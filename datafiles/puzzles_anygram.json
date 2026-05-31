@@ -1,0 +1,200 @@
+[
+  {
+    "date": "2026-05-29",
+    "letters": [
+      "S",
+      "M",
+      "I",
+      "L",
+      "E"
+    ],
+    "words": [
+      {
+        "text": "SMILE",
+        "row": 0,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "MILE",
+        "row": 0,
+        "col": 1,
+        "dir": "V"
+      },
+      {
+        "text": "SLIM",
+        "row": 2,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "MIL",
+        "row": 2,
+        "col": 3,
+        "dir": "V"
+      }
+    ],
+    "bonus_pool": [
+      "ELMS",
+      "LEIS",
+      "LIES",
+      "LIME",
+      "ELM",
+      "ISM",
+      "LEI",
+      "LIE",
+      "SIM"
+    ],
+    "grid_size": {
+      "rows": 5,
+      "cols": 5
+    }
+  },
+  {
+    "date": "2026-05-30",
+    "letters": [
+      "B",
+      "E",
+      "A",
+      "C",
+      "H"
+    ],
+    "words": [
+      {
+        "text": "BEACH",
+        "row": 3,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "EACH",
+        "row": 0,
+        "col": 4,
+        "dir": "V"
+      },
+      {
+        "text": "ACE",
+        "row": 1,
+        "col": 1,
+        "dir": "V"
+      },
+      {
+        "text": "CAB",
+        "row": 1,
+        "col": 0,
+        "dir": "H"
+      }
+    ],
+    "bonus_pool": [
+      "ACHE",
+      "BACH",
+      "ABE",
+      "BAH",
+      "BEA",
+      "CHE"
+    ],
+    "grid_size": {
+      "rows": 5,
+      "cols": 5
+    }
+  },
+  {
+    "date": "2026-05-31",
+    "letters": [
+      "I",
+      "M",
+      "A",
+      "G",
+      "E"
+    ],
+    "words": [
+      {
+        "text": "IMAGE",
+        "row": 0,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "MAG",
+        "row": 0,
+        "col": 1,
+        "dir": "V"
+      },
+      {
+        "text": "GAME",
+        "row": 2,
+        "col": 1,
+        "dir": "H"
+      },
+      {
+        "text": "AIM",
+        "row": 2,
+        "col": 2,
+        "dir": "V"
+      },
+      {
+        "text": "GEM",
+        "row": 4,
+        "col": 0,
+        "dir": "H"
+      }
+    ],
+    "bonus_pool": [
+      "AGE",
+      "GIN"
+    ],
+    "grid_size": {
+      "rows": 5,
+      "cols": 5
+    }
+  },
+  {
+    "date": "2026-06-01",
+    "letters": [
+      "O",
+      "C",
+      "E",
+      "A",
+      "N"
+    ],
+    "words": [
+      {
+        "text": "OCEAN",
+        "row": 0,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "CANOE",
+        "row": 0,
+        "col": 1,
+        "dir": "V"
+      },
+      {
+        "text": "ONCE",
+        "row": 2,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "ACE",
+        "row": 0,
+        "col": 3,
+        "dir": "V"
+      }
+    ],
+    "bonus_pool": [
+      "ACNE",
+      "CANE",
+      "CONE",
+      "CAN",
+      "CON",
+      "EON",
+      "ONE"
+    ],
+    "grid_size": {
+      "rows": 5,
+      "cols": 5
+    }
+  }
+]

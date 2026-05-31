@@ -1,0 +1,57 @@
+platform :ios, '18.6'
+
+# No third-party pods required.
+# This Podfile exists solely so GMS2 runs `pod install` on every iOS export,
+# which triggers the post_install hook below. That hook patches the
+# freshly-regenerated Xcode project before the build, suppressing warnings
+# that originate in YYC codegen or the GMS2 runner template.
+
+post_install do |installer|
+  require 'xcodeproj'
+
+  # Navigate from Pods/ up to the .xcodeproj
+  proj_path = Dir[File.join(installer.sandbox.root, '..', '*.xcodeproj')].first
+  unless proj_path
+    warn "⚠️  Puzzle Hub Podfile: could not locate .xcodeproj — skipping patches"
+    next
+  end
+
+  project = Xcodeproj::Project.open(proj_path)
+
+  project.targets.each do |target|
+    target.build_configurations.each do |config|
+
+      # ── Warnings #1 & #2 ────────────────────────────────────────────────────
+      # GMS2's YYC emits comma-operator sequences and unused 'argSpace' variables
+      # in every generated .gml.cpp file. Suppress at the Clang level.
+      existing_cflags = Array(config.build_settings['OTHER_CFLAGS']).join(' ')
+      existing_cflags = '$(inherited)' if existing_cflags.strip.empty?
+      unless existing_cflags.include?('-Wno-comma')
+        config.build_settings['OTHER_CFLAGS'] =
+          "#{existing_cflags} -Wno-comma -Wno-unused-variable".strip
+      end
+
+      # ── Warning #5 ──────────────────────────────────────────────────────────
+      # GMS2 runner injects -ld_classic into OTHER_LDFLAGS as a workaround for
+      # an old linker issue that is now resolved. Strip it so Xcode 15+ doesn't
+      # warn about the deprecated flag.
+      ldflags = Array(config.build_settings['OTHER_LDFLAGS']).join(' ')
+      patched = ldflags.gsub(/-ld_classic/, '').gsub(/\s{2,}/, ' ').strip
+      config.build_settings['OTHER_LDFLAGS'] = patched if patched != ldflags
+
+    end
+  end
+
+  project.save
+
+  # ── Warning #6 ──────────────────────────────────────────────────────────────
+  # GMS2 writes UIDeviceFamily into Info.plist AND sets TARGETED_DEVICE_FAMILY.
+  # Xcode 15+ wants the plist key absent; only the build setting should govern it.
+  Dir[File.join(File.dirname(proj_path), '**', '*-Info.plist')].each do |plist|
+    next if plist.include?('/Pods/')
+    # PlistBuddy exits non-zero if key is absent; redirect stderr to suppress that.
+    system("/usr/libexec/PlistBuddy -c 'Delete :UIDeviceFamily' '#{plist}' 2>/dev/null")
+  end
+
+  puts "✅  Puzzle Hub post_install: GMS2 warning patches applied (#{proj_path})"
+end

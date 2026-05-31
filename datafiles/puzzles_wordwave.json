@@ -1,0 +1,532 @@
+[
+  {
+    "date": "2026-05-30",
+    "grid": [
+      "CBCHNYLM",
+      "CGAANJOC",
+      "RPKVRUOE",
+      "EIEESOTM",
+      "AEASKVRO",
+      "MDEIXWAH",
+      "NPEMOCTV",
+      "DOOGEKAM"
+    ],
+    "words": [
+      {
+        "text": "CAKE",
+        "row": 0,
+        "col": 2,
+        "dir": "V"
+      },
+      {
+        "text": "PIE",
+        "row": 2,
+        "col": 1,
+        "dir": "V"
+      },
+      {
+        "text": "TART",
+        "row": 6,
+        "col": 6,
+        "dir": "V_REV"
+      },
+      {
+        "text": "MOUSSE",
+        "row": 0,
+        "col": 7,
+        "dir": "DL"
+      },
+      {
+        "text": "CREAM",
+        "row": 1,
+        "col": 0,
+        "dir": "V"
+      },
+      {
+        "text": "COOKIE",
+        "row": 1,
+        "col": 7,
+        "dir": "DL"
+      }
+    ],
+    "bonus_pool": [
+      "HAVE",
+      "MAKE",
+      "GOOD",
+      "COME",
+      "HOME",
+      "READ"
+    ]
+  },
+  {
+    "date": "2026-05-31",
+    "grid": [
+      "OCEANBRE",
+      "JNECRDSE",
+      "JRRVOFDD",
+      "SESUGRLI",
+      "DERWCSAT",
+      "BFTGPVRL",
+      "NYKOSOLJ",
+      "HEVAWZFW"
+    ],
+    "words": [
+      {
+        "text": "OCEAN",
+        "row": 0,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "REEF",
+        "row": 2,
+        "col": 1,
+        "dir": "V"
+      },
+      {
+        "text": "WAVE",
+        "row": 7,
+        "col": 4,
+        "dir": "H_REV"
+      },
+      {
+        "text": "TIDE",
+        "row": 4,
+        "col": 7,
+        "dir": "V_REV"
+      },
+      {
+        "text": "CORAL",
+        "row": 1,
+        "col": 3,
+        "dir": "DR"
+      }
+    ],
+    "bonus_pool": [
+      "CORE",
+      "ROW",
+      "EAR",
+      "DIE",
+      "FED",
+      "AVE",
+      "WAR"
+    ]
+  },
+  {
+    "date": "2026-06-01",
+    "grid": [
+      "IHAPPYTE",
+      "RLSQMQRD",
+      "UWYIKJAR",
+      "NEDKNWTI",
+      "JKCECISV",
+      "TUOAEAFE",
+      "WJMORPRR",
+      "ETTPBAST"
+    ],
+    "words": [
+      {
+        "text": "RACE",
+        "row": 6,
+        "col": 4,
+        "dir": "UL"
+      },
+      {
+        "text": "TRACK",
+        "row": 7,
+        "col": 7,
+        "dir": "UL"
+      },
+      {
+        "text": "SPEED",
+        "row": 7,
+        "col": 6,
+        "dir": "UL"
+      },
+      {
+        "text": "START",
+        "row": 4,
+        "col": 6,
+        "dir": "V_REV"
+      },
+      {
+        "text": "FINISH",
+        "row": 5,
+        "col": 6,
+        "dir": "UL"
+      },
+      {
+        "text": "DRIVER",
+        "row": 1,
+        "col": 7,
+        "dir": "V"
+      }
+    ],
+    "bonus_pool": [
+      "RUN",
+      "JUMP",
+      "BOOK",
+      "HAPPY"
+    ]
+  },
+  {
+    "date": "2026-06-02",
+    "grid": [
+      "PEELSEHE",
+      "FCQTIMES",
+      "RURDTBII",
+      "UPCEWAPC",
+      "IUUATDER",
+      "TVGZEAVE",
+      "COPBOMWX",
+      "YACTIVEE"
+    ],
+    "words": [
+      {
+        "text": "EAT",
+        "row": 4,
+        "col": 6,
+        "dir": "UL"
+      },
+      {
+        "text": "YOGA",
+        "row": 7,
+        "col": 0,
+        "dir": "UR"
+      },
+      {
+        "text": "SLEEP",
+        "row": 0,
+        "col": 4,
+        "dir": "H_REV"
+      },
+      {
+        "text": "FRUIT",
+        "row": 1,
+        "col": 0,
+        "dir": "V"
+      },
+      {
+        "text": "ACTIVE",
+        "row": 7,
+        "col": 1,
+        "dir": "H"
+      },
+      {
+        "text": "WATER",
+        "row": 6,
+        "col": 6,
+        "dir": "UL"
+      },
+      {
+        "text": "EXERCISE",
+        "row": 7,
+        "col": 7,
+        "dir": "V_REV"
+      }
+    ],
+    "bonus_pool": [
+      "BED",
+      "CUP",
+      "TIME"
+    ]
+  },
+  {
+    "date": "2026-06-03",
+    "grid": [
+      "DNUSATGG",
+      "UDHXRGSN",
+      "DNHAPPYI",
+      "LAVLRJBL",
+      "MEEETUEI",
+      "LITREMAA",
+      "UAWHGPCS",
+      "WWGSEAHG"
+    ],
+    "words": [
+      {
+        "text": "BEACH",
+        "row": 3,
+        "col": 6,
+        "dir": "V"
+      },
+      {
+        "text": "SUN",
+        "row": 0,
+        "col": 3,
+        "dir": "H_REV"
+      },
+      {
+        "text": "RELAX",
+        "row": 5,
+        "col": 3,
+        "dir": "V_REV"
+      },
+      {
+        "text": "TRAVEL",
+        "row": 0,
+        "col": 5,
+        "dir": "DL"
+      },
+      {
+        "text": "SWIM",
+        "row": 7,
+        "col": 3,
+        "dir": "UL"
+      },
+      {
+        "text": "SAILING",
+        "row": 6,
+        "col": 7,
+        "dir": "V_REV"
+      }
+    ],
+    "bonus_pool": [
+      "THE",
+      "AND",
+      "GET",
+      "JUMP",
+      "READ",
+      "WATER",
+      "HAPPY"
+    ]
+  },
+  {
+    "date": "2026-06-04",
+    "grid": [
+      "RPTESUOH",
+      "LETABLER",
+      "ANAWRITE",
+      "CGUDOGNV",
+      "ORTOLROI",
+      "VEPHNAOR",
+      "TENSEPMK",
+      "UNCLLEPS"
+    ],
+    "words": [
+      {
+        "text": "SPELL",
+        "row": 7,
+        "col": 7,
+        "dir": "H_REV"
+      },
+      {
+        "text": "VOCAL",
+        "row": 5,
+        "col": 0,
+        "dir": "V_REV"
+      },
+      {
+        "text": "READ",
+        "row": 0,
+        "col": 0,
+        "dir": "DR"
+      },
+      {
+        "text": "WRITE",
+        "row": 2,
+        "col": 3,
+        "dir": "H"
+      },
+      {
+        "text": "TENSE",
+        "row": 6,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "NOUN",
+        "row": 5,
+        "col": 4,
+        "dir": "UL"
+      }
+    ],
+    "bonus_pool": [
+      "TABLE",
+      "HOUSE",
+      "GRAPE",
+      "GREEN",
+      "MOON",
+      "RIVER"
+    ]
+  },
+  {
+    "date": "2026-06-05",
+    "grid": [
+      "DESVCTCE",
+      "NULLIHPH",
+      "ILJMIONT",
+      "FBMPLDIY",
+      "JUESOPAD",
+      "SAEGNARN",
+      "KVODTACA",
+      "RUNCLIMB"
+    ],
+    "words": [
+      {
+        "text": "PEAK",
+        "row": 3,
+        "col": 3,
+        "dir": "DL"
+      },
+      {
+        "text": "HILL",
+        "row": 1,
+        "col": 5,
+        "dir": "H_REV"
+      },
+      {
+        "text": "SLOPE",
+        "row": 4,
+        "col": 3,
+        "dir": "UR"
+      },
+      {
+        "text": "CLIMB",
+        "row": 7,
+        "col": 3,
+        "dir": "H"
+      },
+      {
+        "text": "SUMMIT",
+        "row": 5,
+        "col": 0,
+        "dir": "UR"
+      },
+      {
+        "text": "RANGE",
+        "row": 5,
+        "col": 6,
+        "dir": "H_REV"
+      }
+    ],
+    "bonus_pool": [
+      "THE",
+      "AND",
+      "CAT",
+      "DOG",
+      "RUN",
+      "BLUE",
+      "FIND"
+    ]
+  },
+  {
+    "date": "2026-06-06",
+    "grid": [
+      "INDLIUBP",
+      "YUVEESSM",
+      "SRANDETU",
+      "TDXCMPFJ",
+      "ORQAABOP",
+      "RAGITGRL",
+      "YWNRIHOA",
+      "PTJBDZEY"
+    ],
+    "words": [
+      {
+        "text": "PLAY",
+        "row": 4,
+        "col": 7,
+        "dir": "V"
+      },
+      {
+        "text": "DRAW",
+        "row": 3,
+        "col": 1,
+        "dir": "V"
+      },
+      {
+        "text": "GAMES",
+        "row": 5,
+        "col": 2,
+        "dir": "UR"
+      },
+      {
+        "text": "STORY",
+        "row": 2,
+        "col": 0,
+        "dir": "V"
+      },
+      {
+        "text": "PAINT",
+        "row": 3,
+        "col": 5,
+        "dir": "DL"
+      },
+      {
+        "text": "BUILD",
+        "row": 0,
+        "col": 6,
+        "dir": "H_REV"
+      }
+    ],
+    "bonus_pool": [
+      "THE",
+      "AND",
+      "RUN",
+      "JUMP",
+      "SEE",
+      "FOR",
+      "BIG"
+    ]
+  },
+  {
+    "date": "2026-06-07",
+    "grid": [
+      "CATBANDM",
+      "EULBORST",
+      "STAMPOUW",
+      "DOLLSBKN",
+      "COMICKZS",
+      "THECARDS",
+      "KDCOINSA",
+      "SZSEEAVA"
+    ],
+    "words": [
+      {
+        "text": "STAMP",
+        "row": 2,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "COINS",
+        "row": 6,
+        "col": 2,
+        "dir": "H"
+      },
+      {
+        "text": "COMIC",
+        "row": 4,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "DOLLS",
+        "row": 3,
+        "col": 0,
+        "dir": "H"
+      },
+      {
+        "text": "CARDS",
+        "row": 5,
+        "col": 3,
+        "dir": "H"
+      },
+      {
+        "text": "BOOKS",
+        "row": 0,
+        "col": 3,
+        "dir": "DR"
+      }
+    ],
+    "bonus_pool": [
+      "THE",
+      "AND",
+      "RUN",
+      "SEE",
+      "BLUE",
+      "CAT"
+    ]
+  }
+]

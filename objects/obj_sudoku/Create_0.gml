@@ -1,0 +1,201 @@
+// ── Sudoku — Create ───────────────────────────────────────────────────────────
+puzzle = ph_sudoku_for_date(global.selected_date_key);
+
+// ── Grid geometry ─────────────────────────────────────────────────────────────
+// 9×9 board centred horizontally, top-anchored just below the HUD strip.
+GAP    = 0;                                   // cells are flush; lines drawn over them
+BOARD  = 990;                                 // total board pixel size
+CELL   = BOARD / 9;                           // 110 px per cell
+grid_x = floor((PH_W - BOARD) / 2);           // 45
+grid_y = 215 + global.safe_top_gui;
+grid_h = BOARD;
+
+// ── Number pad (1..9) geometry ────────────────────────────────────────────────
+NUM_Y  = grid_y + grid_h + 95;
+NUM_H  = 110;
+var _pad_margin = 40;
+var _avail = PH_W - _pad_margin * 2;
+NUM_W  = 92;
+var _ngap = (_avail - 9 * NUM_W) / 8;
+num_x  = array_create(9, 0);
+for (var _i = 0; _i < 9; _i++) {
+    num_x[_i] = _pad_margin + _i * (NUM_W + _ngap);   // left edge of tile i (digit i+1)
+}
+
+// ── Delete button geometry ────────────────────────────────────────────────────
+DEL_W  = 320;
+DEL_H  = 96;
+DEL_L  = floor((PH_W - DEL_W) / 2);
+DEL_Y  = NUM_Y + NUM_H + 40;     // top edge
+
+// ── Selection + animation state ───────────────────────────────────────────────
+sel_idx     = -1;                         // selected cell index (0..80), -1 = none
+cell_flash  = array_create(81, 0.0);      // green "unit solved" pulse, frames remaining
+cell_scale  = array_create(81, 1.0);      // per-cell pop scale
+
+// Per-unit solved tracking — used to detect the *transition* into solved so the
+// positive feedback flash fires exactly once per row/column/box.
+row_solved = array_create(9, false);
+col_solved = array_create(9, false);
+box_solved = array_create(9, false);
+
+// ── Feedback toast ────────────────────────────────────────────────────────────
+toast_text  = "";
+toast_col   = PH_COL_PURPLE;
+toast_timer = 0;
+TOAST_DUR   = 90;
+
+// ── HUD / toolbar tap targets (re-written every frame by Draw, read by Step) ──
+HINT_PILL_L = PH_W - 390;
+HINT_PILL_R = PH_W - 50;
+HINT_PILL_T = PH_H - 155 - global.safe_bottom_gui;
+HINT_PILL_B = PH_H - 65  - global.safe_bottom_gui;
+COIN_BAL_X  = PH_W / 2 - 80;
+COIN_BAL_Y  = PH_H - 110 - global.safe_bottom_gui;
+coin_pulse_t     = 1.0;
+coin_overshoot_t = 1.0;
+
+// ── Restore in-progress grid (resume) ─────────────────────────────────────────
+var _saved = ph_sudoku_load_grid(global.save, global.selected_date_key);
+if (!is_undefined(_saved) && string_length(_saved) == 81) {
+    for (var _i = 0; _i < 81; _i++) {
+        var _v = real(string_char_at(_saved, _i + 1));
+        // Never let a saved blank wipe a locked given.
+        if (puzzle.givens[_i] != 0) puzzle.grid[_i] = puzzle.givens[_i];
+        else                        puzzle.grid[_i] = _v;
+    }
+}
+
+// ── Debug: start ~90% solved (testing only — gated by PH_SUDOKU_TEST_PREFILL) ──
+// Fills correct values into empty, non-given cells until only ~10% of the whole
+// board (≈8 cells) remain blank, so the win flow is fast to reach.
+if (PH_SUDOKU_TEST_PREFILL && !ph_sudoku_is_done(global.save, global.selected_date_key)) {
+    var _empty = [];
+    for (var _i = 0; _i < 81; _i++) {
+        if (puzzle.givens[_i] == 0 && puzzle.grid[_i] == 0) array_push(_empty, _i);
+    }
+    // Shuffle so the remaining blanks are spread around the board.
+    for (var _i = array_length(_empty) - 1; _i > 0; _i--) {
+        var _j = irandom(_i);
+        var _t = _empty[_i]; _empty[_i] = _empty[_j]; _empty[_j] = _t;
+    }
+    var _leave_blank = max(1, round(81 * 0.10));   // keep ~8 cells empty
+    var _to_fill = max(0, array_length(_empty) - _leave_blank);
+    for (var _k = 0; _k < _to_fill; _k++) {
+        puzzle.grid[_empty[_k]] = puzzle.solution[_empty[_k]];
+    }
+}
+
+// ── Win state ─────────────────────────────────────────────────────────────────
+win_phase        = 0;
+xp_gained        = 0;
+coins_bonus      = 0;
+win_anim_t       = 0;
+win_btn_back_y   = 0;
+win_time_str     = "0:00";
+session_start_ms = current_time;
+
+// ── Confetti state (mirrors Anygram celebration) ──────────────────────────────
+confetti_pieces           = [];
+confetti_burst_pending    = false;
+confetti_run_frames       = 0;
+CONFETTI_TARGET_FALL      = 70;
+CONFETTI_DURATION_FRAMES  = 180;
+
+// ── Instance methods ──────────────────────────────────────────────────────────
+
+/// Flash every cell in a row/column/box that just became solved.
+sd_flash_cells = function(_indices) {
+    for (var _k = 0; _k < array_length(_indices); _k++) {
+        cell_flash[_indices[_k]] = 18;
+    }
+};
+
+/// Re-scan all rows/columns/boxes; flash any unit that transitioned to solved.
+sd_check_units = function() {
+    for (var _r = 0; _r < 9; _r++) {
+        var _now = ph_sudoku_row_solved(puzzle, _r);
+        if (_now && !row_solved[_r]) {
+            var _idx = array_create(9, 0);
+            for (var _c = 0; _c < 9; _c++) _idx[_c] = _r * 9 + _c;
+            sd_flash_cells(_idx);
+        }
+        row_solved[_r] = _now;
+    }
+    for (var _c = 0; _c < 9; _c++) {
+        var _nowc = ph_sudoku_col_solved(puzzle, _c);
+        if (_nowc && !col_solved[_c]) {
+            var _idxc = array_create(9, 0);
+            for (var _r2 = 0; _r2 < 9; _r2++) _idxc[_r2] = _r2 * 9 + _c;
+            sd_flash_cells(_idxc);
+        }
+        col_solved[_c] = _nowc;
+    }
+    for (var _b = 0; _b < 9; _b++) {
+        var _br = _b div 3;
+        var _bc = _b mod 3;
+        var _nowb = ph_sudoku_box_solved(puzzle, _br, _bc);
+        if (_nowb && !box_solved[_b]) {
+            var _idxb = array_create(9, 0);
+            var _n = 0;
+            for (var _dr = 0; _dr < 3; _dr++) {
+                for (var _dc = 0; _dc < 3; _dc++) {
+                    _idxb[_n++] = (_br * 3 + _dr) * 9 + (_bc * 3 + _dc);
+                }
+            }
+            sd_flash_cells(_idxb);
+        }
+        box_solved[_b] = _nowb;
+    }
+};
+
+/// Win bookkeeping — fires exactly once when the grid is fully correct.
+sd_check_win = function() {
+    if (!ph_sudoku_all_solved(puzzle)) return;
+    var _fin_s  = floor((current_time - session_start_ms) / 1000);
+    var _fin_m  = _fin_s div 60;
+    var _fin_ss = _fin_s mod 60;
+    win_time_str = string(_fin_m) + ":" + ((_fin_ss < 10) ? "0" : "") + string(_fin_ss);
+    global.save[$ "sudoku_time_" + global.selected_date_key] = win_time_str;
+
+    ph_sudoku_save_grid(global.save, global.selected_date_key, ph_sudoku_grid_to_str(puzzle));
+    ph_sudoku_mark_done(global.save, global.selected_date_key);
+
+    // Single +100 XP grant for the whole puzzle.
+    ph_grant_xp(global.save, PH_XP_PER_PUZZLE);
+    xp_gained = PH_XP_PER_PUZZLE;
+
+    // Gift box for the 4th solved puzzle of the day.
+    var _count = ph_solved_count_on(global.save, global.selected_date_key);
+    coins_bonus = 0;
+    if (_count >= PH_GIFT_PUZZLE_INDEX + 1 && !ph_has_gift_been_claimed(global.save, global.selected_date_key)) {
+        ph_claim_gift(global.save, global.selected_date_key);
+        ph_grant_coins(global.save, PH_COINS_FOR_4TH);
+        coins_bonus = PH_COINS_FOR_4TH;
+    }
+    ph_update_streak(global.save);
+    ph_save_write(global.save);
+
+    sel_idx                = -1;
+    win_phase              = 1;
+    confetti_burst_pending = true;
+};
+
+// ── Enter review/solved mode when re-opening a finished puzzle ─────────────────
+var _review = variable_global_exists("sudoku_review_mode") && global.sudoku_review_mode;
+if (_review) global.sudoku_review_mode = false;
+
+if (_review || ph_sudoku_is_done(global.save, global.selected_date_key) || ph_sudoku_all_solved(puzzle)) {
+    for (var _i = 0; _i < 81; _i++) puzzle.grid[_i] = puzzle.solution[_i];
+    var _tk = "sudoku_time_" + global.selected_date_key;
+    win_time_str = variable_struct_exists(global.save, _tk) ? global.save[$ _tk] : "--:--";
+    xp_gained    = PH_XP_PER_PUZZLE;
+    win_phase    = 1;
+    win_anim_t   = 1.0;
+    confetti_burst_pending = true;
+}
+
+// Seed the per-unit solved snapshot so already-correct units don't re-flash on
+// entry; clear any flashes the seeding pass produced.
+sd_check_units();
+for (var _i = 0; _i < 81; _i++) cell_flash[_i] = 0.0;
