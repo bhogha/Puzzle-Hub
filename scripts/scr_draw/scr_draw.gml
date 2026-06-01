@@ -26,8 +26,45 @@ function ph_draw_rounded(_x1,_y1,_x2,_y2,_r,_col) {
     draw_circle(_x2-_r, _y2-_r, _r, false);
 }
 
-/// Chunky 3-D chip button
+/// Pill-shaped background sprite (Pill.png), drawn as a horizontal 3-slice so
+/// the rounded end-caps keep their shape at any width. The caps are scaled to
+/// half the target height (a true capsule) and the flat middle is stretched
+/// horizontally only. The sprite is white with a baked soft drop shadow, so
+/// _col tints it to any colour and _alpha controls translucency.
+function ph_draw_pill(_x1,_y1,_x2,_y2,_col,_alpha) {
+    if (_alpha == undefined) _alpha = 1;
+    var _s  = global.spr_pill;
+    var _sw = sprite_get_width(_s);
+    var _sh = sprite_get_height(_s);
+    var _h  = _y2 - _y1;
+    var _w  = _x2 - _x1;
+    var _cap_src = _sh * 0.5;                 // semicircle cap region in the source
+    var _cap_dst = min(_h * 0.5, _w * 0.5);   // keep caps a true semicircle (clamp for narrow pills)
+    var _sx_cap  = _cap_dst / _cap_src;
+    var _sy      = _h / _sh;
+    // Left cap
+    draw_sprite_part_ext(_s, 0, 0, 0, _cap_src, _sh, _x1, _y1, _sx_cap, _sy, _col, _alpha);
+    // Right cap
+    draw_sprite_part_ext(_s, 0, _sw - _cap_src, 0, _cap_src, _sh, _x2 - _cap_dst, _y1, _sx_cap, _sy, _col, _alpha);
+    // Stretched flat middle (uniform white in the source → no visible seam)
+    var _mid_dst_w = _w - 2 * _cap_dst;
+    if (_mid_dst_w > 0) {
+        var _mid_src_w = _sw - 2 * _cap_src;
+        draw_sprite_part_ext(_s, 0, _cap_src, 0, _mid_src_w, _sh,
+                             _x1 + _cap_dst, _y1, _mid_dst_w / _mid_src_w, _sy, _col, _alpha);
+    }
+}
+
+/// Chunky 3-D chip button.
+/// Capsule-proportioned chips (corner radius ≈ half the height — i.e. fully
+/// rounded ends) are drawn with the shared Pill.png sprite so every pill in the
+/// app shares one look. Lower-radius rounded rectangles (panels, boards, cards)
+/// keep the original primitive-based shadow+fill drawing.
 function ph_draw_chip(_x1,_y1,_x2,_y2,_r,_fill,_shadow,_drop) {
+    if (variable_global_exists("spr_pill") && (_r * 2 >= (_y2 - _y1) - 4)) {
+        ph_draw_pill(_x1, _y1, _x2, _y2, _fill, 1);
+        return;
+    }
     ph_draw_rounded(_x1, _y1+_drop, _x2, _y2+_drop, _r, _shadow);
     ph_draw_rounded(_x1, _y1,       _x2, _y2,       _r, _fill);
 }
@@ -160,22 +197,27 @@ function ph_draw_burst(_cx, _cy, _r_out, _r_in, _n, _col) {
     }
 }
 
-// ── Cached dot-grid background ───────────────────────────────────────────────
-/// Draw the dotted background pattern. The dots are rendered once into a cached
-/// surface; subsequent calls just blit and tint, saving ~600 draw_circle calls/frame.
+// ── Cached tiled background pattern ──────────────────────────────────────────
+/// Draw the background by tiling BG Pattern.png across the screen (replaces the
+/// old dot grid). The tiled result is rendered once into a cached surface, so
+/// each frame is a single blit. The _col argument is kept for backward
+/// compatibility with existing call sites but is no longer used — the pattern
+/// art defines its own colour.
 function ph_draw_dot_bg(_col) {
     if (!variable_global_exists("ph_dot_surface") || !surface_exists(global.ph_dot_surface)) {
         global.ph_dot_surface = surface_create(PH_W, PH_H);
         surface_set_target(global.ph_dot_surface);
         draw_clear_alpha(c_black, 0);
-        draw_set_color(c_white);
-        var _gs = 54;
-        for (var _gx = _gs; _gx < PH_W; _gx += _gs) {
-            for (var _gy = _gs; _gy < PH_H; _gy += _gs) {
-                draw_circle(_gx, _gy, 3, false);
+        if (variable_global_exists("spr_bg_pattern")) {
+            var _pw = sprite_get_width(global.spr_bg_pattern);
+            var _ph = sprite_get_height(global.spr_bg_pattern);
+            for (var _gx = 0; _gx < PH_W; _gx += _pw) {
+                for (var _gy = 0; _gy < PH_H; _gy += _ph) {
+                    draw_sprite(global.spr_bg_pattern, 0, _gx, _gy);
+                }
             }
         }
         surface_reset_target();
     }
-    draw_surface_ext(global.ph_dot_surface, 0, 0, 1, 1, 0, _col, 1);
+    draw_surface(global.ph_dot_surface, 0, 0);
 }

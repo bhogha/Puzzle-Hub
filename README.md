@@ -2,14 +2,15 @@
 
 A "Daily Puzzles" mobile game built with **GameMaker**. Players solve a set of daily puzzles — earning XP, leveling up, and collecting coins.
 
-> **Status:** `v0.1` — early prototype / work in progress. Private repo, shared for feedback.
+> **Status:** `v0.2` in development (baseline `v0.1` tagged). Private repo, shared for feedback.
 
 ## Puzzles
 - **Anygram**
 - **Sudoku**
 - **Word Wave**
-
-(More puzzle types planned.)
+- **Shikaku**
+- **Wordle** _(coming soon)_
+- **Mix-Up** _(coming soon)_
 
 ## Core loop
 - Solve up to 10 daily puzzles; each solve grants **100 XP**.

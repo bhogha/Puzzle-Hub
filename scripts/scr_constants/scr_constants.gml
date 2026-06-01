@@ -14,6 +14,9 @@
 #macro PH_COL_PURPLE_DEEP make_color_rgb( 80, 30,180)
 #macro PH_COL_ORANGE      make_color_rgb(255,122, 26)
 #macro PH_COL_ORANGE_DEEP make_color_rgb(194, 78,  0)
+#macro PH_COL_BLUE        make_color_rgb( 45,125,246)
+#macro PH_COL_BLUE_SOFT   make_color_rgb(205,224,255)
+#macro PH_COL_BLUE_DEEP   make_color_rgb( 20, 80,190)
 #macro PH_COL_GOLD        make_color_rgb(245,180,  0)
 #macro PH_COL_DARK        make_color_rgb( 31, 20, 48)
 #macro PH_COL_INK_SOFT    make_color_rgb( 80, 60,100)
@@ -50,6 +53,7 @@
 #macro PH_ANYGRAM_INDEX      0
 #macro PH_SUDOKU_INDEX       1
 #macro PH_WORDWAVE_INDEX     2
+#macro PH_SHIKAKU_INDEX      3
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"
@@ -91,6 +95,26 @@ function ph_game_cards() {
         icon_spr: global.spr_game_wordwave,
         text_col: PH_COL_TEAL_DEEP,
         btn_type: "play_light",
+    });
+    array_push(_cards, {
+        name:     "SHIKAKU",
+        subtitle: "Divide by squares",
+        room:     "rm_shikaku",
+        locked:   false,
+        card_spr: global.spr_card_blue,
+        icon_spr: global.spr_game_shikaku,
+        text_col: PH_COL_BLUE_DEEP,
+        btn_type: "play_light",
+    });
+    array_push(_cards, {
+        name:     "WORDLE",
+        subtitle: "Guess the word",
+        room:     "",
+        locked:   true,
+        card_spr: global.spr_card_green,
+        icon_spr: global.spr_game_wordle,
+        text_col: make_color_rgb(0, 90, 40),
+        btn_type: "locked",
     });
     array_push(_cards, {
         name:     "MIX-UP",

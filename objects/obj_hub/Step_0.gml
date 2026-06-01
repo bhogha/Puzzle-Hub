@@ -157,6 +157,12 @@ if (device_mouse_check_button_released(0, mb_left)) {
                             } else {
                                 global.wordwave_review_mode = false;
                             }
+                            if (_card.name == "SHIKAKU") {
+                                global.shikaku_review_mode =
+                                    ph_shikaku_is_done(global.save, global.selected_date_key);
+                            } else {
+                                global.shikaku_review_mode = false;
+                            }
                             room_goto(_rm_idx);
                         }
                     }

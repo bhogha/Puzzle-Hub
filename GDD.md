@@ -1,6 +1,6 @@
 # Puzzle Hub — Game Design Document
 
-_Last updated: 2026-05-23_
+_Last updated: 2026-06-01 · Version: 0.2 (in development; v0.1 tagged baseline)_
 
 This document captures **what is actually implemented in code** today, not the long-term vision. Update it whenever an economy rule changes, a new puzzle ships, or a balancing constant is tuned. All gameplay numbers live in `scripts/scr_constants/scr_constants.gml` as `#macro`s — change them there and reflect the change here.
 
@@ -10,7 +10,7 @@ This document captures **what is actually implemented in code** today, not the l
 
 Puzzle Hub is a daily-puzzle container app. Each calendar day surfaces **10 unique puzzles** on a hub screen; the player earns XP and coins by solving them. Each daily puzzle can be solved exactly once — solving it locks a "finish time" for that day, and the player can travel back to play previous days from the calendar but cannot replay a day already solved. Future days are not accessible.
 
-Three puzzle types — **Anygram**, **Sudoku**, and **Word Wave** — are implemented. The remaining slot on the hub (Mix-Up) is a placeholder showing "COMING SOON".
+Four puzzle types — **Anygram**, **Sudoku**, **Word Wave**, and **Shikaku** — are implemented. The remaining slot on the hub (Mix-Up) is a placeholder showing "COMING SOON".
 
 ---
 
@@ -205,7 +205,40 @@ Indexing is row-major (`index = row*9 + col`). `date` is optional. **Date select
 
 **Save shape.** Per-word found state is persisted as `WW_W0`, `WW_W1`, … (these keys are skipped by `ph_solved_count_on` so they don't inflate the daily count); `WORDWAVE` is the single flag the Hub reads. Bonus words are tracked under `save.wordwave_bonus[date_key]` (lowercased keys), mirroring Anygram's `anygram_bonus`.
 
-### 4.4 Mix-Up
+### 4.4 Shikaku
+
+**Genre.** Rectangle-division logic puzzle ("Shikaku" / "divide by squares") on a **6×6 grid**. The grid carries numbers; the player partitions the whole grid into rectangles so that **each rectangle contains exactly one number and that number equals the rectangle's area** (cell count). Every cell ends up inside exactly one rectangle. Generation guarantees each puzzle has a **unique** solution.
+
+**Reward.** Solving grants a single **+100 XP** (`PH_XP_PER_PUZZLE`), once on completion — identical to the other puzzles. Shikaku counts toward the daily 4th-puzzle gift box and the streak. **No bonus-word / secondary reward** (the genre has none).
+
+**Layout (mirrors Sudoku).** Back arrow + live timer in the top HUD strip; **coin balance + HINT pill in the bottom toolbar — no bonus chest**, exactly like Sudoku. The accent colour is **blue** (`PH_COL_BLUE`). The board is a 6×6 grid (`BOARD = 960`, `CELL = 160`) centred horizontally below the HUD. There is no number pad.
+
+**Interaction.** **Drag corner-to-corner** to draw a rectangle: press a cell, drag to the opposite corner, release to commit. Committing removes any existing rectangles that overlap the new one (so you can redraw freely). **Single-cell tap on an existing rectangle deletes it.** Each drawn rectangle is filled soft (blue) with a coloured border: **teal** when it is correct (contains exactly one number whose value equals its area), **pink** otherwise. The in-progress drag shows a translucent blue preview.
+
+**Hint (`PH_HINT_COST` = 100 coins).** Reveals the *shape* of one number's correct rectangle as a **small rounded glyph in that number's cell corner** — its proportions match the solution's width×height (e.g. 9 → a small 3×3 square glyph; 3 → a small 1×3 bar). The glyph is deliberately smaller than the number and does **not** place the rectangle for the player; it only communicates the orientation/dimensions. The hint targets the first number that isn't already hinted and isn't already correctly enclosed. If none qualify, the action is rejected with a toast and no coins are spent. Revealed hint glyphs persist across resume.
+
+**Completion.** When the player's rectangles form a complete valid partition (`ph_shikaku_check_solution`), the controller records `save.shikaku_time_<date>` (mm:ss), sets the `SHIKAKU` flag in `save.puzzles_solved[date_key]`, grants the single +100 XP, triggers the 4th-puzzle gift if applicable, updates streak, and shows the win overlay with the confetti burst.
+
+**Win screen.** Same teal-backdrop celebration as the other puzzles: Blinky → "WELL DONE!" → a **mini solved board** (the completed 6×6 partition: solution rectangles drawn as teal rings with their numbers) → "+100 XP" pill → level row + XP bar → finish-time + streak chips → optional GIFT banner → BACK TO HUB.
+
+**Review mode.** Tapping a completed Shikaku on the hub re-enters with `global.shikaku_review_mode = true`, going straight to the win overlay (rectangles rebuilt from the solution) with the recorded finish time. The hub queries `ph_shikaku_is_done` for the solved-state badge and reads `shikaku_time_<date>`.
+
+**Data source.** `datafiles/puzzles_shikaku.json` — an array of puzzles, cached in `global.ph_shikaku_cache`. Each entry:
+
+```json
+{ "date": "YYYY-MM-DD", "size": 6,
+  "rects": [ {"r":0,"c":0,"w":2,"h":3,"cr":1,"cc":0}, ... ] }
+```
+
+Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed number = `w*h` and sits at clue cell `(cr,cc)` inside the rect. The `rects` list is **both the clue source and the unique solution**. `date` is optional; **date selection** uses the same two-pass logic as the other puzzles (exact `date` match wins, else `seed mod length`). If the file is missing, a hardcoded fallback (six 1×6 columns) is used. The shipped pool is 20 generator-verified unique puzzles dated 2026-06-01 onward.
+
+**Save shape.** Completion is the single `SHIKAKU` key in `puzzles_solved` (counted automatically by `ph_solved_count_on` — no bookkeeping sub-keys to skip). In-progress state is persisted under `save.shikaku_state[date] = { rects: "r,c,w,h;…", hints: "i,j,…" }` so a player who leaves mid-puzzle resumes their rectangles and purchased hints. Finish time is `shikaku_time_<date>`.
+
+### 4.5 Wordle
+
+Not implemented. Coming-soon tile only — green card (`card_green.png`) with the `game_wordle.png` icon, `locked: true` and a "COMING SOON" badge. Tapping it does nothing.
+
+### 4.6 Mix-Up
 
 Not implemented. The card renders on the hub with `locked: true` and a "COMING SOON" badge. Tapping it does nothing.
 
@@ -227,6 +260,8 @@ File: `working_directory + "puzzlehub_save.json"`. JSON struct, currently `versi
 | `anygram_time_<date>` | mm:ss string — recorded Anygram finish time per date |
 | `sudoku_time_<date>` | mm:ss string — recorded Sudoku finish time per date |
 | `sudoku_grid` | Struct keyed by date → 81-char string of the player's in-progress Sudoku grid (resume) |
+| `shikaku_time_<date>` | mm:ss string — recorded Shikaku finish time per date |
+| `shikaku_state` | Struct keyed by date → `{rects, hints}`: the player's in-progress rectangles (`"r,c,w,h;…"`) and revealed hint clue indices (`"i,j,…"`) for resume |
 
 The save is rewritten on every solve event, hint purchase, and bonus-word discovery. Forward-compat: missing fields are backfilled to safe defaults on load.
 
@@ -253,7 +288,46 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ---
 
-## 7. Recent code changes (2026-05-23)
+## 7. Recent code changes (2026-06-02)
+
+**Custom UI background art — Pill chips + tiled background pattern.**
+
+Two new art assets replace the previous primitive-drawn UI backgrounds:
+
+- `datafiles/icons/Pill.png` (250×84, white capsule with a baked soft drop shadow) — the shared background for every pill-shaped chip.
+- `datafiles/icons/BG Pattern.png` (100×100, cream texture) — tiled background that replaces the old dot grid.
+
+Changes:
+
+- `obj_persistent/Create_0`: loads `global.spr_pill` and `global.spr_bg_pattern` (both with a top-left origin so 9-slice / tiling math is direct).
+- `scr_draw`: new `ph_draw_pill(x1,y1,x2,y2,col,alpha)` draws `Pill.png` as a horizontal 3-slice — end-caps scaled to a true semicircle of the target height, flat middle stretched horizontally only. The white art is tinted by `col`, so any pill colour and translucency is possible.
+- `scr_draw`: `ph_draw_chip` now delegates to `ph_draw_pill` for **capsule-proportioned** chips (corner radius ≈ half the height). Lower-radius rounded rectangles — panels, puzzle boards, win cards — keep the original primitive shadow+fill drawing, so nothing is distorted. This single change re-skins every pill across all screens (hub HUD LVL/Coin, toolbar check/shuffle/hint/cost chips, win-screen action and reward pills, etc.).
+- `scr_draw`: `ph_draw_dot_bg` now tiles `BG Pattern.png` into its cached surface instead of drawing a dot grid. The `_col` argument is retained for call-site compatibility but is unused (the art defines its own colour). Affects all five screens that call it (hub, anygram, sudoku, shikaku, word wave).
+- `obj_hub/Draw_64`: the game-card buttons (COMING SOON / PLAY / timer / SOLVED / best-time) were drawn with translucent `ph_draw_rounded` + manual `draw_set_alpha`; these are now single `ph_draw_pill` calls with the alpha passed directly.
+
+**New coming-soon tile: Wordle.** Added a sixth hub card (locked) — see §4.5.
+
+- `obj_persistent/Create_0`: loads `global.spr_card_green` (`card_green.png`) and `global.spr_game_wordle` (`game_wordle.png`).
+- `scr_constants`: WORDLE entry added to `ph_game_cards()` before Mix-Up — green card, `locked: true`, `btn_type: "locked"`, deep-green text. No room (handled by the existing locked-card guard in `obj_hub/Step_0`).
+
+---
+
+## 7b. Recent code changes (2026-06-01)
+
+**New puzzle: Shikaku.** Added a fourth playable puzzle (see §4.4).
+
+- New logic script `scripts/scr_shikaku/scr_shikaku.gml`: loader/cache, date selection, `ph_shikaku_make`, rectangle validation (`ph_shikaku_rect_is_correct`), full-solution check (`ph_shikaku_check_solution`), save state serialise/restore, `ph_shikaku_is_done` / `ph_shikaku_mark_done`.
+- New controller `obj_shikaku` (Create/Step/Draw) + room `rm_shikaku`. Drag-corner-to-corner input, tap-to-delete, blue accent, shape-glyph hint, win overlay + confetti — mirrors Sudoku.
+- New data `datafiles/puzzles_shikaku.json` — 20 generator-verified uniquely-solvable 6×6 puzzles (dated 2026-06-01 onward).
+- `scr_constants`: added `PH_COL_BLUE` / `_SOFT` / `_DEEP`, `PH_SHIKAKU_INDEX = 3`, and a SHIKAKU entry in `ph_game_cards()` (inserted before Mix-Up).
+- `obj_persistent/Create_0`: loads `global.spr_card_blue` (`card_blue.png`) and `global.spr_game_shikaku` (`game_shikaku.png`).
+- `obj_hub`: review-mode flag (`global.shikaku_review_mode`) in Step, and finish-time badge prefix (`shikaku_time_`) in Draw.
+- Save: new `shikaku_time_<date>` and `shikaku_state` fields (see §5).
+- **Assets to add (placeholders until provided):** `datafiles/icons/card_blue.png` (1400×400 card background, blue) and `datafiles/icons/game_shikaku.png` (512×512 game icon). Until both PNGs exist the Shikaku card sprite/icon will render blank; the puzzle itself plays fine.
+
+---
+
+## 8. Recent code changes (2026-05-23)
 
 **Profile triple-tap reset gesture (easter egg).**
 
@@ -265,7 +339,7 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ---
 
-## 8. Recent code changes (2026-05-22)
+## 9. Recent code changes (2026-05-22)
 
 **Anygram daily-puzzle data import.**
 

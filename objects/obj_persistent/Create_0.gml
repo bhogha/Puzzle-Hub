@@ -90,15 +90,27 @@ global.spr_card_yellow = sprite_add(_d + "card_yellow.png", 1, false, false, 700
 global.spr_card_purple = sprite_add(_d + "card_purple.png", 1, false, false, 700, 200);
 global.spr_card_teal   = sprite_add(_d + "card_teal.png",   1, false, false, 700, 200);
 global.spr_card_orange = sprite_add(_d + "card_orange.png", 1, false, false, 700, 200);
+global.spr_card_blue   = sprite_add(_d + "card_blue.png",   1, false, false, 700, 200);
+global.spr_card_green  = sprite_add(_d + "card_green.png",  1, false, false, 700, 200);
 
 // ── Game icons (512×512, origin centred) ──────────────────────────────────────
 global.spr_game_anygram  = sprite_add(_d + "game_anygram.png",  1, false, false, 256, 256);
 global.spr_game_sudoku   = sprite_add(_d + "game_sudoku.png",   1, false, false, 256, 256);
 global.spr_game_wordwave = sprite_add(_d + "game_wordwave.png", 1, false, false, 256, 256);
 global.spr_game_mixup    = sprite_add(_d + "game_mixup.png",    1, false, false, 256, 256);
+global.spr_game_shikaku  = sprite_add(_d + "game_shikaku.png",  1, false, false, 256, 256);
+global.spr_game_wordle   = sprite_add(_d + "game_wordle.png",   1, false, false, 256, 256);
 
 // ── Anygram tile (256×256, origin centred) ────────────────────────────────────
 global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);
+
+// ── UI background art (origin top-left so 9-slice / tiling math is direct) ─────
+// Pill.png  — white capsule (with a baked soft drop shadow) used as the shared
+//             background for all pill-shaped chips (HUD LVL/Coin, card buttons,
+//             toolbar chips, etc.) via ph_draw_pill / ph_draw_chip.
+// BG Pattern.png — tiled cream texture that replaces the old dot-grid background.
+global.spr_pill       = sprite_add(_d + "Pill.png",       1, false, false, 0, 0);
+global.spr_bg_pattern = sprite_add(_d + "BG Pattern.png", 1, false, false, 0, 0);
 
 // ── Characters (origin centred) ───────────────────────────────────────────────
 global.spr_blinky = sprite_add(_d + "char_blinky.png", 1, false, false, 332, 350);

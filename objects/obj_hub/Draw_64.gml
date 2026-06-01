@@ -293,9 +293,17 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     // on every side and ensures the icon never spills onto the coloured card.
     // We restore the outer body scissor immediately so the title/button draw
     // unclipped.
-    var _icon_clip_h = 200;
-    ph_scissor_gui(_icon_clip_x, _ccy - _icon_clip_h/2, _icon_clip_w, _icon_clip_h);
-    draw_sprite_ext(_card.icon_spr, 0, _icon_cx, _ccy, _icon_s, _icon_s, 0, c_white, 1);
+    // Clamp the icon clip to the body region [_body_top, _body_bot]. gpu_set_scissor
+    // REPLACES (not intersects) the outer body scissor, so without this clamp an
+    // icon on a card scrolled partly above the list would draw over the
+    // "TODAY'S GAMES" header / progress tube.
+    var _icon_clip_h   = 200;
+    var _icon_clip_top = max(_body_top, _ccy - _icon_clip_h/2);
+    var _icon_clip_bot = min(_body_bot, _ccy + _icon_clip_h/2);
+    if (_icon_clip_bot > _icon_clip_top) {
+        ph_scissor_gui(_icon_clip_x, _icon_clip_top, _icon_clip_w, _icon_clip_bot - _icon_clip_top);
+        draw_sprite_ext(_card.icon_spr, 0, _icon_cx, _ccy, _icon_s, _icon_s, 0, c_white, 1);
+    }
     ph_scissor_gui(0, _body_top, PH_W, _body_bot - _body_top);
 
     // ── Title + subtitle ────────────────────────────────────
@@ -312,22 +320,20 @@ for (var _i = 0; _i < array_length(cards); _i++) {
 
     var _btype = variable_struct_exists(_card, "btn_type") ? _card.btn_type : "play";
 
-    if (_is_solved && (_card.name == "ANYGRAM" || _card.name == "SUDOKU" || _card.name == "WORD WAVE")) {
+    if (_is_solved && (_card.name == "ANYGRAM" || _card.name == "SUDOKU" || _card.name == "WORD WAVE" || _card.name == "SHIKAKU")) {
         // Stopwatch + finish time — translucent pill matching the "COMING SOON"
         // style (white @ 30% alpha) so the underlying card colour shows through.
         // Stopwatch icon is sized slightly larger than the time text per design ref.
         var _time_prefix = "anygram_time_";
         if (_card.name == "SUDOKU")    _time_prefix = "sudoku_time_";
         if (_card.name == "WORD WAVE") _time_prefix = "wordwave_time_";
+        if (_card.name == "SHIKAKU")   _time_prefix = "shikaku_time_";
         var _time_key = _time_prefix + _sel;
         var _ag_time  = variable_struct_exists(_save, _time_key)
                         ? _save[$ _time_key] : "--:--";
         var _btn_hw = 140;
-        draw_set_alpha(0.30);
-        ph_draw_rounded(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                        _btn_right,            _btn_cy+_btn_hh,
-                        _btn_hh, PH_COL_WHITE);
-        draw_set_alpha(1);
+        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
+                     _btn_right,            _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
         draw_sprite_ext(global.spr_stopwatch, 0,
                         _btn_right-_btn_hw*2+50, _btn_cy,
                         72/512, 72/512, 0, c_white, 1);
@@ -336,21 +342,15 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     } else if (_is_solved) {
         // Solved badge for non-Anygram puzzles — translucent pill + check sprite.
         var _btn_hw = 120;
-        draw_set_alpha(0.30);
-        ph_draw_rounded(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                        _btn_right,           _btn_cy+_btn_hh,
-                        _btn_hh, PH_COL_WHITE);
-        draw_set_alpha(1);
+        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
+                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
         ph_draw_icon(global.spr_icon_check, _btn_right-_btn_hw*2+44, _btn_cy, 0.12, c_white);
         ph_draw_text(_btn_right-_btn_hw*2+82, _btn_cy, "SOLVED",
                      global.fnt_body_sm, PH_COL_WHITE, fa_left, fa_middle);
     } else if (_btype == "time_trophy") {
         var _btn_hw = 120;
-        draw_set_alpha(0.20);
-        ph_draw_rounded(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                        _btn_right,           _btn_cy+_btn_hh,
-                        _btn_hh, PH_COL_WHITE);
-        draw_set_alpha(1);
+        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
+                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.20);
         draw_sprite_ext(global.spr_trophy3d, 0,
                         _btn_right-_btn_hw*2+46, _btn_cy,
                         52/512, 52/512, 0, c_white, 1);
@@ -359,28 +359,25 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     } else if (_btype == "locked") {
         // Wider pill so "COMING SOON" fits without clipping.
         var _btn_hw = 155;
-        draw_set_alpha(0.20);
-        ph_draw_rounded(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                        _btn_right,           _btn_cy+_btn_hh,
-                        _btn_hh, PH_COL_WHITE);
-        draw_set_alpha(1);
-        ph_draw_icon(global.spr_icon_lock, _btn_right-_btn_hw*2+40, _btn_cy, 0.26, c_white);
+        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
+                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.20);
+        // Use the 3D lock sprite (icon_lock3d.png) — the flat spr_icon_lock.png
+        // asset does not exist, so referencing it returned sprite -1 and crashed
+        // the Draw event. Matches the colour-3D badge style used by time_trophy.
+        draw_sprite_ext(global.spr_lock3d, 0, _btn_right-_btn_hw*2+40, _btn_cy,
+                        52/512, 52/512, 0, c_white, 1);
         ph_draw_text(_btn_right-_btn_hw*2+74, _btn_cy, "COMING SOON",
                      global.fnt_body_xs, PH_COL_WHITE, fa_left, fa_middle);
     } else if (_btype == "play_translucent") {
         var _btn_hw = 90;
-        draw_set_alpha(0.30);
-        ph_draw_rounded(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                        _btn_right,           _btn_cy+_btn_hh,
-                        _btn_hh, PH_COL_WHITE);
-        draw_set_alpha(1);
+        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
+                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
         ph_draw_text(_btn_right-_btn_hw, _btn_cy, "PLAY",
                      global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
     } else if (_btype == "play_light") {
         var _btn_hw = 90;
-        ph_draw_rounded(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                        _btn_right,           _btn_cy+_btn_hh,
-                        _btn_hh, make_color_rgb(255, 245, 200));
+        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
+                     _btn_right,           _btn_cy+_btn_hh, make_color_rgb(255, 245, 200), 1);
         ph_draw_text(_btn_right-_btn_hw, _btn_cy, "PLAY",
                      global.fnt_body_sm, _card.text_col, fa_center, fa_middle);
     } else {
