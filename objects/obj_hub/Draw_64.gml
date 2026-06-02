@@ -8,9 +8,17 @@ var _cal_h    = lerp(LAYOUT.calbar_h, LAYOUT.calexpand_h, cal_anim_t);
 // When the calendar opens the 7-day strip is faded out, so the strip slot
 // shrinks too — this pulls the progress tube, "TODAY'S GAMES" header, and the
 // card list up close to the calendar grid instead of leaving an empty band.
-// Keep this in sync with Step_0 (the tap handler computes _body_top the same way).
 var _eff_strip_h = LAYOUT.strip_h * lerp(1.0, 0.50, cal_anim_t);
-var _body_top    = LAYOUT.calbar_y + _cal_h + _eff_strip_h + LAYOUT.section_h;
+
+// _post_cal = y where content below the calendar (TODAY'S GAMES header + cards)
+// begins. Closed: just below the 7-day strip slot. Open: just below the last
+// date row of the month grid — the strip is faded out and the progress tube is
+// hidden, so we no longer reserve their height and the header/cards sit close to
+// the numbers. Blended by cal_anim_t and kept in sync with Step_0.
+var _grid_rows   = ceil(array_length(month_days) / 7);
+var _grid_bottom = LAYOUT.calbar_y + LAYOUT.calbar_h + LAYOUT.cal_grid_off + _grid_rows * LAYOUT.cal_cell_h;
+var _post_cal    = lerp(LAYOUT.calbar_y + _cal_h + _eff_strip_h, _grid_bottom + 40, cal_anim_t);
+var _body_top    = _post_cal + LAYOUT.section_h;
 var _body_bot    = PH_H - LAYOUT.nav_h;
 
 // ═══════════════════════════════════════════════════════════
@@ -70,17 +78,23 @@ ph_draw_text(_plus_cx, _crow_cy-2, "+", global.fnt_disp_xs, PH_COL_WHITE, fa_cen
 ph_draw_text(_plus_cx - 32, _crow_cy, ph_format_int_thousands(_coins),
              global.fnt_num_md, PH_COL_DARK, fa_right, fa_middle);
 
+// — Game title — centred between the LVL and coin pills at the top of the hub.
+ph_draw_text(PH_W/2, _crow_cy, "PUZZLE HUB",
+             global.fnt_disp_md, PH_COL_PINK, fa_center, fa_middle);
+
 // ═══════════════════════════════════════════════════════════
 // 3. CALENDAR BAR  (tappable — expands to month grid)
 // ═══════════════════════════════════════════════════════════
 var _cal_y1  = LAYOUT.calbar_y;
 var _cal_cy  = _cal_y1 + LAYOUT.calbar_h/2;
 
-// Large teal background covering calendar, week view, progress bar AND the
-// 3D gift/trophy icons that hang off the progress tube. Formula tracks the
-// effective progress-tube y (≈ 0.82 × _eff_strip_h) plus the trophy hang (~78)
-// and ~10px of padding, so it stays correct in both the closed and open states.
-var _teal_bottom = _cal_y1 + _cal_h + _eff_strip_h * 0.82 + 88;
+// Large teal background. Two states, blended by cal_anim_t:
+//  • Closed — must cover the week strip, progress tube and the 3D gift/trophy
+//    icons that hang off it (≈ 0.82 × _eff_strip_h + ~88 trophy hang).
+//  • Open — the progress tube is hidden, so the teal only needs to reach just
+//    below the last row of date numbers (the grid sits ~28px inside _cal_h),
+//    leaving a clear gap above the "TODAY'S GAMES" title.
+var _teal_bottom = lerp(_cal_y1 + _cal_h + _eff_strip_h * 0.82 + 88, _grid_bottom + 16, cal_anim_t);
 
 // The Month Banner block (slightly darker light-teal)
 draw_set_color(PH_COL_TEAL_SOFT);
@@ -126,12 +140,13 @@ if (cal_anim_t > 0.05) {
         var _is_today_m = (_mday.key == today_key);
         var _solved_m   = ph_solved_count_on(_save, _mday.key);
 
-        // Only draw a background pill for days that have state (selected /
-        // today / solved). Plain days show just the number on the teal band.
+        // Only draw a background box for days that have state (selected / today
+        // / solved). Plain days show just the number on the teal band. Selected
+        // and today use the pink / yellow box sprites; solved keeps the teal pill.
         if (_is_sel_m) {
-            ph_draw_rounded(_mcx-26, _mcy-24, _mcx+26, _mcy+24, 12, PH_COL_PINK);
+            draw_sprite_ext(global.spr_cal_day_sel, 0, _mcx, _mcy, 56/106, 52/107, 0, c_white, 1);
         } else if (_is_today_m) {
-            ph_draw_rounded(_mcx-26, _mcy-24, _mcx+26, _mcy+24, 12, PH_COL_YELLOW);
+            draw_sprite_ext(global.spr_cal_day_today, 0, _mcx, _mcy, 56/106, 52/107, 0, c_white, 1);
         } else if (_solved_m > 0) {
             ph_draw_rounded(_mcx-26, _mcy-24, _mcx+26, _mcy+24, 12, PH_COL_TEAL);
         }
@@ -164,84 +179,73 @@ if (_strip_alpha > 0.02) {
         var _dtc = (_is_sel || _is_today) ? PH_COL_DARK : PH_COL_GRAY;
         ph_draw_text(_scx, _scy - 44, DOW_LABELS[_sd.dow], global.fnt_body_xs, _dtc, fa_center, fa_middle);
 
-        // Selected/Today highlight (solid yellow circle behind number)
+        // Selected/Today highlight — yellow circle sprite behind the number.
         if (_is_sel || _is_today) {
-            draw_set_color(PH_COL_YELLOW);
-            draw_circle(_scx, _scy + 18, 40, false);
+            draw_sprite_ext(global.spr_today_circle, 0, _scx, _scy + 18,
+                            80/124, 80/124, 0, c_white, _strip_alpha);
         }
 
         // Number text (always dark)
         ph_draw_text(_scx, _scy + 18, _sd.label, global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
 
-        // Solved badge (pink circle + check sprite) at bottom right.
-        // The check icon is white-on-transparent — keep it small enough that the
-        // strokes stay inside the pink circle (or the white would bleed onto the
-        // cream background and disappear).
+        // Solved badge at bottom right — full-colour icon_check sprite (pink disc
+        // with a white tick baked in), drawn at ~40px with no tint.
         if (_solved) {
             var _badge_cx = _scx + 24;
             var _badge_cy = _scy + 44;
-            var _badge_r  = 18;
-            draw_set_color(PH_COL_PINK);
-            draw_circle(_badge_cx, _badge_cy, _badge_r, false);
-            ph_draw_icon(global.spr_icon_check, _badge_cx, _badge_cy, 0.10, c_white);
+            draw_sprite_ext(global.spr_check_badge, 0, _badge_cx, _badge_cy,
+                            40/38, 40/38, 0, c_white, _strip_alpha);
         }
     }
     draw_set_alpha(1);
 }
 
 // ── Progress tube ─────────────────────────────────────────────────────────────
-var _ptube_top    = _strip_top + _eff_strip_h * 0.82;
+// Hidden while the calendar is open — the expanded month grid is allowed to
+// cover this band. Fades out together with the 7-day strip (_strip_alpha).
 var _solved_today = ph_solved_count_on(_save, _sel);
-var _prog         = _solved_today / PH_PUZZLES_PER_DAY;
 
-// Tube bounds — leave right gap for trophy icon
-var _tx1 = LAYOUT.card_pad_x;
-var _tx2 = PH_W - LAYOUT.card_pad_x - 96;  // gap for trophy
-var _ty1 = _ptube_top;
-var _ty2 = _ptube_top + 46;
-var _tr  = 23;
+if (_strip_alpha > 0.02) {
+    var _ptube_top = _strip_top + _eff_strip_h * 0.82;
 
-// Track (beige/dark when not completed)
-ph_draw_rounded(_tx1, _ty1, _tx2, _ty2, _tr, PH_COL_TILE_DARK);
+    // Tube bounds — leave right gap for trophy icon
+    var _tx1 = LAYOUT.card_pad_x;
+    var _tx2 = PH_W - LAYOUT.card_pad_x - 96;  // gap for trophy
+    var _ty1 = _ptube_top;
+    var _ty2 = _ptube_top + 46;
 
-// Purple fill (when completed)
-if (_prog > 0) {
-    ph_draw_rounded(_tx1, _ty1,
-                    max(_tx1 + _tr*2, _tx1 + (_tx2-_tx1)*_prog),
-                    _ty2, _tr, PH_COL_PURPLE);
+    // Segmented bar built from the progress_bar_* sprites: one cell per daily
+    // puzzle, the first _solved_today cells purple (filled), the rest grey.
+    ph_draw_progress_segments(_tx1, _tx2, (_ty1+_ty2)/2, _ty2-_ty1,
+                              PH_PUZZLES_PER_DAY, _solved_today, _strip_alpha);
+
+    // Gift box icon at milestone — sits directly over the thick bar, between 4th and 5th
+    var _tube_cy = (_ty1+_ty2)/2;
+    var _gift_x  = _tx1 + (_tx2-_tx1)*(4/PH_PUZZLES_PER_DAY);
+    var _gift_s  = 110 / 512;
+    draw_sprite_ext(global.spr_gift, 0, _gift_x, _tube_cy, _gift_s, _gift_s, 0, c_white, _strip_alpha);
+
+    // Trophy icon — right end of tube
+    var _trophy_cx = _tx2 + 56;
+    var _trophy_s  = 100 / 512;
+    draw_sprite_ext(global.spr_trophy3d, 0, _trophy_cx, _tube_cy + 8, _trophy_s, _trophy_s, 0, c_white, _strip_alpha);
+
+    // "4/10" counter — top-right above trophy
+    draw_set_alpha(_strip_alpha);
+    ph_draw_text(_trophy_cx, _ty1 - 8,
+                 string(_solved_today) + "/" + string(PH_PUZZLES_PER_DAY),
+                 global.fnt_body_sm, PH_COL_DARK, fa_center, fa_bottom);
+    draw_set_alpha(1);
 }
-
-// Tick dividers (segments the bar)
-for (var _ti = 1; _ti < PH_PUZZLES_PER_DAY; _ti++) {
-    var _tick_x = _tx1 + (_tx2-_tx1)*(_ti/PH_PUZZLES_PER_DAY);
-    draw_set_color(PH_COL_BG);
-    draw_line_width(_tick_x, _ty1, _tick_x, _ty2, 4);
-}
-
-// Gift box icon at milestone — sits directly over the thick bar, between 4th and 5th
-var _tube_cy = (_ty1+_ty2)/2;
-var _gift_x  = _tx1 + (_tx2-_tx1)*(4/PH_PUZZLES_PER_DAY);
-var _gift_s  = 110 / 512;
-draw_sprite_ext(global.spr_gift, 0, _gift_x, _tube_cy, _gift_s, _gift_s, 0, c_white, 1);
-
-// Trophy icon — right end of tube
-var _trophy_cx = _tx2 + 56;
-var _trophy_s  = 100 / 512;
-draw_sprite_ext(global.spr_trophy3d, 0, _trophy_cx, _tube_cy + 8, _trophy_s, _trophy_s, 0, c_white, 1);
-
-// "4/10" counter — top-right above trophy
-ph_draw_text(_trophy_cx, _ty1 - 8,
-             string(_solved_today) + "/" + string(PH_PUZZLES_PER_DAY),
-             global.fnt_body_sm, PH_COL_DARK, fa_center, fa_bottom);
 
 // ═══════════════════════════════════════════════════════════
 // 5. SECTION HEADER — "TODAY'S GAMES"
 // ═══════════════════════════════════════════════════════════
-// Title sits in the lower 70% of the section so it visually separates from
-// the progress-tube band above. Anchored to _eff_strip_h so the header pulls
-// up when the calendar is open.
-var _sec_top = _strip_top + _eff_strip_h;
-var _sec_cy  = _sec_top + LAYOUT.section_h * 0.70;
+// Title is anchored to _post_cal. Closed it sits in the lower 70% of the section
+// so it clears the progress-tube band above; open it rides higher (40%) so it
+// tucks just under the month grid.
+var _sec_off = lerp(LAYOUT.section_h * 0.70, LAYOUT.section_h * 0.40, cal_anim_t);
+var _sec_cy  = _post_cal + _sec_off;
 ph_draw_text(LAYOUT.card_pad_x, _sec_cy,
              "TODAY'S GAMES", global.fnt_disp_sm, PH_COL_DARK, fa_left, fa_middle);
 
@@ -307,10 +311,12 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     ph_scissor_gui(0, _body_top, PH_W, _body_bot - _body_top);
 
     // ── Title + subtitle ────────────────────────────────────
+    // Both lines are black @ 60% opacity for consistent contrast on every card
+    // colour. Title fnt_disp_md (44px), subtitle fnt_body_sm (28px).
     var _tx = _icon_cx + _icon_sz/2 + 22;
-    ph_draw_text(_tx, _ccy - 26, _card.name,     global.fnt_disp_sm, _card.text_col, fa_left, fa_middle);
-    draw_set_alpha(0.7);
-    ph_draw_text(_tx, _ccy + 28, _card.subtitle, global.fnt_body_xs, _card.text_col, fa_left, fa_middle);
+    draw_set_alpha(0.6);
+    ph_draw_text(_tx, _ccy - 26, _card.name,     global.fnt_disp_md, c_black, fa_left, fa_middle);
+    ph_draw_text(_tx, _ccy + 28, _card.subtitle, global.fnt_body_sm, c_black, fa_left, fa_middle);
     draw_set_alpha(1);
 
     // ── Right badge ─────────────────────────────────────────

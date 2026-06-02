@@ -17,7 +17,12 @@ cal_anim_t = lerp(cal_anim_t, _cal_target, 0.18);
 // is being rendered.
 var _cal_h        = lerp(LAYOUT.calbar_h, LAYOUT.calexpand_h, cal_anim_t);
 var _eff_strip_h  = LAYOUT.strip_h * lerp(1.0, 0.50, cal_anim_t);
-var _body_top     = LAYOUT.calbar_y + _cal_h + _eff_strip_h + LAYOUT.section_h;
+// _post_cal must match Draw_64 §0 exactly so card tap targets line up with what
+// is rendered (closed: below the strip slot; open: just below the month grid).
+var _grid_rows    = ceil(array_length(month_days) / 7);
+var _grid_bottom  = LAYOUT.calbar_y + LAYOUT.calbar_h + LAYOUT.cal_grid_off + _grid_rows * LAYOUT.cal_cell_h;
+var _post_cal     = lerp(LAYOUT.calbar_y + _cal_h + _eff_strip_h, _grid_bottom + 40, cal_anim_t);
+var _body_top     = _post_cal + LAYOUT.section_h;
 var _body_bot     = PH_H - LAYOUT.nav_h;
 var _view_h       = _body_bot - _body_top;
 var _total_h      = array_length(cards) * (LAYOUT.card_h + LAYOUT.card_gap) - LAYOUT.card_gap;

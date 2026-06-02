@@ -112,5 +112,25 @@ global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);
 global.spr_pill       = sprite_add(_d + "Pill.png",       1, false, false, 0, 0);
 global.spr_bg_pattern = sprite_add(_d + "BG Pattern.png", 1, false, false, 0, 0);
 
+// ── Hub date badge + progress-bar art ─────────────────────────────────────────
+// today_circle.png — solid yellow circle behind the "today/selected" date number
+//                    in the 7-day strip (124×124, origin centred).
+// icon_check.png    — full-colour solved badge (pink disc + white tick baked in),
+//                     so it is drawn directly with c_white (no tint) (38×38, centred).
+global.spr_today_circle = sprite_add(_d + "today_circle.png", 1, false, false, 62, 62);
+global.spr_check_badge  = sprite_add(_d + "icon_check.png",   1, false, false, 19, 19);
+// Progress-bar segments (195×90). Origin x=0 / y=45 (left edge, vertically
+// centred) so the bar tiles left-to-right with simple per-cell math. There is no
+// dedicated grey_left cap; ph_draw_progress_segments mirrors grey_right for it.
+global.spr_pb_purple_left   = sprite_add(_d + "progress_bar_purple_left.png",   1, false, false, 0, 45);
+global.spr_pb_purple_center = sprite_add(_d + "progress_bar_purple_center.png", 1, false, false, 0, 45);
+global.spr_pb_purple_right  = sprite_add(_d + "progress_bar_purple_right.png",  1, false, false, 0, 45);
+global.spr_pb_grey_center   = sprite_add(_d + "progress_bar_grey_center.png",   1, false, false, 0, 45);
+global.spr_pb_grey_right    = sprite_add(_d + "progress_bar_grey_right.png",    1, false, false, 0, 45);
+// Expanded month-grid day boxes (106×107, origin centred): pink box marks the
+// selected day, yellow box marks today.
+global.spr_cal_day_sel   = sprite_add(_d + "calendar_day_bg_box_purple.png", 1, false, false, 53, 54);
+global.spr_cal_day_today = sprite_add(_d + "calendar_day_bg_box_yellow.png", 1, false, false, 53, 54);
+
 // ── Characters (origin centred) ───────────────────────────────────────────────
 global.spr_blinky = sprite_add(_d + "char_blinky.png", 1, false, false, 332, 350);

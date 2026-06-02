@@ -89,6 +89,44 @@ function ph_draw_icon(_spr, _x, _y, _scale, _col) {
     draw_sprite_ext(_spr, 0, _x, _y, _scale, _scale, 0, _col, 1);
 }
 
+/// Segmented progress bar built from the progress_bar_* sprites.
+/// Draws _total cells evenly across [_x1.._x2], vertically centred on _cy at
+/// height _h. The first _filled cells are purple, the rest grey. The two end
+/// cells use the rounded cap sprites; internal cells use the flat centre
+/// sprites. There is no grey_left.png asset, so an unfilled left cap is produced
+/// by mirroring the grey right cap (negative x-scale). Segment sprites are loaded
+/// with origin x=0, y=45 so each cell anchors at its own left edge.
+function ph_draw_progress_segments(_x1, _x2, _cy, _h, _total, _filled, _alpha) {
+    if (_alpha == undefined) _alpha = 1;
+    var _seg_src_w = 195;
+    var _seg_src_h = 90;
+    var _cell_w = (_x2 - _x1) / _total;
+    var _sx     = _cell_w / _seg_src_w;
+    var _sy     = _h / _seg_src_h;
+    for (var _i = 0; _i < _total; _i++) {
+        var _cx_left   = _x1 + _i * _cell_w;
+        var _is_filled = (_i < _filled);
+        if (_i == 0) {
+            // Left cap. Purple cap when filled; otherwise mirror the grey right
+            // cap into a left cap by anchoring at the cell's right edge and
+            // drawing with a negative x-scale.
+            if (_is_filled) {
+                draw_sprite_ext(global.spr_pb_purple_left, 0, _cx_left, _cy, _sx, _sy, 0, c_white, _alpha);
+            } else {
+                draw_sprite_ext(global.spr_pb_grey_right, 0, _cx_left + _cell_w, _cy, -_sx, _sy, 0, c_white, _alpha);
+            }
+        } else if (_i == _total - 1) {
+            // Right cap.
+            var _spr_r = _is_filled ? global.spr_pb_purple_right : global.spr_pb_grey_right;
+            draw_sprite_ext(_spr_r, 0, _cx_left, _cy, _sx, _sy, 0, c_white, _alpha);
+        } else {
+            // Flat interior cell.
+            var _spr_c = _is_filled ? global.spr_pb_purple_center : global.spr_pb_grey_center;
+            draw_sprite_ext(_spr_c, 0, _cx_left, _cy, _sx, _sy, 0, c_white, _alpha);
+        }
+    }
+}
+
 // ── Easing ────────────────────────────────────────────────────────────────────
 function ph_ease_out(_t)  { return 1 - (1-_t)*(1-_t); }
 function ph_ease_back(_t) {

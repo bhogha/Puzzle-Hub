@@ -15,7 +15,10 @@ var _sprites = [
     "spr_lock3d", "spr_position", "spr_puzzle", "spr_shop3d", "spr_star3d", "spr_stopwatch",
     "spr_trophy3d", "spr_boxing_glove", "spr_card_yellow", "spr_card_purple", "spr_card_teal",
     "spr_card_orange", "spr_game_anygram", "spr_game_sudoku", "spr_game_wordwave", "spr_game_mixup",
-    "spr_tile", "spr_blinky"
+    "spr_tile", "spr_blinky",
+    "spr_today_circle", "spr_check_badge", "spr_pb_purple_left", "spr_pb_purple_center",
+    "spr_pb_purple_right", "spr_pb_grey_center", "spr_pb_grey_right",
+    "spr_cal_day_sel", "spr_cal_day_today"
 ];
 for (var _i = 0; _i < array_length(_sprites); _i++) {
     var _name = _sprites[_i];

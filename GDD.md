@@ -290,6 +290,23 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ## 7. Recent code changes (2026-06-02)
 
+**Hub-screen art pass — date badges, segmented progress bar, title.**
+
+Four custom assets in `datafiles/icons/` replace primitive-drawn hub elements:
+
+- `today_circle.png` (124×124, solid yellow disc) — background behind the "today/selected" date number in the 7-day strip. Replaces the `draw_circle` call. `global.spr_today_circle`, origin centred.
+- `icon_check.png` (38×38, pink disc + white tick baked in) — the solved-day badge in the 7-day strip. Replaces the old "pink `draw_circle` + white `spr_icon_check`" pair, so it is drawn full-colour (no tint). `global.spr_check_badge`, origin centred. *(The card-list "SOLVED" pill still uses the white `spr_icon_check`; only the strip badge changed.)*
+- `progress_bar_*` segment set (195×90 each): `purple_left`, `purple_center`, `purple_right`, `grey_center`, `grey_right`. Loaded with origin x=0/y=45 for left-to-right tiling. There is **no** `grey_left.png`; the unfilled left cap is produced by mirroring `grey_right` (negative x-scale).
+- The hub progress tube (track + purple fill + tick dividers) is now `ph_draw_progress_segments(x1,x2,cy,h,total,filled)` in `scr_draw` — one cell per daily puzzle, first `solved_today` cells purple, rest grey, rounded end caps. Gift (at 4/10) and trophy markers are unchanged.
+- **Game title:** "PUZZLE HUB" is drawn centred (pink, `fnt_disp_md`) between the LVL and coin pills at the top of the hub (`obj_hub/Draw_64`).
+- **Progress bar hidden when calendar is open:** the whole progress-tube band (segments, gift, trophy, X/10 counter) now draws only while `_strip_alpha > 0.02` and fades out with the 7-day strip as the month grid expands. The expanded calendar is allowed to cover that band. `ph_draw_progress_segments` gained an optional `_alpha` argument for the fade.
+- **Expanded month-grid day boxes:** the selected and today highlights in the open calendar now use box sprites — `calendar_day_bg_box_purple.png` (renders pink) for the selected day and `calendar_day_bg_box_yellow.png` for today (both 106×107, origin centred, `global.spr_cal_day_sel` / `spr_cal_day_today`). Solved days keep the teal rounded pill.
+- **Open-calendar layout reflow:** since the progress tube no longer shows when the calendar is open, the post-calendar content is now anchored to the actual month-grid bottom (`_grid_rows = ceil(len(month_days)/7)`), blended by `cal_anim_t`. The teal background ends at `_grid_bottom + 16` (just under the last date row), and `_post_cal` drives the "TODAY'S GAMES" header (which rides higher — 40% of the section band when open vs 70% closed) and the card-list `_body_top`. Closed-state values are mathematically unchanged. `_body_top` is computed identically in `Draw_64` and `Step_0` so card tap targets stay aligned.
+- **Game-tile text restyle:** card titles and subtitles are now black at 60% opacity (instead of a darkened shade of each card colour), with a larger title (`fnt_disp_md`, 44px) and subtitle (`fnt_body_sm`, 28px). Spacing unchanged. The `text_col` card field is retained — it still colours the PLAY-button label.
+- `obj_persistent/Create_0` loads the nine new sprites; `CleanUp_0` frees them.
+
+---
+
 **Custom UI background art — Pill chips + tiled background pattern.**
 
 Two new art assets replace the previous primitive-drawn UI backgrounds:
