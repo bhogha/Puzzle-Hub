@@ -8,7 +8,7 @@ _Internal reference map of the codebase, written to make future work faster. Not
 
 ## 1. What this is
 
-GameMaker (IDE `2024.14.4.222`, runtime `2024.14.4.268`) mobile daily-puzzle app. Portrait, designed at **1080×1920**. Project file: `Puzzle Hub.yyp` (lives in this folder, which is a sibling of the `Daily Puzzle` reference folder — see auto-memory `project_puzzle_hub_paths`).
+GameMaker (IDE `2026.0.0.16`, runtime `2026.0.0.23` — LTS) mobile daily-puzzle app. Portrait, designed at **1080×1920**. Project file: `Puzzle Hub.yyp` (lives in this folder, which is a sibling of the `Daily Puzzle` reference folder — see auto-memory `project_puzzle_hub_paths`).
 
 Four puzzles implemented — **Anygram**, **Sudoku**, **Word Wave**, **Shikaku** — plus a locked **Mix-Up** placeholder. Economy = XP / Levels / Coins. Full design rules in `GDD.md`.
 

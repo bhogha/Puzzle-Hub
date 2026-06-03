@@ -20,8 +20,8 @@ A "Daily Puzzles" mobile game built with **GameMaker**. Players solve a set of d
 - Travel to previous days via the calendar to play missed puzzles.
 
 ## Built with
-- GameMaker IDE `2024.14.4.222`
-- Runtime `2024.14.4.268`
+- GameMaker IDE `2026.0.0.16`
+- Runtime `2026.0.0.23`
 
 ## Opening the project
 Open `Puzzle Hub.yyp` in GameMaker.
