@@ -204,8 +204,12 @@ ww_check_win = function() {
     }
     ph_wordwave_mark_done(global.save, global.selected_date_key);
 
-    ph_grant_xp(global.save, PH_XP_PER_PUZZLE);
+    // auto_coins=false: level-up coins are deferred to the Level-Up screen (rm_win).
+    var _lvl_res = ph_grant_xp(global.save, PH_XP_PER_PUZZLE, false);
     xp_gained = PH_XP_PER_PUZZLE;
+    if (_lvl_res.levels_gained > 0) {
+        global.pending_levelup = { level: _lvl_res.new_level, base_reward: PH_COINS_PER_LEVEL };
+    }
 
     var _count = ph_solved_count_on(global.save, global.selected_date_key);
     coins_bonus = 0;
@@ -219,3 +223,35 @@ ww_check_win = function() {
     win_phase = 1;
     confetti_burst_pending = true;
 };
+
+// ── Hint helpers (used by the shared hint modal) ──────────────────────────────
+/// Index of the first unfound word whose start cell isn't already ringed, or -1.
+ww_next_hint_word = function() {
+    for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
+        if (puzzle.words[_wi].found) continue;
+        var _start = puzzle.words[_wi].cells[0];
+        var _key   = string(_start.r) + "," + string(_start.c);
+        if (!variable_struct_exists(hint_cells, _key)) return _wi;
+    }
+    return -1;
+};
+
+/// True if a first-letter hint is still available.
+ww_can_hint = function() {
+    return ww_next_hint_word() >= 0;
+};
+
+/// Ring the first letter of the next eligible unfound word. Returns true on
+/// success. Does NOT touch coins.
+ww_apply_hint = function() {
+    var _wi = ww_next_hint_word();
+    if (_wi < 0) return false;
+    var _s = puzzle.words[_wi].cells[0];
+    hint_cells[$ string(_s.r) + "," + string(_s.c)] = true;
+    cell_flash[_s.r * GRID_N + _s.c] = 12;
+    ph_save_write(global.save);
+    return true;
+};
+
+// Shared hint-flow controller (modal + placeholder video). Teal accent.
+hint = ph_hint_create(ww_apply_hint, PH_COL_TEAL);

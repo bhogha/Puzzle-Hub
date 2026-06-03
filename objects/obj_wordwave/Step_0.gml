@@ -92,6 +92,9 @@ if (is_array(global.fly_tiles)) {
 }
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
+// Advance the shared hint-flow timers (modal slide / "-100" / video).
+ph_hint_tick(hint);
+
 // ── Win-screen input (precedence over everything else) ────────────────────────
 if (win_phase == 1) {
     if (device_mouse_check_button_pressed(0, mb_left)) {
@@ -99,7 +102,8 @@ if (win_phase == 1) {
         var _my = device_mouse_y_to_gui(0);
         if (win_btn_back_y > 0
             && ph_point_in_rect(_mx,_my, 80, win_btn_back_y, PH_W-80, win_btn_back_y+90)) {
-            room_goto(rm_hub);
+            // A pending level-up shows the reward screen (rm_win) before the hub.
+            room_goto(ph_levelup_pending() ? rm_win : rm_hub);
         }
     }
     exit;
@@ -127,6 +131,20 @@ if (current_time < global.input_locked_until) exit;
 var _mx = device_mouse_x_to_gui(0);
 var _my = device_mouse_y_to_gui(0);
 
+// Hint overlay (modal + placeholder video) eats taps while open.
+var _hr = ph_hint_input(hint);
+if (_hr != "none") {
+    if (_hr == "paid") {
+        toast_text = "HINT  •  -" + string(PH_HINT_COST) + " COINS";
+        toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
+    } else if (_hr == "freed") {
+        toast_text = "HINT REVEALED"; toast_col = PH_COL_TEAL; toast_timer = TOAST_DUR;
+    } else if (_hr == "poor") {
+        toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
+    }
+    exit;
+}
+
 // Toolbar / back-button taps (only on a fresh press, before grid swipe logic).
 if (device_mouse_check_button_pressed(0, mb_left)) {
     // Back arrow
@@ -143,31 +161,15 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
         }
         if (_have_any) { bonus_modal_open = true; exit; }
     }
-    // Hint pill
+    // Hint pill — opens the shared hint modal (pay coins OR watch a placeholder
+    // rewarded video).
     if (ph_point_in_rect(_mx,_my, HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B)) {
         if (ph_wordwave_all_solved(puzzle)) {
             toast_text = "PUZZLE COMPLETE"; toast_col = PH_COL_GRAY; toast_timer = TOAST_DUR;
+        } else if (!ww_can_hint()) {
+            toast_text = "NO HINTS AVAILABLE"; toast_col = PH_COL_GRAY; toast_timer = TOAST_DUR;
         } else {
-            // Find an unfound word whose first letter isn't already hinted.
-            var _hint_wi = -1;
-            for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
-                if (puzzle.words[_wi].found) continue;
-                var _start = puzzle.words[_wi].cells[0];
-                var _key   = string(_start.r) + "," + string(_start.c);
-                if (!variable_struct_exists(hint_cells, _key)) { _hint_wi = _wi; break; }
-            }
-            if (_hint_wi < 0) {
-                toast_text = "NO HINTS AVAILABLE"; toast_col = PH_COL_GRAY; toast_timer = TOAST_DUR;
-            } else if (ph_spend_coins(global.save, PH_HINT_COST)) {
-                var _s = puzzle.words[_hint_wi].cells[0];
-                hint_cells[$ string(_s.r) + "," + string(_s.c)] = true;
-                cell_flash[_s.r * GRID_N + _s.c] = 12;
-                ph_save_write(global.save);
-                toast_text = "HINT  •  -" + string(PH_HINT_COST) + " COINS";
-                toast_col  = PH_COL_YELLOW; toast_timer = TOAST_DUR;
-            } else {
-                toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
-            }
+            ph_hint_open(hint);
         }
         exit;
     }

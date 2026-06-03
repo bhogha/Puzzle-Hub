@@ -37,7 +37,9 @@ Level is derived from total XP: `level = floor(xp / 500) + 1`. So:
 - 1000–1499 XP → Level 3
 - …
 
-Each level-up grants **100 coins** (`PH_COINS_PER_LEVEL`). A single XP grant can cross multiple level thresholds; the reward scales accordingly (`levels_gained × 100`).
+Each level-up grants **100 coins** (`PH_COINS_PER_LEVEL`), but these coins are no longer added silently — they are awarded through the **Level-Up reward screen** (§2.6), where the player can choose to **double** them to 200 by watching a placeholder rewarded video. Because each puzzle grants exactly 100 XP and a level is 500 XP, at most one level-up can occur per puzzle, so the reward screen always concerns a single level.
+
+At puzzle completion `ph_grant_xp(save, 100, /*auto_coins*/ false)` adds the XP but **defers** the level-up coins; if `levels_gained > 0` it sets `global.pending_levelup = { level, base_reward:100 }` for the reward screen to consume.
 
 ### 2.3 Coins
 
@@ -62,6 +64,39 @@ The "gift box" reward fires once per calendar day when the player crosses the 4-
 `save.streak` is the count of consecutive calendar days (ending at today or yesterday) on which **at least one puzzle was solved**. It is recomputed on save load and after every Anygram completion (`ph_update_streak`).
 
 If the player did not solve a puzzle today but did solve one yesterday, the streak still counts (it just doesn't grow until they solve today's). If neither today nor yesterday has any solve, the streak resets to 0.
+
+### 2.5 Hint acquisition flow (modal + rewarded video)
+
+This flow is shared by **all four playable puzzles** (Anygram, Sudoku, Word Wave, Shikaku) via one helper script, `scr_hint` (see implementation note below).
+
+Hints are no longer a single-tap coin spend. Tapping the HINT pill opens a **slide-up bottom-sheet modal** that offers two ways to pay for the same reveal:
+
+1. **Pay 100 coins** (`PH_HINT_COST`) — the modal closes, 100 coins are deducted (`ph_spend_coins`), a **"-100" feedback** rises and fades next to the top-HUD coin pill, and the hint is revealed. If the player can't afford it, the modal closes and a "NOT ENOUGH COINS" toast shows instead.
+2. **Watch a free rewarded video** — opens a full-screen dark **placeholder** screen showing "VIDEO PLAYING". After 5 seconds a close **X** appears top-right; tapping it closes the placeholder and reveals the hint with **no coins removed**.
+
+The modal layout (per design reference): large bulb icon up top, the title "Want to use a hint?", and two pill buttons at the bottom — left "100" + coin icon, right "FREE" + retro-TV icon. A pink close-X sits at the sheet's top-right; tapping it (or the dimmed area above the sheet) dismisses the modal with no charge and no reveal.
+
+**Placeholder status.** The dark "VIDEO PLAYING" screen is a stand-in for the ad SDK, used to validate the flow before any rewarded-ad network is integrated. The 5-second delay before the X appears emulates a non-skippable ad. When the SDK lands, only the placeholder screen and its timer are replaced; the modal, coin path, and reveal logic stay as-is.
+
+**Implementation (`scr_hint`).** The whole flow lives in one struct-based helper so the four puzzles share a single source of truth. Each controller creates a flow struct in Create — `hint = ph_hint_create(<apply_method>, <accent>)` — passing a puzzle-specific reveal method (which reveals exactly one hint and does **not** touch coins) and an accent colour for the close-X discs (Anygram pink, Sudoku purple, Word Wave teal, Shikaku blue). The helper's API:
+
+- `ph_hint_open(h)` — open the modal (call after the controller's own availability gate passes).
+- `ph_hint_tick(h)` — advance the slide / "-100" / video timers; called once per Step.
+- `ph_hint_input(h)` — handle taps while an overlay is open; returns `"none"` (nothing open — continue normal input), `"consumed"`, `"paid"`, `"freed"`, or `"poor"`. The coin spend (`ph_spend_coins`), "-100" trigger, reveal (`h.apply()`), and save are all done inside. Controllers `exit` whenever the result isn't `"none"`.
+- `ph_hint_draw_feedback(h)` / `ph_hint_draw_modal(h)` / `ph_hint_draw_video(h)` — draw the "-100" at the coin pill, the slide-up sheet, and the full-screen dark placeholder (drawn last so it covers every layer).
+
+Per puzzle, the reveal + availability methods are: Anygram `ag_apply_hint` / `ag_can_use_hint`; Sudoku `sd_apply_hint` / `sd_can_hint`; Word Wave `ww_apply_hint` / `ww_can_hint`; Shikaku `sk_apply_hint` / `sk_can_hint`. Each controller's HINT-pill handler runs its own "puzzle complete / nothing to reveal" gate (with the puzzle's existing toast wording) and only then calls `ph_hint_open`. The FREE button uses `global.spr_tv` (loaded from `retro tv icon.png` in obj_persistent). The video placeholder shows for `VIDEO_X_DELAY` (300 frames ≈ 5 s) before its close X appears.
+
+### 2.6 Level-Up reward screen
+
+When a puzzle's completion pushes the player past a level boundary, a dedicated **Level-Up screen** appears **after** that puzzle's win card and **before** the hub. It celebrates the new level and lets the player choose how to collect the level-up coins:
+
+- **Take 100 coins** — grants `base_reward` (100, = `PH_COINS_PER_LEVEL`) and returns to the hub.
+- **DOUBLE** — opens the shared placeholder rewarded video (`ph_video_overlay`, the same dark "VIDEO PLAYING" screen as the hint flow). After 5 s a close X appears; tapping it grants `base_reward × 2` (200) and returns to the hub.
+
+There is no decline option — both buttons grant coins. The screen shows a star icon, "LEVEL UP!", a "LEVEL N" badge, a one-shot confetti burst, and the two pill buttons (100 + coin, DOUBLE + TV) on a purple backdrop.
+
+**Flow / state.** At completion, `*_check_win` defers the coins (see §2.2) and sets `global.pending_levelup = { level, base_reward }`. Each puzzle's win-screen BACK button routes via `room_goto(ph_levelup_pending() ? rm_win : rm_hub)`. The screen lives in the repurposed (formerly dead) **`rm_win` / `obj_win`** pair — the in-game win overlay is drawn inside each puzzle controller, so this room/object slot was free. `obj_win` reads `global.pending_levelup` in Create (bouncing straight to the hub if it's somehow empty), grants the chosen amount via `ph_grant_coins` + `ph_save_write`, clears the flag, and `room_goto(rm_hub)`. The reward is granted exactly once (`claimed` guard). Re-opening an already-solved puzzle (review mode) never grants XP, so it never queues a level-up.
 
 ---
 
@@ -98,7 +133,7 @@ If the player did not solve a puzzle today but did solve one yesterday, the stre
 - `neutral` → uses only wheel letters, ≥ 2 chars, not a key word; "NOT A KEY WORD" toast.
 - `bad` → otherwise; "NOT A VALID WORD" toast, swipe trail shakes briefly before clearing.
 
-**Hint.** The bulb button (bottom-right toolbar) costs **100 coins** and reveals one unfilled, non-hint cell. If no such cell exists or the puzzle is already complete, the action is rejected with a toast and no coins are spent.
+**Hint.** The bulb button (bottom-right toolbar) reveals one unfilled, non-hint cell. Tapping it no longer charges coins immediately — it opens the **hint modal** (see §2.5). If no revealable cell exists or the puzzle is already complete, the modal does not open and the action is rejected with a toast and no coins are spent. The actual reveal is performed by `ag_apply_hint()` (find the next unfilled, non-hint cell, mark it `hint`+`filled`, save); `ag_can_use_hint()` is the up-front availability guard.
 
 **Completion.** When *every* main word is solved (`ph_anygram_all_solved`), `ag_check_win` fires:
 - Records elapsed time as `save.anygram_time_<date_key>` (mm:ss).
@@ -151,7 +186,7 @@ Classic 9×9 Sudoku. The board is divided into nine 3×3 boxes; the solved grid 
 - When a row, column, or 3×3 box becomes completely and correctly filled, its cells pulse green (positive feedback).
 - Completing the whole grid stops the timer and shows the win celebration (same confetti / level-up card as Anygram).
 
-**Hint (`PH_HINT_COST` = 100 coins).** Reveals one correct number. If a cell is selected and empty, that cell is revealed; otherwise a random empty cell is chosen. Revealed cells are flagged as hints (gold) and persist in the saved grid.
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`sd_apply_hint`) exposes one correct number: the selected empty cell if any, otherwise a random empty cell. Revealed cells are flagged as hints (gold) and persist in the saved grid. If no empty non-given cell remains, the modal doesn't open ("NO CELLS TO REVEAL").
 
 **Data format.** Loaded from `datafiles/puzzles_sudoku.json` (cached in `global.ph_sudoku_cache`). Each entry:
 
@@ -184,7 +219,7 @@ Indexing is row-major (`index = row*9 + col`). `date` is optional. **Date select
 
 **Highlight colours.** Each hidden word is assigned a distinct strong colour from the hub palette (`PH_COL_PINK`, `TEAL`, `PURPLE`, `ORANGE`, `YELLOW_DEEP`, plus the `_DEEP` variants), cycled by word index. The colour is used for the on-grid capsule, the word's letters (white over the capsule), and its entry in the word list.
 
-**Hint** (`PH_HINT_COST` = 100 coins). Reveals **only the first letter** of an unfound word: its starting cell gets a persistent yellow ring marker (the player still has to trace the rest). The hint targets the first unfound word whose start isn't already ringed. If none qualifies or the puzzle is complete, the action is rejected with a toast and no coins are spent. Hinted cells persist via re-derivation on resume (the rings re-appear because they mark word starts, but only hinted starts are stored in the live `hint_cells` map for the session).
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`ww_apply_hint`) rings **only the first letter** of the first unfound word whose start isn't already ringed (the player still traces the rest). If none qualifies or the puzzle is complete, the modal doesn't open and a toast explains why. Hinted cells persist via re-derivation on resume (the rings re-appear because they mark word starts; only hinted starts are stored in the live `hint_cells` map for the session).
 
 **Completion.** When every hidden word is found (`ph_wordwave_all_solved`), `ww_check_win` fires: records `save.wordwave_time_<date>` (mm:ss), marks each word as `WW_W<i>` and sets the `WORDWAVE` flag in `save.puzzles_solved[date_key]`, grants the single **+100 XP**, triggers the 4th-puzzle gift if applicable, updates streak, and shows the win overlay with the confetti burst.
 
@@ -215,7 +250,7 @@ Indexing is row-major (`index = row*9 + col`). `date` is optional. **Date select
 
 **Interaction.** **Drag corner-to-corner** to draw a rectangle: press a cell, drag to the opposite corner, release to commit. Committing removes any existing rectangles that overlap the new one (so you can redraw freely). **Single-cell tap on an existing rectangle deletes it.** Each drawn rectangle is filled soft (blue) with a coloured border: **teal** when it is correct (contains exactly one number whose value equals its area), **pink** otherwise. The in-progress drag shows a translucent blue preview.
 
-**Hint (`PH_HINT_COST` = 100 coins).** Reveals the *shape* of one number's correct rectangle as a **small rounded glyph in that number's cell corner** — its proportions match the solution's width×height (e.g. 9 → a small 3×3 square glyph; 3 → a small 1×3 bar). The glyph is deliberately smaller than the number and does **not** place the rectangle for the player; it only communicates the orientation/dimensions. The hint targets the first number that isn't already hinted and isn't already correctly enclosed. If none qualify, the action is rejected with a toast and no coins are spent. Revealed hint glyphs persist across resume.
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`sk_apply_hint`) exposes the *shape* of one number's correct rectangle as a **small rounded glyph in that number's cell corner** — its proportions match the solution's width×height (e.g. 9 → a small 3×3 square glyph; 3 → a small 1×3 bar). The glyph is deliberately smaller than the number and does **not** place the rectangle for the player; it only communicates the orientation/dimensions. It targets the first number that isn't already hinted and isn't already correctly enclosed. If none qualify, the modal doesn't open ("NO HINTS LEFT"). Revealed hint glyphs persist across resume.
 
 **Completion.** When the player's rectangles form a complete valid partition (`ph_shikaku_check_solution`), the controller records `save.shikaku_time_<date>` (mm:ss), sets the `SHIKAKU` flag in `save.puzzles_solved[date_key]`, grants the single +100 XP, triggers the 4th-puzzle gift if applicable, updates streak, and shows the win overlay with the confetti burst.
 

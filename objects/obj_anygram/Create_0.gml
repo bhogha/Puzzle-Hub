@@ -73,23 +73,29 @@ shake_t        = 0;       // frames remaining
 shake_offset_x = 0;
 SHAKE_DUR      = 16;
 
-// Bonus modal
+// Bonus modal + BONUS chest+pill button (bottom-left). Pill bounds are
+// re-written every frame by Draw so layout & input agree; defaults here avoid
+// an undefined read on the first Step.
 bonus_modal_open = false;
-BONUS_ICON_X     = 100;        // toolbar left position (matches existing chest)
-BONUS_ICON_Y     = PH_H - 120 - global.safe_bottom_gui;
+BONUS_ICON_X     = 77;         // chest centre inside the pill (fly-tile target)
+BONUS_ICON_Y     = PH_H - 110 - global.safe_bottom_gui;
 BONUS_ICON_R     = 60;
+BONUS_PILL_L     = 50;
+BONUS_PILL_R     = 340;
+BONUS_PILL_T     = PH_H - 143 - global.safe_bottom_gui;
+BONUS_PILL_B     = PH_H - 77  - global.safe_bottom_gui;
 // Coin balance target (re-written every frame by Draw to point at the HUD pill
 // in the top-right, so the coin-fly arc lands on the moving pulse target).
-COIN_BAL_X       = PH_W - 165;
-COIN_BAL_Y       = 165;
+COIN_BAL_X       = PH_W - 160;
+COIN_BAL_Y       = 95 + global.safe_top_gui;
 coin_pulse_t     = 1.0;        // 1.0 == idle; reset to 0 on coin gain
 coin_overshoot_t = 1.0;        // 1.0 == idle; reset to 0 on coin arrival for the bounce
 
 // Hint pill tap target — re-written every frame by Draw so layout & input agree.
-HINT_PILL_L = PH_W - 390;
+HINT_PILL_L = PH_W - 260;
 HINT_PILL_R = PH_W - 50;
-HINT_PILL_T = PH_H - 155 - global.safe_bottom_gui;
-HINT_PILL_B = PH_H - 65  - global.safe_bottom_gui;
+HINT_PILL_T = PH_H - 143 - global.safe_bottom_gui;
+HINT_PILL_B = PH_H - 77  - global.safe_bottom_gui;
 
 // Hydrate per-word found state from save (resume mid-puzzle)
 for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
@@ -120,6 +126,11 @@ for (var _ci = 0; _ci < array_length(puzzle.cells); _ci++) {
     }
     puzzle.cells[_ci] = _c;
 }
+
+// ── Hint flow ─────────────────────────────────────────────────────────────────
+// The HINT pill opens the shared hint modal (pay coins OR watch a placeholder
+// rewarded video). The controller struct is created below, once the puzzle's
+// reveal methods exist — see ag_apply_hint / ag_can_use_hint.
 
 // ── Win state (defaults) ──────────────────────────────────────────────────────
 // fly_tiles entries:
@@ -304,8 +315,13 @@ ag_check_win = function() {
     }
     ph_anygram_mark_done(global.save, global.selected_date_key);
     // Single XP grant for the whole puzzle — fires exactly once, on completion.
-    ph_grant_xp(global.save, PH_XP_PER_PUZZLE);
+    // auto_coins=false: any level-up coins are deferred to the Level-Up reward
+    // screen (rm_win), which lets the player double them by watching a video.
+    var _lvl_res = ph_grant_xp(global.save, PH_XP_PER_PUZZLE, false);
     xp_gained = PH_XP_PER_PUZZLE;
+    if (_lvl_res.levels_gained > 0) {
+        global.pending_levelup = { level: _lvl_res.new_level, base_reward: PH_COINS_PER_LEVEL };
+    }
     // Gift for 4th puzzle?
     var _count = ph_solved_count_on(global.save, global.selected_date_key);
     coins_bonus = 0;
@@ -319,3 +335,30 @@ ag_check_win = function() {
     win_phase = 1;
     confetti_burst_pending = true;   // Step_0 will spawn the centre burst next frame.
 };
+
+// ── Hint helpers ──────────────────────────────────────────────────────────────
+/// True if the puzzle is unsolved AND at least one cell can still be revealed.
+ag_can_use_hint = function() {
+    if (ph_anygram_all_solved(puzzle)) return false;
+    for (var _i = 0; _i < array_length(puzzle.cells); _i++) {
+        if (!puzzle.cells[_i].filled && !puzzle.cells[_i].hint) return true;
+    }
+    return false;
+};
+
+/// Reveal the next unfilled, non-hint cell. Returns true if one was revealed.
+/// Does NOT touch the coin balance — callers decide whether/what to charge.
+ag_apply_hint = function() {
+    for (var _i = 0; _i < array_length(puzzle.cells); _i++) {
+        if (!puzzle.cells[_i].filled && !puzzle.cells[_i].hint) {
+            puzzle.cells[_i].hint   = true;
+            puzzle.cells[_i].filled = true;
+            ph_save_write(global.save);
+            return true;
+        }
+    }
+    return false;
+};
+
+// Shared hint-flow controller (modal + placeholder video). Pink accent.
+hint = ph_hint_create(ag_apply_hint, PH_COL_PINK);

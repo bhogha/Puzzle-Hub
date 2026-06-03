@@ -33,6 +33,9 @@ ph_load_fonts();
 global.save              = ph_save_load();
 global.selected_date_key = ph_today_key();
 global.input_locked_until = 0;
+// Queued level-up reward (set at puzzle completion, consumed by the Level-Up
+// screen in rm_win). { level, base_reward } when pending; undefined otherwise.
+global.pending_levelup   = undefined;
 
 application_surface_draw_enable(true);
 surface_resize(application_surface, PH_W, global.PH_H_dyn);
@@ -104,6 +107,14 @@ global.spr_game_wordle   = sprite_add(_d + "game_wordle.png",   1, false, false,
 // ── Anygram tile (256×256, origin centred) ────────────────────────────────────
 global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);
 
+// ── Game-screen HUD art ───────────────────────────────────────────────────────
+// back_buton.png — new solid-black back chevron (103×178, origin centred). Drawn
+//                  with c_white so it keeps its baked colour.
+// Wheel_bg.png   — Anygram wheel disc: yellow fill + dashed ring baked in
+//                  (750×750, origin centred). Replaces the hand-drawn disc/ring.
+global.spr_back2    = sprite_add(_d + "back_buton.png", 1, false, true, 51, 89);
+global.spr_wheel_bg = sprite_add(_d + "Wheel_bg.png",   1, false, false, 375, 375);
+
 // ── UI background art (origin top-left so 9-slice / tiling math is direct) ─────
 // Pill.png  — white capsule (with a baked soft drop shadow) used as the shared
 //             background for all pill-shaped chips (HUD LVL/Coin, card buttons,
@@ -111,6 +122,10 @@ global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);
 // BG Pattern.png — tiled cream texture that replaces the old dot-grid background.
 global.spr_pill       = sprite_add(_d + "Pill.png",       1, false, false, 0, 0);
 global.spr_bg_pattern = sprite_add(_d + "BG Pattern.png", 1, false, false, 0, 0);
+
+// retro tv icon.png — full-colour TV used on the "FREE" (rewarded-video) hint
+// button (512×512, origin centred). Placeholder art until the ad SDK ships.
+global.spr_tv = sprite_add(_d + "retro tv icon.png", 1, false, false, 256, 256);
 
 // ── Hub date badge + progress-bar art ─────────────────────────────────────────
 // today_circle.png — solid yellow circle behind the "today/selected" date number

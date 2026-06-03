@@ -7,6 +7,9 @@ if (toast_timer > 0) toast_timer--;
 if (coin_pulse_t < 1)     coin_pulse_t     = min(1, coin_pulse_t + 1/18);
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
+// Advance the shared hint-flow timers (modal slide / "-100" / video).
+ph_hint_tick(hint);
+
 // Win animation + confetti (mirrors Sudoku/Anygram)
 if (win_phase == 1) {
     win_anim_t = min(win_anim_t + 0.04, 1.0);
@@ -63,7 +66,8 @@ if (win_phase == 1) {
         var _wmy = device_mouse_y_to_gui(0);
         if (win_btn_back_y > 0
             && ph_point_in_rect(_wmx,_wmy, 80, win_btn_back_y, PH_W-80, win_btn_back_y+90)) {
-            room_goto(rm_hub);
+            // A pending level-up shows the reward screen (rm_win) before the hub.
+            room_goto(ph_levelup_pending() ? rm_win : rm_hub);
         }
     }
     exit;
@@ -74,6 +78,20 @@ if (current_time < global.input_locked_until) exit;
 
 var _mx = device_mouse_x_to_gui(0);
 var _my = device_mouse_y_to_gui(0);
+
+// Hint overlay (modal + placeholder video) eats taps while open.
+var _hr = ph_hint_input(hint);
+if (_hr != "none") {
+    if (_hr == "paid") {
+        toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
+        toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
+    } else if (_hr == "freed") {
+        toast_text = "HINT REVEALED"; toast_col = PH_COL_TEAL; toast_timer = TOAST_DUR;
+    } else if (_hr == "poor") {
+        toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
+    }
+    exit;
+}
 
 // Map a GUI point to a grid cell (clamped to the board).
 var _cur_col = clamp(floor((_mx - grid_x) / CELL), 0, N - 1);
@@ -88,26 +106,13 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
         exit;
     }
 
-    // Hint pill (bottom-right) — bounds set by Draw_64
+    // Hint pill (bottom-right) — opens the shared hint modal (pay coins OR watch
+    // a placeholder rewarded video). Bounds set by Draw_64.
     if (ph_point_in_rect(_mx, _my, HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B)) {
-        // Pick the first clue that isn't hinted yet AND isn't already correctly
-        // solved by the player (so the hint always teaches something new).
-        var _target = -1;
-        for (var _i = 0; _i < n_clues; _i++) {
-            if (hint_shown[_i]) continue;
-            var _s = puzzle.sol_rects[_i];
-            if (ph_shikaku_player_has_rect(player_rects, _s.r, _s.c, _s.w, _s.h)) continue;
-            _target = _i; break;
-        }
-        if (_target < 0) {
+        if (!sk_can_hint()) {
             toast_text = "NO HINTS LEFT"; toast_col = PH_COL_GRAY; toast_timer = TOAST_DUR;
-        } else if (ph_spend_coins(global.save, PH_HINT_COST)) {
-            hint_shown[_target] = true;
-            sk_save();
-            toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
-            toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
         } else {
-            toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
+            ph_hint_open(hint);
         }
         exit;
     }

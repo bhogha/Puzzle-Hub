@@ -25,19 +25,31 @@ var _draw_capsule = function(_inst, _path, _col, _alpha) {
 
 if (win_phase == 0) {
 
-// ── Top HUD strip ─────────────────────────────────────────────────────────────
+// ── Top HUD strip: back · WORD WAVE · coin balance ────────────────────────────
 var _hud_y = 95 + global.safe_top_gui;
-ph_draw_icon(global.spr_icon_back, 65, _hud_y, 0.6, PH_COL_DARK);
+draw_sprite_ext(global.spr_back2, 0, 60, _hud_y, 0.36, 0.36, 0, c_white, 1);
 ph_draw_text(PH_W/2, _hud_y, "WORD WAVE", global.fnt_disp_md, PH_COL_TEAL, fa_center, fa_middle);
 
-var _hud_e_s  = floor((current_time - session_start_ms) / 1000);
-var _hud_time = string(_hud_e_s div 60) + ":" + (((_hud_e_s mod 60) < 10) ? "0" : "") + string(_hud_e_s mod 60);
-var _t_pill_r = PH_W - 50;
-var _t_pill_l = _t_pill_r - 210;
-ph_draw_chip(_t_pill_l, _hud_y-32, _t_pill_r, _hud_y+32, 32,
-             PH_COL_WHITE, make_color_rgb(190,170,155), 5);
-draw_sprite_ext(global.spr_stopwatch, 0, _t_pill_l+44, _hud_y, 52/512, 52/512, 0, c_white, 1);
-ph_draw_text(_t_pill_l+80, _hud_y, _hud_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+// Coin balance pill — top-right (no tap action).
+var _cp_hud = 1.0;
+if (coin_pulse_t < 1) {
+    var _p2c = coin_pulse_t;
+    _cp_hud = (_p2c < 0.5) ? lerp(1.0, 1.25, _p2c/0.5) : lerp(1.25, 1.0, (_p2c-0.5)/0.5);
+}
+if (coin_overshoot_t < 1) _cp_hud *= 1 + sin(coin_overshoot_t * pi * 2) * 0.12 * (1 - coin_overshoot_t);
+var _cb_r = PH_W - 50;
+var _cb_l = _cb_r - 220;
+ph_draw_chip(_cb_l, _hud_y-33, _cb_r, _hud_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+var _cb_is = (112/512) * _cp_hud;
+draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+23, _hud_y, _cb_is, _cb_is, 0, c_white, 1);
+ph_draw_text(_cb_l+74, _hud_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+COIN_BAL_X = (_cb_l + _cb_r)/2;
+COIN_BAL_Y = _hud_y;
+
+// "-100" spend feedback near the coin pill (shared hint helper).
+hint.coin_x = COIN_BAL_X;
+hint.coin_y = COIN_BAL_Y;
+ph_hint_draw_feedback(hint);
 
 // ── Found-word highlights (behind letters) ────────────────────────────────────
 for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
@@ -126,58 +138,43 @@ for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
 
 // ── Bottom toolbar : chest · coins · hint ─────────────────────────────────────
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
-BONUS_ICON_Y = _tool_y - 10;
+BONUS_ICON_Y = _tool_y;
 
 // Chest (bonus words)
 var _bonus_count = 0;
 for (var _bi = 0; _bi < array_length(puzzle.bonus_found); _bi++) {
     if (puzzle.bonus_found[_bi]) _bonus_count++;
 }
-var _chest_s = 140 / 512;
-draw_sprite_ext(global.spr_chest, 0, BONUS_ICON_X, _tool_y - 10, _chest_s, _chest_s, 0,
-                _bonus_count > 0 ? c_white : make_color_rgb(190,180,180), 1);
+var _chest_s = 118 / 512;   // matches the coin icon's visible height
+// Always full-colour (never greyed) so it doesn't read as disabled before the
+// first bonus word is found.
+draw_sprite_ext(global.spr_chest, 0, BONUS_ICON_X, _tool_y, _chest_s, _chest_s, 0, c_white, 1);
 if (_bonus_count > 0) {
     draw_set_color(PH_COL_PURPLE);
-    draw_circle(BONUS_ICON_X + 58, _tool_y - 66, 24, false);
-    ph_draw_text(BONUS_ICON_X + 58, _tool_y - 66, string(_bonus_count),
+    draw_circle(BONUS_ICON_X + 42, _tool_y - 32, 20, false);
+    ph_draw_text(BONUS_ICON_X + 42, _tool_y - 32, string(_bonus_count),
                  global.fnt_body_xs, PH_COL_WHITE, fa_center, fa_middle);
 }
 
-// Coin balance pill (centre, with pulse/overshoot on coin arrival)
-var _cp = 1.0;
-if (coin_pulse_t < 1) {
-    if (coin_pulse_t < 0.5) _cp = lerp(1.0, 1.25, coin_pulse_t / 0.5);
-    else                    _cp = lerp(1.25, 1.0, (coin_pulse_t - 0.5) / 0.5);
-}
-if (coin_overshoot_t < 1) _cp *= 1 + sin(coin_overshoot_t * pi * 2) * 0.12 * (1 - coin_overshoot_t);
-var _cb_w  = 220;
-var _cb_cx = PH_W/2 - 80;
-var _cb_l  = _cb_cx - _cb_w/2;
-var _cb_r  = _cb_cx + _cb_w/2;
-ph_draw_chip(_cb_l, _tool_y - 38, _cb_r, _tool_y + 38, 38,
+// Timer pill (centre, moved down from the top HUD)
+var _b_e_s  = floor((current_time - session_start_ms) / 1000);
+var _b_time = string(_b_e_s div 60) + ":" + (((_b_e_s mod 60) < 10) ? "0" : "") + string(_b_e_s mod 60);
+var _tp_l = PH_W/2 - 105;
+var _tp_r = PH_W/2 + 105;
+ph_draw_chip(_tp_l, _tool_y - 33, _tp_r, _tool_y + 33, 33,
              PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-var _cb_icon_s = (88 / 512) * _cp;
-draw_sprite_ext(global.spr_gold_coin, 0, _cb_l + 44, _tool_y, _cb_icon_s, _cb_icon_s, 0, c_white, 1);
-ph_draw_text(_cb_l + 92, _tool_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
-COIN_BAL_X = (_cb_l + _cb_r) / 2;
-COIN_BAL_Y = _tool_y;
+draw_sprite_ext(global.spr_stopwatch, 0, _tp_l + 19, _tool_y, 106/512, 106/512, 0, c_white, 1);
+ph_draw_text(_tp_l + 65, _tool_y, _b_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
-// Hint pill (right)
+// Hint pill (right) — bulb · "HINT" (cost chip removed; handled elsewhere)
 HINT_PILL_R = PH_W - 50;
-HINT_PILL_L = HINT_PILL_R - 400;
-HINT_PILL_T = _tool_y - 45;
-HINT_PILL_B = _tool_y + 45;
-ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 45,
+HINT_PILL_L = HINT_PILL_R - 210;
+HINT_PILL_T = _tool_y - 33;
+HINT_PILL_B = _tool_y + 33;
+ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33,
              PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L + 50, _tool_y, 78/512, 78/512, 0, c_white, 1);
-ph_draw_text(HINT_PILL_L + 110, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
-var _cost_w = 130;
-var _cost_l = HINT_PILL_R - 22 - _cost_w;
-var _cost_r = HINT_PILL_R - 22;
-ph_draw_chip(_cost_l, _tool_y - 32, _cost_r, _tool_y + 32, 32,
-             PH_COL_PINK_SOFT, PH_COL_PINK_DEEP, 4);
-draw_sprite_ext(global.spr_gold_coin, 0, _cost_l + 28, _tool_y, 56/512, 56/512, 0, c_white, 1);
-ph_draw_text(_cost_r - 18, _tool_y, string(PH_HINT_COST), global.fnt_body_md, PH_COL_DARK, fa_right, fa_middle);
+draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L + 12, _tool_y, 101/512, 101/512, 0, c_white, 1);
+ph_draw_text(HINT_PILL_L + 51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
 // ── Toast (centred just above the toolbar) ────────────────────────────────────
 if (toast_timer > 0) {
@@ -228,6 +225,9 @@ if (bonus_modal_open) {
         ph_draw_text((_px1+_px2)/2, (_py1+_py2)/2, "No bonus words yet", global.fnt_body_md, PH_COL_GRAY, fa_center, fa_middle);
     }
 }
+
+// ── Hint modal — slide-up bottom sheet (pay coins OR watch a placeholder video).
+ph_hint_draw_modal(hint);
 
 } // end if (win_phase == 0)
 
@@ -359,3 +359,6 @@ if (win_phase == 1) {
     }
     draw_set_alpha(1);
 }
+
+// ── Placeholder rewarded-video screen — drawn last so it covers every layer.
+ph_hint_draw_video(hint);

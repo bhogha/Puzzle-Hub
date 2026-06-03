@@ -11,28 +11,43 @@ draw_set_alpha(1);
 if (win_phase == 0) {
 
 // ── Top bar (HUD strip) ──────────────────────────────────────────────────────
-// Layout across the bar: back arrow · ANYGRAM title (centred) · timer (right).
-// _hud_y is offset by safe_top_gui so the bar clears the Dynamic Island /
-// status bar on all devices. The base offset (95) gives a small visual gap
-// between the safe area boundary and the pill top edge.
+// Layout across the bar: back chevron · ANYGRAM title (centred) · coin balance
+// (right). _hud_y is offset by safe_top_gui so the bar clears the Dynamic Island
+// / status bar on all devices. The base offset (95) gives a small visual gap
+// between the safe area boundary and the pill top edge. The live timer now lives
+// in the centre of the bottom strip.
 var _hud_y = 95 + global.safe_top_gui;
 
-ph_draw_icon(global.spr_icon_back, 65, _hud_y, 0.6, PH_COL_DARK);
+// Back chevron — new baked-black sprite (drawn with c_white to keep its colour).
+draw_sprite_ext(global.spr_back2, 0, 60, _hud_y, 0.36, 0.36, 0, c_white, 1);
 ph_draw_text(PH_W/2, _hud_y, "ANYGRAM", global.fnt_disp_md, PH_COL_PINK, fa_center, fa_middle);
 
-// Live timer pill — right side of the HUD
-var _hud_e_s   = floor((current_time - session_start_ms) / 1000);
-var _hud_e_m   = _hud_e_s div 60;
-var _hud_e_ss  = _hud_e_s mod 60;
-var _hud_time  = string(_hud_e_m) + ":" + ((_hud_e_ss < 10) ? "0" : "") + string(_hud_e_ss);
-var _t_pill_r  = PH_W - 50;
-var _t_pill_l  = _t_pill_r - 210;
-ph_draw_chip(_t_pill_l, _hud_y-32, _t_pill_r, _hud_y+32, 32,
-             PH_COL_WHITE, make_color_rgb(190,170,155), 5);
-draw_sprite_ext(global.spr_stopwatch, 0, _t_pill_l+44, _hud_y, 52/512, 52/512, 0, c_white, 1);
-ph_draw_text(_t_pill_l+80, _hud_y, _hud_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+// Coin balance pill — top-right (moved up from the bottom toolbar). Keeps the
+// pulse/overshoot animation so coin-fly arrivals still feel alive. No tap action.
+var _cp_hud = 1.0;
+if (coin_pulse_t < 1) {
+    var _p2c = coin_pulse_t;
+    _cp_hud = (_p2c < 0.5) ? lerp(1.0, 1.25, _p2c/0.5) : lerp(1.25, 1.0, (_p2c-0.5)/0.5);
+}
+if (coin_overshoot_t < 1) _cp_hud *= 1 + sin(coin_overshoot_t * pi * 2) * 0.12 * (1 - coin_overshoot_t);
+var _cb_pill_r = PH_W - 50;
+var _cb_pill_l = _cb_pill_r - 220;
+ph_draw_chip(_cb_pill_l, _hud_y-33, _cb_pill_r, _hud_y+33, 33,
+             PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+// Coin icon: oversized, vertically centred on the pill, pinned to the left cap
+// so it spills past the left/top/bottom edges (shared HUD-pill icon style).
+var _cb_icon_s = (112/512) * _cp_hud;
+draw_sprite_ext(global.spr_gold_coin, 0, _cb_pill_l+23, _hud_y, _cb_icon_s, _cb_icon_s, 0, c_white, 1);
+ph_draw_text(_cb_pill_l+74, _hud_y, string(global.save.coins),
+             global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+// Expose the coin pill centre as the coin-fly target so the reward arc lands here.
+COIN_BAL_X = (_cb_pill_l + _cb_pill_r) / 2;
+COIN_BAL_Y = _hud_y;
 
-// (Coin balance pill lives in the bottom toolbar — see further down.)
+// "-100" spend feedback — drawn by the shared hint helper near the coin pill.
+hint.coin_x = COIN_BAL_X;
+hint.coin_y = COIN_BAL_Y;
+ph_hint_draw_feedback(hint);
 
 // ── Crossword grid ────────────────────────────────────────────────────────────
 var _base_sc = CELL / 256;   // tile_empty.png is 256×256, origin centred
@@ -48,7 +63,7 @@ for (var _i = 0; _i < array_length(puzzle.cells); _i++) {
     if      (_c.shared && _c.filled)  _tint = PH_COL_YELLOW;
     else if (_c.hint)                 _tint = make_color_rgb(255,180,220);   // light pink
     else if (_c.filled)               _tint = PH_COL_PINK;
-    else                              _tint = make_color_rgb(234,216,200);   // warm cream
+    else                              _tint = make_color_rgb(241,234,225);   // blank placeholder #F1EAE1
 
     draw_sprite_ext(global.spr_tile, 0, _cx, _cy, _sc, _sc, 0, _tint, 1);
 
@@ -66,25 +81,10 @@ for (var _i = 0; _i < array_length(puzzle.cells); _i++) {
 
 // ── Wheel (with shake offset on invalid swipe) ────────────────────────────────
 var _wcx = WHEEL_CX + shake_offset_x;
-// Disc background
-ph_draw_chip(_wcx-WHEEL_R, WHEEL_CY-WHEEL_R,
-             _wcx+WHEEL_R, WHEEL_CY+WHEEL_R,
-             WHEEL_R, PH_COL_YELLOW_SOFT, make_color_rgb(200,175,120), 10);
-
-// Dashed ring (24 segments alternating)
-draw_set_color(PH_COL_YELLOW);
-for (var _si = 0; _si < 24; _si++) {
-    if (_si mod 2 == 0) continue;
-    var _a1     = degtorad(_si*15 - 90);
-    var _a2     = degtorad((_si+1)*15 - 90);
-    var _ring_r = WHEEL_R - 20;
-    draw_primitive_begin(pr_trianglefan);
-    draw_vertex(_wcx + cos(_a1)*(_ring_r-8), WHEEL_CY + sin(_a1)*(_ring_r-8));
-    draw_vertex(_wcx + cos(_a1)*_ring_r,     WHEEL_CY + sin(_a1)*_ring_r);
-    draw_vertex(_wcx + cos(_a2)*_ring_r,     WHEEL_CY + sin(_a2)*_ring_r);
-    draw_vertex(_wcx + cos(_a2)*(_ring_r-8), WHEEL_CY + sin(_a2)*(_ring_r-8));
-    draw_primitive_end();
-}
+// Disc background — Wheel_bg.png (yellow fill + dashed ring baked in). Source is
+// 750×750 with origin centred; scale so its diameter matches 2×WHEEL_R.
+var _wheel_bg_sc = (WHEEL_R * 2) / 750;
+draw_sprite_ext(global.spr_wheel_bg, 0, _wcx, WHEEL_CY, _wheel_bg_sc, _wheel_bg_sc, 0, c_white, 1);
 
 // Trail lines + dots — bold pink stroke so the path visually unites with the
 // pink letter tiles it passes through. Lighter pink inner core gives the line
@@ -153,79 +153,64 @@ if (array_length(trail) >= 1) {
 // (Live timer now lives in the top HUD strip — see GDD §7.)
 
 // ── Bottom toolbar ────────────────────────────────────────────────────────────
-// Layout: chest (left) · coin balance pill (centre) · HINT pill (right).
+// Layout: BONUS chest+pill (left) · timer pill (centre) · HINT pill (right).
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
 
-// Left — bonus-words icon (chest sprite) + count badge; tappable to open modal.
-// Drawn larger than the previous design so it reads as a hero icon (still a
-// touch smaller than a pink wheel tile, per design ref).
+// Left — BONUS button: white pill (Pill.png) with the 3D chest on the left and a
+// "BONUS" label. Tappable to open the bonus-words modal; bounds are stored in
+// BONUS_PILL_{L,R,T,B} and read by Step_0.gml (keep in sync).
 var _bonus_count = 0;
 for (var _bi = 0; _bi < array_length(puzzle.bonus_found); _bi++) {
     if (puzzle.bonus_found[_bi]) _bonus_count++;
 }
-var _chest_s = 140 / 512;
-draw_sprite_ext(global.spr_chest, 0, BONUS_ICON_X, _tool_y - 10, _chest_s, _chest_s, 0,
-                _bonus_count > 0 ? c_white : make_color_rgb(190,180,180), 1);
-// Badge (only visible if at least one bonus found) — pushed up/right so it
-// clears the now-larger chest sprite.
+BONUS_PILL_L = 50;
+BONUS_PILL_R = 340;
+BONUS_PILL_T = _tool_y - 33;
+BONUS_PILL_B = _tool_y + 33;
+ph_draw_chip(BONUS_PILL_L, BONUS_PILL_T, BONUS_PILL_R, BONUS_PILL_B, 33,
+             PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+// Chest: matches the coin icon's height (numerator differs because each icon's
+// transparent padding differs). Vertically centred on the pill, pinned to the
+// left cap so it spills past the edges. Always full-colour (never greyed).
+var _chest_s = 118 / 512;
+draw_sprite_ext(global.spr_chest, 0, BONUS_PILL_L + 27, _tool_y, _chest_s, _chest_s, 0, c_white, 1);
+ph_draw_text(BONUS_PILL_L + 82, _tool_y, "BONUS",
+             global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+// Keep the fly-tile target pointing at the chest centre.
+BONUS_ICON_X = BONUS_PILL_L + 27;
+BONUS_ICON_Y = _tool_y;
+// Count badge (only visible if at least one bonus found) — chest's upper-right.
 if (_bonus_count > 0) {
     draw_set_color(PH_COL_PINK);
-    draw_circle(BONUS_ICON_X + 58, _tool_y - 66, 24, false);
-    ph_draw_text(BONUS_ICON_X + 58, _tool_y - 66, string(_bonus_count),
+    draw_circle(BONUS_PILL_L + 60, _tool_y - 30, 20, false);
+    ph_draw_text(BONUS_PILL_L + 60, _tool_y - 30, string(_bonus_count),
                  global.fnt_body_xs, PH_COL_WHITE, fa_center, fa_middle);
 }
 
-// Centre — coin balance pill (moved from the top HUD per design ref). Keeps
-// the original pulse/overshoot animation so coin-fly arrivals still feel alive.
-var _cp_hud = 1.0;
-if (coin_pulse_t < 1) {
-    var _p2 = coin_pulse_t;
-    if (_p2 < 0.5) _cp_hud = lerp(1.0, 1.25, _p2 / 0.5);
-    else           _cp_hud = lerp(1.25, 1.0, (_p2 - 0.5) / 0.5);
-}
-if (coin_overshoot_t < 1) {
-    _cp_hud *= 1 + sin(coin_overshoot_t * pi * 2) * 0.12 * (1 - coin_overshoot_t);
-}
-// Coin pill shifted slightly left of true centre so it doesn't bump into the
-// wider HINT pill on the right.
-var _cb_pill_w = 220;
-var _cb_pill_cx = PH_W/2 - 80;
-var _cb_pill_l  = _cb_pill_cx - _cb_pill_w/2;
-var _cb_pill_r  = _cb_pill_cx + _cb_pill_w/2;
-ph_draw_chip(_cb_pill_l, _tool_y - 38, _cb_pill_r, _tool_y + 38, 38,
+// Centre — live timer pill (moved down from the top HUD per design ref).
+var _hud_e_s   = floor((current_time - session_start_ms) / 1000);
+var _hud_e_m   = _hud_e_s div 60;
+var _hud_e_ss  = _hud_e_s mod 60;
+var _hud_time  = string(_hud_e_m) + ":" + ((_hud_e_ss < 10) ? "0" : "") + string(_hud_e_ss);
+var _tp_l = PH_W/2 - 105;
+var _tp_r = PH_W/2 + 105;
+ph_draw_chip(_tp_l, _tool_y - 33, _tp_r, _tool_y + 33, 33,
              PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-var _cb_icon_s = (88 / 512) * _cp_hud;
-draw_sprite_ext(global.spr_gold_coin, 0, _cb_pill_l + 44, _tool_y, _cb_icon_s, _cb_icon_s, 0, c_white, 1);
-ph_draw_text(_cb_pill_l + 92, _tool_y, string(global.save.coins),
-             global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+draw_sprite_ext(global.spr_stopwatch, 0, _tp_l + 19, _tool_y, 106/512, 106/512, 0, c_white, 1);
+ph_draw_text(_tp_l + 65, _tool_y, _hud_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
-// Expose the coin pill centre as the coin-fly target so the reward arc lands here.
-COIN_BAL_X = (_cb_pill_l + _cb_pill_r) / 2;
-COIN_BAL_Y = _tool_y;
-
-// Right — HINT pill: bulb · "HINT" · cost-chip [coin · 100].
+// Right — HINT pill: bulb · "HINT" (cost chip removed; handled elsewhere).
 // Tap target lives in Step_0.gml as HINT_PILL_{L,R,T,B}; keep them in sync.
-// Pill is 400 wide so the HINT label has room without bumping into the cost chip.
 HINT_PILL_R = PH_W - 50;
-HINT_PILL_L = HINT_PILL_R - 400;
-HINT_PILL_T = _tool_y - 45;
-HINT_PILL_B = _tool_y + 45;
-ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 45,
+HINT_PILL_L = HINT_PILL_R - 210;
+HINT_PILL_T = _tool_y - 33;
+HINT_PILL_B = _tool_y + 33;
+ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33,
              PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-var _bulb_s = 78 / 512;
-draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L + 50, _tool_y, _bulb_s, _bulb_s, 0, c_white, 1);
-ph_draw_text(HINT_PILL_L + 110, _tool_y, "HINT",
+// Bulb: vertically centred, pinned to the left cap so it spills past the edges.
+draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L + 12, _tool_y, 101/512, 101/512, 0, c_white, 1);
+ph_draw_text(HINT_PILL_L + 51, _tool_y, "HINT",
              global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
-// Cost chip on the right end of the pill. Coin icon goes on the LEFT, number
-// right-aligned to the chip's right edge — no overlap.
-var _cost_w = 130;
-var _cost_l = HINT_PILL_R - 22 - _cost_w;
-var _cost_r = HINT_PILL_R - 22;
-ph_draw_chip(_cost_l, _tool_y - 32, _cost_r, _tool_y + 32, 32,
-             PH_COL_PINK_SOFT, PH_COL_PINK_DEEP, 4);
-draw_sprite_ext(global.spr_gold_coin, 0, _cost_l + 28, _tool_y, 56/512, 56/512, 0, c_white, 1);
-ph_draw_text(_cost_r - 18, _tool_y, string(PH_HINT_COST),
-             global.fnt_body_md, PH_COL_DARK, fa_right, fa_middle);
 
 // ── Toast — drawn at the same y as the word-preview pill so the FOUND/NOT-A-
 //           WORD message replaces the live swipe pill seamlessly. Pill is sized
@@ -320,6 +305,9 @@ if (bonus_modal_open) {
                      global.fnt_body_md, PH_COL_GRAY, fa_center, fa_middle);
     }
 }
+
+// ── Hint modal — slide-up bottom sheet (pay coins OR watch a placeholder video).
+ph_hint_draw_modal(hint);
 
 } // end if (win_phase == 0)
 
@@ -510,3 +498,6 @@ if (win_phase == 1) {
     }
     draw_set_alpha(1);
 }
+
+// ── Placeholder rewarded-video screen — drawn last so it covers every layer.
+ph_hint_draw_video(hint);

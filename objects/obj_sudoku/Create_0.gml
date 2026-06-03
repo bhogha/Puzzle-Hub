@@ -161,9 +161,13 @@ sd_check_win = function() {
     ph_sudoku_save_grid(global.save, global.selected_date_key, ph_sudoku_grid_to_str(puzzle));
     ph_sudoku_mark_done(global.save, global.selected_date_key);
 
-    // Single +100 XP grant for the whole puzzle.
-    ph_grant_xp(global.save, PH_XP_PER_PUZZLE);
+    // Single +100 XP grant for the whole puzzle. auto_coins=false: level-up
+    // coins are deferred to the Level-Up reward screen (rm_win).
+    var _lvl_res = ph_grant_xp(global.save, PH_XP_PER_PUZZLE, false);
     xp_gained = PH_XP_PER_PUZZLE;
+    if (_lvl_res.levels_gained > 0) {
+        global.pending_levelup = { level: _lvl_res.new_level, base_reward: PH_COINS_PER_LEVEL };
+    }
 
     // Gift box for the 4th solved puzzle of the day.
     var _count = ph_solved_count_on(global.save, global.selected_date_key);
@@ -180,6 +184,42 @@ sd_check_win = function() {
     win_phase              = 1;
     confetti_burst_pending = true;
 };
+
+// ── Hint helpers (used by the shared hint modal) ──────────────────────────────
+/// True if any non-given cell is still empty (i.e. a reveal is possible).
+sd_can_hint = function() {
+    for (var _i = 0; _i < 81; _i++) {
+        if (!ph_sudoku_is_given(puzzle, _i) && puzzle.grid[_i] == 0) return true;
+    }
+    return false;
+};
+
+/// Reveal one correct number — the selected empty cell if any, else a random
+/// empty cell. Returns true on success. Does NOT touch coins.
+sd_apply_hint = function() {
+    var _target = -1;
+    if (sel_idx >= 0 && !ph_sudoku_is_given(puzzle, sel_idx) && puzzle.grid[sel_idx] == 0) {
+        _target = sel_idx;
+    } else {
+        var _empties = [];
+        for (var _i = 0; _i < 81; _i++) {
+            if (!ph_sudoku_is_given(puzzle, _i) && puzzle.grid[_i] == 0) array_push(_empties, _i);
+        }
+        if (array_length(_empties) > 0) _target = _empties[irandom(array_length(_empties)-1)];
+    }
+    if (_target < 0) return false;
+    puzzle.grid[_target]   = puzzle.solution[_target];
+    puzzle.hinted[_target] = true;
+    cell_flash[_target]    = 18;
+    sd_check_units();
+    ph_sudoku_save_grid(global.save, global.selected_date_key, ph_sudoku_grid_to_str(puzzle));
+    ph_save_write(global.save);
+    sd_check_win();
+    return true;
+};
+
+// Shared hint-flow controller (modal + placeholder video). Purple accent.
+hint = ph_hint_create(sd_apply_hint, PH_COL_PURPLE);
 
 // ── Enter review/solved mode when re-opening a finished puzzle ─────────────────
 var _review = variable_global_exists("sudoku_review_mode") && global.sudoku_review_mode;

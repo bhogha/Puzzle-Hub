@@ -17,6 +17,9 @@ if (toast_timer > 0) toast_timer--;
 if (coin_pulse_t < 1)     coin_pulse_t     = min(1, coin_pulse_t + 1/18);
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
+// Advance the shared hint-flow timers (modal slide / "-100" / video).
+ph_hint_tick(hint);
+
 // Win animation + confetti
 if (win_phase == 1) {
     win_anim_t = min(win_anim_t + 0.04, 1.0);
@@ -73,7 +76,8 @@ if (win_phase == 1) {
         var _wmy = device_mouse_y_to_gui(0);
         if (win_btn_back_y > 0
             && ph_point_in_rect(_wmx,_wmy, 80, win_btn_back_y, PH_W-80, win_btn_back_y+90)) {
-            room_goto(rm_hub);
+            // A pending level-up shows the reward screen (rm_win) before the hub.
+            room_goto(ph_levelup_pending() ? rm_win : rm_hub);
         }
     }
     exit;
@@ -86,6 +90,20 @@ if (!device_mouse_check_button_pressed(0, mb_left)) exit;
 var _mx = device_mouse_x_to_gui(0);
 var _my = device_mouse_y_to_gui(0);
 
+// Hint overlay (modal + placeholder video) eats taps while open.
+var _hr = ph_hint_input(hint);
+if (_hr != "none") {
+    if (_hr == "paid") {
+        toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
+        toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
+    } else if (_hr == "freed") {
+        toast_text = "HINT REVEALED"; toast_col = PH_COL_TEAL; toast_timer = TOAST_DUR;
+    } else if (_hr == "poor") {
+        toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
+    }
+    exit;
+}
+
 // Back arrow (top-left of HUD strip)
 if (ph_point_in_rect(_mx, _my, 0, 40, 130, 150)) {
     global.input_locked_until = current_time + 200;
@@ -93,34 +111,13 @@ if (ph_point_in_rect(_mx, _my, 0, 40, 130, 150)) {
     exit;
 }
 
-// Hint pill (bottom-right) — bounds set by Draw_64
+// Hint pill (bottom-right) — opens the shared hint modal (pay coins OR watch a
+// placeholder rewarded video). Bounds set by Draw_64.
 if (ph_point_in_rect(_mx, _my, HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B)) {
-    // Choose target cell: selected-and-empty first, else a random empty cell.
-    var _target = -1;
-    if (sel_idx >= 0 && !ph_sudoku_is_given(puzzle, sel_idx) && puzzle.grid[sel_idx] == 0) {
-        _target = sel_idx;
-    } else {
-        var _empties = [];
-        for (var _i = 0; _i < 81; _i++) {
-            if (!ph_sudoku_is_given(puzzle, _i) && puzzle.grid[_i] == 0) array_push(_empties, _i);
-        }
-        if (array_length(_empties) > 0) _target = _empties[irandom(array_length(_empties)-1)];
-    }
-
-    if (_target < 0) {
+    if (!sd_can_hint()) {
         toast_text = "NO CELLS TO REVEAL"; toast_col = PH_COL_GRAY; toast_timer = TOAST_DUR;
-    } else if (ph_spend_coins(global.save, PH_HINT_COST)) {
-        puzzle.grid[_target]   = puzzle.solution[_target];
-        puzzle.hinted[_target] = true;
-        cell_flash[_target]    = 18;
-        sd_check_units();
-        ph_sudoku_save_grid(global.save, global.selected_date_key, ph_sudoku_grid_to_str(puzzle));
-        ph_save_write(global.save);
-        toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
-        toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
-        sd_check_win();
     } else {
-        toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
+        ph_hint_open(hint);
     }
     exit;
 }

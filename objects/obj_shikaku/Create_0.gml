@@ -103,9 +103,13 @@ sk_check_win = function() {
     sk_save();
     ph_shikaku_mark_done(global.save, global.selected_date_key);
 
-    // Single +100 XP grant for the whole puzzle.
-    ph_grant_xp(global.save, PH_XP_PER_PUZZLE);
+    // Single +100 XP grant for the whole puzzle. auto_coins=false: level-up
+    // coins are deferred to the Level-Up reward screen (rm_win).
+    var _lvl_res = ph_grant_xp(global.save, PH_XP_PER_PUZZLE, false);
     xp_gained = PH_XP_PER_PUZZLE;
+    if (_lvl_res.levels_gained > 0) {
+        global.pending_levelup = { level: _lvl_res.new_level, base_reward: PH_COINS_PER_LEVEL };
+    }
 
     // Gift box for the 4th solved puzzle of the day.
     var _count = ph_solved_count_on(global.save, global.selected_date_key);
@@ -122,6 +126,36 @@ sk_check_win = function() {
     win_phase              = 1;
     confetti_burst_pending = true;
 };
+
+// ── Hint helpers (used by the shared hint modal) ──────────────────────────────
+/// First clue that isn't hinted yet AND isn't already correctly enclosed, or -1.
+sk_next_hint_clue = function() {
+    for (var _i = 0; _i < n_clues; _i++) {
+        if (hint_shown[_i]) continue;
+        var _s = puzzle.sol_rects[_i];
+        if (ph_shikaku_player_has_rect(player_rects, _s.r, _s.c, _s.w, _s.h)) continue;
+        return _i;
+    }
+    return -1;
+};
+
+/// True if a shape-glyph hint is still available.
+sk_can_hint = function() {
+    return sk_next_hint_clue() >= 0;
+};
+
+/// Reveal the shape glyph for the next eligible clue. Returns true on success.
+/// Does NOT touch coins.
+sk_apply_hint = function() {
+    var _target = sk_next_hint_clue();
+    if (_target < 0) return false;
+    hint_shown[_target] = true;
+    sk_save();
+    return true;
+};
+
+// Shared hint-flow controller (modal + placeholder video). Blue accent.
+hint = ph_hint_create(sk_apply_hint, PH_COL_BLUE);
 
 // ── Restore in-progress state (resume) ────────────────────────────────────────
 var _saved = ph_shikaku_load_state(global.save, global.selected_date_key);

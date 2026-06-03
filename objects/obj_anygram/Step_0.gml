@@ -139,6 +139,25 @@ if (is_array(global.fly_tiles)) {
 // Coin overshoot bounce decay (post-arrival, GDD §8)
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
+// Advance the shared hint-flow timers (modal slide / "-100" / video).
+ph_hint_tick(hint);
+
+// ── Hint overlay input (modal + placeholder video) — eats taps while open. ────
+var _hr = ph_hint_input(hint);
+if (_hr != "none") {
+    if (_hr == "paid") {
+        toast_text  = "HINT USED  -" + string(PH_HINT_COST) + " coins";
+        toast_col   = PH_COL_YELLOW; toast_timer = TOAST_DUR;
+    } else if (_hr == "freed") {
+        toast_text  = "HINT REVEALED";
+        toast_col   = PH_COL_TEAL;   toast_timer = TOAST_DUR;
+    } else if (_hr == "poor") {
+        toast_text  = "NOT ENOUGH COINS";
+        toast_col   = PH_COL_PINK;   toast_timer = TOAST_DUR;
+    }
+    exit;
+}
+
 // ── Win-screen input (must run BEFORE the bonus-modal block so it takes precedence) ──
 if (win_phase == 1) {
     if (device_mouse_check_button_pressed(0, mb_left)) {
@@ -146,7 +165,8 @@ if (win_phase == 1) {
         var _my = device_mouse_y_to_gui(0);
         if (win_btn_back_y > 0
             && ph_point_in_rect(_mx,_my, 80, win_btn_back_y, PH_W-80, win_btn_back_y+90)) {
-            room_goto(rm_hub);
+            // A pending level-up shows the reward screen (rm_win) before the hub.
+            room_goto(ph_levelup_pending() ? rm_win : rm_hub);
         }
     }
     exit;
@@ -183,8 +203,8 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
         room_goto(rm_hub);
         exit;
     }
-    // Bonus icon (toolbar left) — opens the bonus words modal if any are found.
-    if (ph_point_in_circle(_mx, _my, BONUS_ICON_X, BONUS_ICON_Y, BONUS_ICON_R)) {
+    // BONUS pill (toolbar left) — opens the bonus words modal if any are found.
+    if (ph_point_in_rect(_mx, _my, BONUS_PILL_L, BONUS_PILL_T, BONUS_PILL_R, BONUS_PILL_B)) {
         var _have_any_bonus = false;
         for (var _bi = 0; _bi < array_length(puzzle.bonus_found); _bi++) {
             if (puzzle.bonus_found[_bi]) { _have_any_bonus = true; break; }
@@ -194,37 +214,22 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
             exit;
         }
     }
-    // Hint button — wide pill in the bottom-right; bounds come from Draw_64.gml
+    // Hint button — wide pill in the bottom-right; bounds come from Draw_64.gml.
+    // Now opens the hint modal (pay coins OR watch a placeholder rewarded video)
+    // instead of spending coins immediately. Guard the no-op cases up front so
+    // the modal only opens when a hint can actually be granted.
     if (ph_point_in_rect(_mx,_my, HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B)) {
         if (ph_anygram_all_solved(puzzle)) {
             toast_text  = "PUZZLE COMPLETE";
             toast_col   = PH_COL_GRAY;
             toast_timer = TOAST_DUR;
+        } else if (!ag_can_use_hint()) {
+            toast_text  = "NO HINTS AVAILABLE";
+            toast_col   = PH_COL_GRAY;
+            toast_timer = TOAST_DUR;
         } else {
-            // Find next unfilled non-hint cell first; only spend coins if one exists.
-            var _hint_idx = -1;
-            for (var _i = 0; _i < array_length(puzzle.cells); _i++) {
-                if (!puzzle.cells[_i].filled && !puzzle.cells[_i].hint) {
-                    _hint_idx = _i;
-                    break;
-                }
-            }
-            if (_hint_idx < 0) {
-                toast_text  = "NO HINTS AVAILABLE";
-                toast_col   = PH_COL_GRAY;
-                toast_timer = TOAST_DUR;
-            } else if (ph_spend_coins(global.save, PH_HINT_COST)) {
-                puzzle.cells[_hint_idx].hint   = true;
-                puzzle.cells[_hint_idx].filled = true;
-                ph_save_write(global.save);
-                toast_text  = "HINT USED  -" + string(PH_HINT_COST) + " coins";
-                toast_col   = PH_COL_YELLOW;
-                toast_timer = TOAST_DUR;
-            } else {
-                toast_text  = "NOT ENOUGH COINS";
-                toast_col   = PH_COL_PINK;
-                toast_timer = TOAST_DUR;
-            }
+            ph_hint_open(hint);
+            exit;
         }
     }
 }

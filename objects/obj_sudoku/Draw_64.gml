@@ -9,18 +9,31 @@ draw_set_alpha(1);
 
 if (win_phase == 0) {
 
-// ── Top HUD strip: back · SUDOKU · timer ──────────────────────────────────────
+// ── Top HUD strip: back · SUDOKU · coin balance ───────────────────────────────
 var _hud_y = 95 + global.safe_top_gui;
-ph_draw_icon(global.spr_icon_back, 65, _hud_y, 0.6, PH_COL_DARK);
+draw_sprite_ext(global.spr_back2, 0, 60, _hud_y, 0.36, 0.36, 0, c_white, 1);
 ph_draw_text(PH_W/2, _hud_y, "SUDOKU", global.fnt_disp_md, PH_COL_PURPLE, fa_center, fa_middle);
 
-var _hud_e_s  = floor((current_time - session_start_ms) / 1000);
-var _hud_time = string(_hud_e_s div 60) + ":" + (((_hud_e_s mod 60) < 10) ? "0" : "") + string(_hud_e_s mod 60);
-var _t_pill_r = PH_W - 50;
-var _t_pill_l = _t_pill_r - 210;
-ph_draw_chip(_t_pill_l, _hud_y-32, _t_pill_r, _hud_y+32, 32, PH_COL_WHITE, make_color_rgb(190,170,155), 5);
-draw_sprite_ext(global.spr_stopwatch, 0, _t_pill_l+44, _hud_y, 52/512, 52/512, 0, c_white, 1);
-ph_draw_text(_t_pill_l+80, _hud_y, _hud_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+// Coin balance pill — top-right (no tap action).
+var _cp_hud = 1.0;
+if (coin_pulse_t < 1) {
+    var _p2c = coin_pulse_t;
+    _cp_hud = (_p2c < 0.5) ? lerp(1.0, 1.25, _p2c/0.5) : lerp(1.25, 1.0, (_p2c-0.5)/0.5);
+}
+if (coin_overshoot_t < 1) _cp_hud *= 1 + sin(coin_overshoot_t * pi * 2) * 0.12 * (1 - coin_overshoot_t);
+var _cb_r = PH_W - 50;
+var _cb_l = _cb_r - 220;
+ph_draw_chip(_cb_l, _hud_y-33, _cb_r, _hud_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+var _cb_is = (112/512) * _cp_hud;
+draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+23, _hud_y, _cb_is, _cb_is, 0, c_white, 1);
+ph_draw_text(_cb_l+74, _hud_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+COIN_BAL_X = (_cb_l + _cb_r)/2;
+COIN_BAL_Y = _hud_y;
+
+// "-100" spend feedback near the coin pill (shared hint helper).
+hint.coin_x = COIN_BAL_X;
+hint.coin_y = COIN_BAL_Y;
+ph_hint_draw_feedback(hint);
 
 // ── Board background ──────────────────────────────────────────────────────────
 ph_draw_chip(grid_x-12, grid_y-12, grid_x+BOARD+12, grid_y+BOARD+12, 24,
@@ -88,41 +101,26 @@ ph_draw_chip(DEL_L, DEL_Y, DEL_L + DEL_W, DEL_Y + DEL_H, 28,
 ph_draw_icon(global.spr_icon_back, DEL_L + 60, DEL_Y + DEL_H/2, 0.45, PH_COL_PURPLE);
 ph_draw_text(DEL_L + DEL_W/2 + 26, DEL_Y + DEL_H/2, "DELETE", global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
 
-// ── Bottom toolbar: coin balance (centre-left) · HINT pill (right) ────────────
+// ── Bottom toolbar: timer pill (centre) · HINT pill (right) ───────────────────
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
 
-// Coin balance pill (with pulse/overshoot on coin gain)
-var _cp = 1.0;
-if (coin_pulse_t < 1) {
-    var _p2 = coin_pulse_t;
-    _cp = (_p2 < 0.5) ? lerp(1.0, 1.25, _p2/0.5) : lerp(1.25, 1.0, (_p2-0.5)/0.5);
-}
-if (coin_overshoot_t < 1) _cp *= 1 + sin(coin_overshoot_t * pi * 2) * 0.12 * (1 - coin_overshoot_t);
-var _cb_w  = 220;
-var _cb_cx = PH_W/2 - 80;
-var _cb_l  = _cb_cx - _cb_w/2;
-var _cb_r  = _cb_cx + _cb_w/2;
-ph_draw_chip(_cb_l, _tool_y-38, _cb_r, _tool_y+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-var _cb_is = (88/512) * _cp;
-draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+44, _tool_y, _cb_is, _cb_is, 0, c_white, 1);
-ph_draw_text(_cb_l+92, _tool_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
-COIN_BAL_X = (_cb_l + _cb_r)/2;
-COIN_BAL_Y = _tool_y;
+// Timer pill — centre of the strip (moved down from the top HUD).
+var _b_e_s  = floor((current_time - session_start_ms) / 1000);
+var _b_time = string(_b_e_s div 60) + ":" + (((_b_e_s mod 60) < 10) ? "0" : "") + string(_b_e_s mod 60);
+var _tp_l = PH_W/2 - 105;
+var _tp_r = PH_W/2 + 105;
+ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+draw_sprite_ext(global.spr_stopwatch, 0, _tp_l+19, _tool_y, 106/512, 106/512, 0, c_white, 1);
+ph_draw_text(_tp_l+65, _tool_y, _b_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
-// HINT pill — bulb · "HINT" · cost-chip [coin · 100]
+// HINT pill — bulb · "HINT" (cost chip removed; handled elsewhere)
 HINT_PILL_R = PH_W - 50;
-HINT_PILL_L = HINT_PILL_R - 400;
-HINT_PILL_T = _tool_y - 45;
-HINT_PILL_B = _tool_y + 45;
-ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 45, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+50, _tool_y, 78/512, 78/512, 0, c_white, 1);
-ph_draw_text(HINT_PILL_L+110, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
-var _cost_w = 130;
-var _cost_l = HINT_PILL_R - 22 - _cost_w;
-var _cost_r = HINT_PILL_R - 22;
-ph_draw_chip(_cost_l, _tool_y-32, _cost_r, _tool_y+32, 32, PH_COL_PURPLE_SOFT, PH_COL_PURPLE_DEEP, 4);
-draw_sprite_ext(global.spr_gold_coin, 0, _cost_l+28, _tool_y, 56/512, 56/512, 0, c_white, 1);
-ph_draw_text(_cost_r-18, _tool_y, string(PH_HINT_COST), global.fnt_body_md, PH_COL_DARK, fa_right, fa_middle);
+HINT_PILL_L = HINT_PILL_R - 210;
+HINT_PILL_T = _tool_y - 33;
+HINT_PILL_B = _tool_y + 33;
+ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
+ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
 // ── Toast — centred between the board and the number pad ───────────────────────
 if (toast_timer > 0) {
@@ -133,6 +131,9 @@ if (toast_timer > 0) {
     ph_draw_text(PH_W/2, _toast_y, toast_text, global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
     draw_set_alpha(1);
 }
+
+// ── Hint modal — slide-up bottom sheet (pay coins OR watch a placeholder video).
+ph_hint_draw_modal(hint);
 
 } // end if (win_phase == 0)
 
@@ -265,3 +266,6 @@ if (win_phase == 1) {
     }
     draw_set_alpha(1);
 }
+
+// ── Placeholder rewarded-video screen — drawn last so it covers every layer.
+ph_hint_draw_video(hint);
