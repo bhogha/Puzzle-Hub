@@ -1,16 +1,147 @@
 // ── obj_wordle — Draw GUI ─────────────────────────────────────────────────────
-// Phase 0 scaffold: background + HUD only, so the room renders and is navigable.
-// The 6×6 grid, custom keyboard, hint, win/loss flow are built in Phases 2–5.
+// Phase 2: board + custom keyboard + reveal. Win screen drawn last when complete.
 
 // Background
 draw_set_color(PH_COL_BG);
 draw_rectangle(0, 0, PH_W, PH_H, false);
 ph_draw_dot_bg(PH_COL_BG);
 
-// HUD: back arrow (left) + green WORDLE title (centred)
-ph_draw_icon(global.spr_icon_back, 65, 165, 0.6, PH_COL_DARK);
-ph_draw_text(PH_W/2, 165, "WORDLE", global.fnt_disp_md, PH_COL_GREEN, fa_center, fa_middle);
+// ── Win screen owns the frame when complete ───────────────────────────────────
+if (win_phase == 1) {
+    win.cfg.time_str = win_time_str;
+    ph_win_draw(win);
+    exit;
+}
 
-// Phase 0 placeholder note
-ph_draw_text(PH_W/2, PH_H/2 - 40, "WORDLE", global.fnt_disp_lg, PH_COL_GREEN, fa_center, fa_middle);
-ph_draw_text(PH_W/2, PH_H/2 + 60, "Coming together — Phase 0 scaffold", global.fnt_body_sm, PH_COL_GRAY, fa_center, fa_middle);
+// ── Top HUD: back · WORDLE · coin balance ─────────────────────────────────────
+draw_sprite_ext(global.spr_back2, 0, 60, HUD_Y, 0.36, 0.36, 0, c_white, 1);
+ph_draw_text(PH_W/2, HUD_Y, "WORDLE", global.fnt_disp_md, PH_COL_GREEN, fa_center, fa_middle);
+
+var _cb_r = PH_W - 50;
+var _cb_l = _cb_r - 220;
+ph_draw_chip(_cb_l, HUD_Y-33, _cb_r, HUD_Y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+23, HUD_Y, 112/512, 112/512, 0, c_white, 1);
+ph_draw_text(_cb_l+74, HUD_Y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+
+// ── Message prompt / toast (under the HUD) ────────────────────────────────────
+if (toast_timer > 0) {
+    var _msg_y = HUD_Y + 95;
+    var _a = min(1, toast_timer/15);
+    draw_set_alpha(_a);
+    ph_draw_chip(PH_W/2-324, _msg_y-36, PH_W/2+324, _msg_y+36, 36, toast_col, make_color_rgb(20,20,20), 5);
+    ph_draw_text(PH_W/2, _msg_y, toast_text, global.fnt_body_md, PH_COL_WHITE, fa_center, fa_middle);
+    draw_set_alpha(1);
+}
+
+// ── Guess grid (6×6) ──────────────────────────────────────────────────────────
+var _ncommitted = array_length(puzzle.guesses);
+var _input_row  = _ncommitted;   // the row currently being typed
+
+var _EMPTY  = make_color_rgb(228,228,228);
+var _ABSENT = make_color_rgb(198,198,198);
+var _BORDER = make_color_rgb(150,150,150);
+
+for (var _r = 0; _r < ROWS; _r++) {
+
+    // Resolve this row's source guess + score (if any).
+    var _guess = "";
+    var _score = [];
+    var _is_committed = (_r < _ncommitted);
+    var _is_reveal    = (revealing && _r == reveal_row);
+    var _is_input     = (!revealing && _r == _input_row && puzzle.status == "in_progress");
+    if (_is_committed) {
+        _guess = puzzle.guesses[_r];
+        _score = ph_wordle_score_guess(puzzle.answer, _guess);
+    } else if (_is_reveal) {
+        _guess = reveal_guess;
+        _score = reveal_score;
+    } else if (_is_input) {
+        _guess = cur_guess;
+    }
+
+    for (var _c = 0; _c < COLS; _c++) {
+        var _x0 = grid_x + _c * (CELL + GAP);
+        var _y0 = grid_y + _r * (CELL + GAP);
+        var _ch = (string_length(_guess) >= _c + 1) ? string_char_at(_guess, _c + 1) : "";
+
+        // Decide fill + whether the colour has "landed" (reveal stagger).
+        var _fill   = _EMPTY;
+        var _letter = (_ch != "");
+        var _pop    = 1.0;
+        var _outline = false;
+
+        if (_is_committed) {
+            if      (_score[_c] == "green")  _fill = PH_COL_GREEN;
+            else if (_score[_c] == "yellow") _fill = PH_COL_YELLOW;
+            else                             _fill = _ABSENT;
+        } else if (_is_reveal) {
+            var _landed_at = _c * REVEAL_STAGGER + REVEAL_FLIP;
+            if (reveal_t >= _landed_at) {
+                if      (_score[_c] == "green")  _fill = PH_COL_GREEN;
+                else if (_score[_c] == "yellow") _fill = PH_COL_YELLOW;
+                else                             _fill = _ABSENT;
+                var _since = reveal_t - _landed_at;
+                if (_since < 8) _pop = 1.0 + 0.12 * (1 - _since/8);   // little settle pop
+            } else {
+                _fill = PH_COL_WHITE;       // not yet flipped — show as typed
+                _outline = true;
+            }
+        } else if (_is_input && _letter) {
+            _fill = PH_COL_WHITE;
+            _outline = true;
+        }
+
+        var _hw = (CELL * _pop) / 2;
+        var _mx0 = _x0 + CELL/2 - _hw, _my0 = _y0 + CELL/2 - _hw;
+        var _mx1 = _x0 + CELL/2 + _hw, _my1 = _y0 + CELL/2 + _hw;
+        draw_set_color(_fill);
+        draw_roundrect_ext(_mx0, _my0, _mx1, _my1, 20, 20, false);
+        if (_outline) {
+            draw_set_color(_BORDER);
+            draw_roundrect_ext(_mx0, _my0, _mx1, _my1, 20, 20, true);
+        }
+        if (_letter) {
+            ph_draw_text(_x0 + CELL/2, _y0 + CELL/2, _ch, global.fnt_disp_lg, PH_COL_DARK, fa_center, fa_middle);
+        }
+    }
+}
+
+// ── Custom keyboard ───────────────────────────────────────────────────────────
+var _keys = wd_build_keys();
+for (var _i = 0; _i < array_length(_keys); _i++) {
+    var _k = _keys[_i];
+    var _kfill = make_color_rgb(228,228,228);
+    var _ktext = PH_COL_DARK;
+    var _label = "";
+
+    if (_k.type == "letter") {
+        _label = _k.ch;
+        if (variable_struct_exists(kbd_states, _k.ch)) {
+            var _st = variable_struct_get(kbd_states, _k.ch);
+            if      (_st == "green")  _kfill = PH_COL_GREEN;
+            else if (_st == "yellow") _kfill = PH_COL_YELLOW;
+            else if (_st == "gray")   { _kfill = make_color_rgb(150,150,150); _ktext = PH_COL_WHITE; }
+        }
+    } else if (_k.type == "del") {
+        _label = "DEL";
+    } else if (_k.type == "send") {
+        _label  = "SEND";
+        _kfill  = PH_COL_GREEN;
+        _ktext  = PH_COL_WHITE;
+    }
+
+    draw_set_color(_kfill);
+    draw_roundrect_ext(_k.x1, _k.y1, _k.x2, _k.y2, 16, 16, false);
+    var _kfnt = (_k.type == "letter") ? global.fnt_disp_md : global.fnt_body_md;
+    ph_draw_text((_k.x1+_k.x2)/2, (_k.y1+_k.y2)/2, _label, _kfnt, _ktext, fa_center, fa_middle);
+}
+
+// ── Bottom bar: timer pill (left) ─────────────────────────────────────────────
+// (HINT pill is added in Phase 4.)
+var _tool_y = PH_H - 110 - global.safe_bottom_gui;
+var _e_s    = floor((current_time - session_start_ms) / 1000);
+var _t_str  = string(_e_s div 60) + ":" + (((_e_s mod 60) < 10) ? "0" : "") + string(_e_s mod 60);
+var _tp_l = 60, _tp_r = 60 + 210;
+ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+draw_sprite_ext(global.spr_stopwatch, 0, _tp_l+30, _tool_y, 106/512, 106/512, 0, c_white, 1);
+ph_draw_text(_tp_l+78, _tool_y, _t_str, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
