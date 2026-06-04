@@ -17,6 +17,9 @@
 #macro PH_COL_BLUE        make_color_rgb( 45,125,246)
 #macro PH_COL_BLUE_SOFT   make_color_rgb(205,224,255)
 #macro PH_COL_BLUE_DEEP   make_color_rgb( 20, 80,190)
+#macro PH_COL_GREEN       make_color_rgb(  0,190, 73)   // Wordle accent (#00be49)
+#macro PH_COL_GREEN_SOFT  make_color_rgb(200,240,210)
+#macro PH_COL_GREEN_DEEP  make_color_rgb(  0,140, 55)
 #macro PH_COL_GOLD        make_color_rgb(245,180,  0)
 #macro PH_COL_DARK        make_color_rgb( 31, 20, 48)
 #macro PH_COL_INK_SOFT    make_color_rgb( 80, 60,100)
@@ -43,6 +46,13 @@
 #macro PH_BONUS_WORD_XP      25
 #macro PH_BONUS_WORD_COINS   10
 
+// ── Wordle ────────────────────────────────────────────────────────────────────
+#macro PH_WORDLE_LEN          6   // letters per word (6×6 board)
+#macro PH_WORDLE_GUESSES      6   // base guess rows
+#macro PH_WORDLE_EXTRA_MOVES  3   // one-time "extra moves" purchase adds this many rows
+#macro PH_WORDLE_EXTRA_COST  100  // coins for the extra moves (or free via rewarded video)
+#macro PH_WORDLE_GIVEUP_XP    25  // consolation XP on a missed/given-up puzzle (doubles to 50)
+
 // ── Starting state (per GDD: new players start at 100 XP / 300 coins) ─────────
 #macro PH_INITIAL_XP       100
 #macro PH_INITIAL_COINS    300
@@ -54,6 +64,7 @@
 #macro PH_SUDOKU_INDEX       1
 #macro PH_WORDWAVE_INDEX     2
 #macro PH_SHIKAKU_INDEX      3
+#macro PH_WORDLE_INDEX       4
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"
@@ -113,12 +124,12 @@ function ph_game_cards() {
     array_push(_cards, {
         name:     "WORDLE",
         subtitle: "Guess the word",
-        room:     "",
-        locked:   true,
+        room:     "rm_wordle",
+        locked:   false,
         card_spr: global.spr_card_green,
         icon_spr: global.spr_game_wordle,
         text_col: make_color_rgb(0, 90, 40),
-        btn_type: "locked",
+        btn_type: "play_light",
     });
     array_push(_cards, {
         name:     "MIX-UP",
