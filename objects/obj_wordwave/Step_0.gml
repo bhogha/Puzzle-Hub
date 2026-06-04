@@ -1,5 +1,13 @@
 // ── Word Wave — Step ──────────────────────────────────────────────────────────
 
+// Win screen (shared controller) — runs first and exits when complete, so the
+// legacy win_phase==1 blocks below are no longer reached.
+if (win_phase == 1) {
+    ph_win_step(win);
+    ph_win_input(win);
+    exit;
+}
+
 // Cell pop animation
 for (var _i = 0; _i < array_length(cell_scales); _i++) {
     if (cell_flash[_i] > 0) {

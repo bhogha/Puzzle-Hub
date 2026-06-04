@@ -5,6 +5,7 @@ function ph_load_fonts() {
     // Lilita One — display headings
     global.fnt_disp_xxl = font_add(_lilita+"LilitaOne-Regular.ttf", 156, false,false,32,127);
     global.fnt_disp_xl  = font_add(_lilita+"LilitaOne-Regular.ttf",  96, false,false,32,127);
+    global.fnt_disp_xlg = font_add(_lilita+"LilitaOne-Regular.ttf",  73, false,false,32,127);
     global.fnt_disp_lg  = font_add(_lilita+"LilitaOne-Regular.ttf",  60, false,false,32,127);
     global.fnt_disp_md  = font_add(_lilita+"LilitaOne-Regular.ttf",  44, false,false,32,127);
     global.fnt_disp_sm  = font_add(_lilita+"LilitaOne-Regular.ttf",  32, false,false,32,127);

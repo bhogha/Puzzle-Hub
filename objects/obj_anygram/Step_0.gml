@@ -1,3 +1,13 @@
+// ── Win screen (shared controller) ────────────────────────────────────────────
+// When the puzzle is complete the shared win controller owns input + animation.
+// It runs first and exits, so the legacy win_phase==1 blocks below are no longer
+// reached (kept temporarily; safe to delete once the new flow is verified).
+if (win_phase == 1) {
+    ph_win_step(win);
+    ph_win_input(win);
+    exit;
+}
+
 // ── Tile animation ────────────────────────────────────────────────────────────
 for (var _i = 0; _i < array_length(tile_scales); _i++) {
     if (tile_flash[_i] > 0) {
@@ -290,7 +300,7 @@ if (is_dragging_wheel && device_mouse_check_button_released(0, mb_left)) {
                 // Cells will be revealed by the fly-tile arrival callbacks; mark
                 // the toast immediately so the player gets instant feedback.
                 ag_spawn_fly_main(_result.index);
-                toast_text  = "FOUND  •  " + string_upper(puzzle.words[_result.index].text);
+                toast_text  = "FOUND - " + string_upper(puzzle.words[_result.index].text);
                 toast_col   = PH_COL_TEAL;
                 toast_timer = TOAST_DUR;
                 break;
@@ -302,7 +312,7 @@ if (is_dragging_wheel && device_mouse_check_button_released(0, mb_left)) {
                 ph_grant_coins(global.save, PH_BONUS_WORD_COINS);
                 ph_save_write(global.save);
                 ag_spawn_fly_bonus(string_upper(_word));
-                toast_text  = "BONUS  +" + string(PH_BONUS_WORD_COINS) + " COINS  •  " + string_upper(_word);
+                toast_text  = "BONUS +" + string(PH_BONUS_WORD_COINS) + " COINS - " + string_upper(_word);
                 toast_col   = PH_COL_PURPLE;
                 toast_timer = TOAST_DUR;
                 break;

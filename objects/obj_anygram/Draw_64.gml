@@ -1,5 +1,14 @@
 // ── Anygram — Draw GUI ────────────────────────────────────────────────────────
 
+// Win screen is now drawn by the shared controller (scr_economy §Shared Win
+// Screen). When complete, it fully owns the frame — draw it and stop here. The
+// legacy win_phase==1 block further below is superseded and no longer reached.
+if (win_phase == 1) {
+    win.cfg.time_str = win_time_str;
+    ph_win_draw(win);
+    exit;
+}
+
 // Background — dots faded to ~50% per design ref
 draw_set_color(PH_COL_BG);
 draw_rectangle(0,0,PH_W,PH_H,false);
@@ -145,7 +154,9 @@ ph_draw_icon(global.spr_icon_shuffle, _wcx, WHEEL_CY, 0.5, PH_COL_GRAY);
 // below so the swipe-end transition stays in place.
 var _pill_y = floor((grid_y + grid_h + WHEEL_CY - WHEEL_R) / 2);
 if (array_length(trail) >= 1) {
-    ph_draw_chip(PH_W/2-200,_pill_y-34, PH_W/2+200,_pill_y+34, 34,
+    // Shares the Message Prompt slot/height (36 half-height, fully-rounded) so the
+    // live swipe pill swaps seamlessly into the feedback Message Prompt on release.
+    ph_draw_chip(PH_W/2-200,_pill_y-36, PH_W/2+200,_pill_y+36, 36,
                  PH_COL_DARK, make_color_rgb(10,5,20), 6);
     ph_draw_text(PH_W/2, _pill_y, trail_word, global.fnt_disp_md, PH_COL_WHITE, fa_center, fa_middle);
 }
@@ -212,15 +223,22 @@ draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L + 12, _tool_y, 101/512, 101/512,
 ph_draw_text(HINT_PILL_L + 51, _tool_y, "HINT",
              global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
-// ── Toast — drawn at the same y as the word-preview pill so the FOUND/NOT-A-
-//           WORD message replaces the live swipe pill seamlessly. Pill is sized
-//           to fit the longest authored toast ("BONUS +10 COINS · {WORD}"). ──
+// ── Message Prompt — the unified feedback pill for ALL Anygram prompts (FOUND,
+//           BONUS, ALREADY FOUND, NOT A KEY/VALID WORD, hint results…). Drawn at
+//           the same y as the live word-preview pill so it replaces the swipe
+//           pill seamlessly on release. Matches the Penpot "Message Prompt"
+//           design: a fully-rounded teal pill (design 900×100 → 648×72 GUI px),
+//           bold white display text, centred between the word grid and the wheel.
+//           Width adapts to the message, never below the design minimum. ──
 if (toast_timer > 0) {
     var _alpha = min(1, toast_timer/15);
+    var _mp_hh = 36;                                     // half-height (design 100 → 72)
+    draw_set_font(global.fnt_disp_md);
+    var _mp_hw = max(324, string_width(toast_text)/2 + 48);   // design min 900 → 648; +pad
     draw_set_alpha(_alpha);
-    ph_draw_chip(PH_W/2-380,_pill_y-34, PH_W/2+380,_pill_y+34, 30,
+    ph_draw_chip(PH_W/2-_mp_hw,_pill_y-_mp_hh, PH_W/2+_mp_hw,_pill_y+_mp_hh, _mp_hh,
                  toast_col, make_color_rgb(20,20,20), 5);
-    ph_draw_text(PH_W/2, _pill_y, toast_text, global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
+    ph_draw_text(PH_W/2, _pill_y, toast_text, global.fnt_disp_md, PH_COL_WHITE, fa_center, fa_middle);
     draw_set_alpha(1);
 }
 

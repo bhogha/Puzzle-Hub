@@ -1,5 +1,13 @@
 // ── Sudoku — Step ─────────────────────────────────────────────────────────────
 
+// Win screen (shared controller) — runs first and exits when complete, so the
+// legacy win_phase==1 blocks below are no longer reached.
+if (win_phase == 1) {
+    ph_win_step(win);
+    ph_win_input(win);
+    exit;
+}
+
 // Cell pop / flash animation
 for (var _i = 0; _i < 81; _i++) {
     if (cell_flash[_i] > 0) {

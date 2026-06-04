@@ -103,14 +103,8 @@ sk_check_win = function() {
     sk_save();
     ph_shikaku_mark_done(global.save, global.selected_date_key);
 
-    // Single +100 XP grant for the whole puzzle. auto_coins=false: level-up
-    // coins are deferred to the Level-Up reward screen (rm_win).
-    var _lvl_res = ph_grant_xp(global.save, PH_XP_PER_PUZZLE, false);
-    xp_gained = PH_XP_PER_PUZZLE;
-    if (_lvl_res.levels_gained > 0) {
-        global.pending_levelup = { level: _lvl_res.new_level, base_reward: PH_COINS_PER_LEVEL };
-    }
-
+    // XP is claimed on the win screen now (ph_win_grant), which also routes any
+    // level-up to the Level-Up reward screen (rm_win). Nothing granted here.
     // Gift box for the 4th solved puzzle of the day.
     var _count = ph_solved_count_on(global.save, global.selected_date_key);
     coins_bonus = 0;
@@ -124,7 +118,8 @@ sk_check_win = function() {
 
     dragging               = false;
     win_phase              = 1;
-    confetti_burst_pending = true;
+    win.cfg.time_str = win_time_str;
+    ph_win_celebrate(win);
 };
 
 // ── Hint helpers (used by the shared hint modal) ──────────────────────────────
@@ -170,8 +165,41 @@ if (!is_undefined(_saved)) {
 // ── Enter review/solved mode when re-opening a finished puzzle ─────────────────
 var _review = variable_global_exists("shikaku_review_mode") && global.shikaku_review_mode;
 if (_review) global.shikaku_review_mode = false;
+var _already_solved = _review || ph_shikaku_is_done(global.save, global.selected_date_key);
 
-if (_review || ph_shikaku_is_done(global.save, global.selected_date_key)) {
+// ── Shared win screen (scr_economy §Shared Win Screen) ────────────────────────
+// Mini solved Shikaku partition fitted into the recap box.
+win_draw_recap = function(_cx, _top, _bw, _bh) {
+    var _cell = floor(min(_bw, _bh) / N);
+    var _grid = _cell * N;
+    var _ox = _cx - _grid/2, _oy = _top + (_bh - _grid)/2;
+    ph_draw_chip(_ox-12, _oy-12, _ox+_grid+12, _oy+_grid+12, 16, PH_COL_BLUE_SOFT, make_color_rgb(20,80,190), 4);
+    for (var _si = 0; _si < array_length(puzzle.sol_rects); _si++) {
+        var _s  = puzzle.sol_rects[_si];
+        var _x1 = _ox + _s.c*_cell + 3, _y1 = _oy + _s.r*_cell + 3;
+        var _x2 = _ox + (_s.c+_s.w)*_cell - 3, _y2 = _oy + (_s.r+_s.h)*_cell - 3;
+        ph_draw_rounded(_x1, _y1, _x2, _y2, 10, PH_COL_TEAL_DEEP);
+        ph_draw_rounded(_x1+3, _y1+3, _x2-3, _y2-3, 8, PH_COL_WHITE);
+    }
+    var _fnt = (_cell >= 44) ? global.fnt_body_md : global.fnt_body_sm;
+    for (var _mi = 0; _mi < n_clues; _mi++) {
+        var _cl  = puzzle.clues[_mi];
+        var _mcx = _ox + _cl.c*_cell + _cell/2, _mcy = _oy + _cl.r*_cell + _cell/2;
+        ph_draw_text(_mcx, _mcy, string(_cl.val), _fnt, PH_COL_DARK, fa_center, fa_middle);
+    }
+};
+win = ph_win_create({
+    puzzle_name: "SHIKAKU",
+    title_col:   PH_COL_BLUE,
+    bg_col:      PH_COL_TEAL,
+    claim_key:   "shikaku_" + global.selected_date_key,
+    already:     _already_solved,
+    share_url:   PH_SHARE_URL,
+    time_str:    win_time_str,
+    draw_recap:  win_draw_recap,
+});
+
+if (_already_solved) {
     // Show the completed solution.
     player_rects = [];
     for (var _i = 0; _i < array_length(puzzle.sol_rects); _i++) {
@@ -180,8 +208,7 @@ if (_review || ph_shikaku_is_done(global.save, global.selected_date_key)) {
     }
     var _tk = "shikaku_time_" + global.selected_date_key;
     win_time_str = variable_struct_exists(global.save, _tk) ? global.save[$ _tk] : "--:--";
-    xp_gained    = PH_XP_PER_PUZZLE;
-    win_phase    = 1;
-    win_anim_t   = 1.0;
-    confetti_burst_pending = true;
+    win.cfg.time_str = win_time_str;
+    win_phase = 1;
+    ph_win_celebrate(win);
 }

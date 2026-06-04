@@ -1,5 +1,13 @@
 // ── Shikaku — Step ────────────────────────────────────────────────────────────
 
+// Win screen (shared controller) — runs first and exits when complete, so the
+// legacy win_phase==1 blocks below are no longer reached.
+if (win_phase == 1) {
+    ph_win_step(win);
+    ph_win_input(win);
+    exit;
+}
+
 // Toast countdown
 if (toast_timer > 0) toast_timer--;
 

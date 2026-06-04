@@ -1,6 +1,6 @@
 # Puzzle Hub — Project Cache (for Claude)
 
-_Internal reference map of the codebase, written to make future work faster. Not player- or design-facing — for design rules see `GDD.md`. Last synced: 2026-06-01 against v0.2 (incl. Shikaku)._
+_Internal reference map of the codebase, written to make future work faster. Not player- or design-facing — for design rules see `GDD.md`. Last synced: 2026-06-04 against v0.2 (incl. Shikaku, shared hint modal + rewarded-video flow, Level-Up reward screen)._
 
 > Keep this in sync when files move, globals are added, or the boot/save flow changes. If it drifts from the code, the code wins — re-verify before relying on a line here.
 
@@ -45,7 +45,8 @@ All functions are global, prefixed `ph_`. No structs-with-methods except inline 
 | Script | LOC | Holds |
 |---|---|---|
 | `scr_constants` | 107 | All `#macro`s: palette colors, canvas, **economy numbers**, daily schedule indices, save filename, debug flags. Also `ph_game_cards()` (hub card list). |
-| `scr_economy` | 29 | `ph_level_from_xp`, `ph_xp_in_level`, `ph_grant_xp` (returns `{levels_gained, coins_awarded, new_level}`), `ph_grant_coins`, `ph_spend_coins`. |
+| `scr_economy` | 44 | `ph_level_from_xp`, `ph_xp_in_level`, `ph_grant_xp(save, amt, _auto_coins=true)` (returns `{levels_gained, coins_awarded, new_level}`; pass `false` to **defer** level-up coins to the Level-Up screen), `ph_grant_coins`, `ph_spend_coins`, `ph_levelup_pending()`. |
+| `scr_hint` | ~200 | **Shared hint-acquisition flow** (modal + placeholder rewarded video), struct-based, reused by all 4 puzzles. `ph_hint_create(apply_method, accent)` → struct; `ph_hint_open/tick/input/is_open`; `ph_hint_draw_feedback/modal/video`. `ph_input` returns `"none"/"consumed"/"paid"/"freed"/"poor"`. Also the **generic** `ph_video_overlay(timer, delay, accent)` dark "VIDEO PLAYING" placeholder (shared by hint + Level-Up screens). |
 | `scr_save` | 252 | Load/write/reset save; per-puzzle solved tracking; streak recompute; bonus-word tracking; Sudoku grid persistence. **Central data layer.** |
 | `scr_dates` | 44 | Date-key formatting (`ph_today_key`, `ph_date_key`), `ph_seed_from_key` (day-index seed), weekday/month math, `ph_date_add_days`. |
 | `scr_puzzles` | 484 | Anygram + Word Wave loaders, normalizers, classifiers, solved checks. Both puzzles' pure logic. |
@@ -55,7 +56,7 @@ All functions are global, prefixed `ph_`. No structs-with-methods except inline 
 | `scr_fonts` | 19 | `ph_load_fonts()` — registers all `global.fnt_*` via `font_add`. |
 
 ### Key economy/save facts to remember
-- Level is **derived**, never stored: `level = floor(xp / 500) + 1`. `ph_grant_xp` handles multi-level jumps and pays `levels_gained × 100` coins.
+- Level is **derived**, never stored: `level = floor(xp / 500) + 1`. `ph_grant_xp` computes `levels_gained × 100` coins, but the four `*_check_win` now call it with `_auto_coins=false` so the level-up coins are **deferred** to the **Level-Up reward screen** (`obj_win`/`rm_win`). On level gain they set `global.pending_levelup = {level, base_reward:100}`; the screen grants 100, or 200 if the player picks DOUBLE (placeholder video). Only 1 level-up possible per puzzle (100 XP grant vs 500/level).
 - `ph_solved_count_on` counts a day's solves but **skips bookkeeping keys** prefixed `ANYGRAM_` and `WW_W` so per-word flags don't inflate the daily count. Adding a new multi-flag puzzle? Add the same skip rule.
 - Anygram completion = `ANYGRAM_DONE` (new) or legacy `ANYGRAM_M1 && ANYGRAM_M2`, via `ph_anygram_is_done`. Sudoku = `SUDOKU` key. Word Wave = `WORDWAVE` key.
 - Streak recomputed on every save load and after completions via `ph_update_streak`.
@@ -77,15 +78,17 @@ Each object owns a screen; logic split across `Create_0` (setup/state), `Step_0`
 | `obj_wordwave` | Create(221), Step(243), Draw(361) | 8×8 word-search grid, swipe selection, per-word colors, hint, win overlay (centered card). |
 | `obj_shop` | Create(2), Step(18), Draw(24) | Shop tab — minimal/stub. |
 | `obj_profile` | Create(18), Step(56), Draw(42) | Profile tab + **hidden triple-tap-Level save-reset** gesture. |
-| `obj_win` | Create(2), Draw(4) | Near-empty; win UI is drawn inside each puzzle controller, not here. `rm_win` is essentially unused. |
+| `obj_win` | Create, Step, Draw | **Level-Up reward screen** (in `rm_win`). Repurposed from the old dead win-overlay stub. Reads `global.pending_levelup`, shows a purple card ("LEVEL UP!" + "LEVEL N" + confetti) with **100** / **DOUBLE** pill buttons; grants coins (`lu_claim`), clears the flag, `room_goto(rm_hub)`. DOUBLE → `ph_video_overlay` 5 s → 200 coins. NB: its video flag is `vid_open` because `video_open` is a reserved built-in. |
 
-Pattern: each puzzle controller embeds its own win overlay + confetti rather than transitioning to `rm_win`. Review mode re-enters the puzzle room with a `global.*_review_mode` flag and jumps straight to the win overlay.
+Pattern: each puzzle controller embeds its own **win overlay** + confetti (not `obj_win`); review mode re-enters the puzzle room with a `global.*_review_mode` flag and jumps straight to the win overlay. The **Level-Up screen** is the one thing that lives in its own room: each puzzle's win-screen BACK button does `room_goto(ph_levelup_pending() ? rm_win : rm_hub)`.
+
+**Shared hint flow (all 4 puzzles):** each controller's Create builds `hint = ph_hint_create(<x>_apply_hint, <accent>)` and defines `<x>_apply_hint` / `<x>_can_hint` (`ag_`/`sd_`/`ww_`/`sk_` prefixes). Step calls `ph_hint_tick(hint)` near the timers and `ph_hint_input(hint)` before normal input (exit if result ≠ `"none"`); the HINT-pill handler gates on `<x>_can_hint()` then calls `ph_hint_open(hint)`. Draw calls `ph_hint_draw_feedback/modal/video(hint)`. See `scr_hint` + GDD §2.5–2.6.
 
 ---
 
 ## 5. Rooms — `rooms/`
 
-`rm_boot` (first, per RoomOrderNodes) → `rm_hub`. Then one room per screen: `rm_anygram`, `rm_sudoku`, `rm_wordwave`, `rm_shop`, `rm_profile`, `rm_win`. Each room hosts its matching object.
+`rm_boot` (first, per RoomOrderNodes) → `rm_hub`. Then one room per screen: `rm_anygram`, `rm_sudoku`, `rm_wordwave`, `rm_shikaku`, `rm_shop`, `rm_profile`, and `rm_win` (= the **Level-Up reward screen**, no longer unused). Each room hosts its matching object.
 
 ---
 
@@ -97,6 +100,7 @@ Set up in `obj_persistent/Create_0`. Most-referenced globals:
 - `global.save` — the entire save struct (89 refs). All progression lives here.
 - `global.selected_date_key` — which day the player is viewing/playing (47 refs).
 - `global.input_locked_until` — frame-time input lock during animations (20 refs).
+- `global.pending_levelup` — `{level, base_reward}` when a completed puzzle queued a level-up reward; `undefined` otherwise (init in persistent, set in `*_check_win`, consumed/cleared by `obj_win`). Gate via `ph_levelup_pending()`.
 - `global.PH_H_dyn` — runtime canvas height (`PH_H` macro reads this).
 - `global.safe_top_gui` / `global.safe_bottom_gui` — iOS notch / home-indicator insets.
 
@@ -110,7 +114,7 @@ Set up in `obj_persistent/Create_0`. Most-referenced globals:
 - `global.fly_tiles` — shared fly-tile particle list (22 refs, Anygram).
 - `global.ph_dot_surface` — cached dotted-background surface.
 
-**Assets** — `global.fnt_*` (fonts), `global.spr_*` (all sprites). Loaded once in persistent.
+**Assets** — `global.fnt_*` (fonts), `global.spr_*` (all sprites). Loaded once in persistent. Includes `global.spr_tv` (`retro tv icon.png`) for the FREE / DOUBLE rewarded-video buttons.
 
 ---
 
@@ -128,6 +132,8 @@ All three: missing file → hardcoded fallback puzzle. Same two-pass date select
 
 - **No struct literals with non-constant fields.** GameMaker's YYC compiler generates anonymous C++ constructors for non-constant expressions inside struct literals, which can cause **linker errors**. Build such structs with explicit property assignment (see `obj_hub/Create_0` `LAYOUT` and `hub_center_strip_on`). Related: adding resources can trigger a YYC link failure fixed by a **Clean rebuild**, not code changes (auto-memory `project_puzzle_hub_yyc_clean_rebuild`).
 - **All gameplay numbers are `#macro`s in `scr_constants`.** Change them there and reflect in `GDD.md`. Never hardcode economy values.
+- **Watch for reserved built-in names.** GameMaker ships functions like `video_open`, `video_close`, etc. Naming an instance variable `video_open` fails to compile ("read-only function"). The Level-Up screen uses `vid_open` for this reason. When in doubt, prefix puzzle-specific state.
+- **Adding events to an existing object** (e.g. the Create/Step added to `obj_win`) means editing its `.yy` `eventList` (eventType: 0=Create, 3=Step, 8 + eventNum 64=Draw GUI) **and** adding the matching `*.gml` file. Like adding resources, this can need a **Clean rebuild**.
 - **`PH_SUDOKU_TEST_PREFILL = true`** in `scr_constants` — debug flag that starts Sudoku ~90% solved. **Must be `false` before shipping.**
 - **`PH_BONUS_WORD_XP = 25`** is dead (bonus words pay coins only, no XP). Safe to delete.
 - **Drawing is GUI-space** (`Draw_64` / GUI events), sized to `PH_W × PH_H_dyn` via `display_set_gui_size`. Use `ph_scissor_gui` (converts GUI→window px) for clipping, not raw `gpu_set_scissor`.
@@ -149,6 +155,8 @@ All three: missing file → hardcoded fallback puzzle. Same two-pass date select
 | Shared UI widgets (chips, nav, text) | `scr_draw` |
 | Fonts / sprites | `scr_fonts` / `obj_persistent/Create_0` |
 | Win screen / confetti | inside each puzzle controller's Draw/Step (not `obj_win`) |
+| Hint modal / rewarded-video flow | `scr_hint` (shared); per-puzzle `<x>_apply_hint`/`<x>_can_hint` in each Create |
+| Level-Up reward screen | `obj_win` (Create/Step/Draw) + `ph_grant_xp(..., false)` in `*_check_win` |
 | New screen | new `obj_*` + `rm_*`, register in `.yyp`, wire nav in Step events |
 
 ---

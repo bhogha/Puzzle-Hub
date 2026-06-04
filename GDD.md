@@ -26,7 +26,9 @@ Four puzzle types — **Anygram**, **Sudoku**, **Word Wave**, and **Shikaku** �
 
 XP can be earned by playing any day's puzzle — including past days — so retroactive solves still progress the player.
 
-**One XP grant per puzzle.** XP is awarded **exactly once** when a daily puzzle becomes fully solved — not per word, sub-step, or mini-objective. For Anygram that means: solving Main 1 alone grants 0 XP, solving Main 2 alone grants 0 XP, finding a bonus word grants 0 XP. The single +100 XP fires only when Main 1 *and* Main 2 are both complete.
+**One XP grant per puzzle.** XP is awarded **exactly once** per daily puzzle — not per word, sub-step, or mini-objective. For Anygram that means: solving Main 1 alone grants 0 XP, solving Main 2 alone grants 0 XP, finding a bonus word grants 0 XP.
+
+**Claimed on the win screen (not at completion).** The XP is no longer added the instant the puzzle is solved. Completing the puzzle opens the Win Screen (§2.7), where the player **claims** the reward — and may **double** it (100 → 200 XP) by watching a placeholder rewarded video. The single grant happens inside `ph_win_grant` when the claim button is pressed; a persisted `save.xp_claimed[<puzzle>_<date>]` flag guards against a second grant when an already-solved puzzle is re-opened in review mode. `*_check_win` therefore records time / done-flags / streak / gift but does **not** grant XP.
 
 ### 2.2 Levels
 
@@ -96,7 +98,23 @@ When a puzzle's completion pushes the player past a level boundary, a dedicated 
 
 There is no decline option — both buttons grant coins. The screen shows a star icon, "LEVEL UP!", a "LEVEL N" badge, a one-shot confetti burst, and the two pill buttons (100 + coin, DOUBLE + TV) on a purple backdrop.
 
-**Flow / state.** At completion, `*_check_win` defers the coins (see §2.2) and sets `global.pending_levelup = { level, base_reward }`. Each puzzle's win-screen BACK button routes via `room_goto(ph_levelup_pending() ? rm_win : rm_hub)`. The screen lives in the repurposed (formerly dead) **`rm_win` / `obj_win`** pair — the in-game win overlay is drawn inside each puzzle controller, so this room/object slot was free. `obj_win` reads `global.pending_levelup` in Create (bouncing straight to the hub if it's somehow empty), grants the chosen amount via `ph_grant_coins` + `ph_save_write`, clears the flag, and `room_goto(rm_hub)`. The reward is granted exactly once (`claimed` guard). Re-opening an already-solved puzzle (review mode) never grants XP, so it never queues a level-up.
+**Flow / state.** When the player **claims** their XP on the Win Screen (§2.7) and that grant crosses a level boundary, `ph_win_grant` defers the coins (see §2.2) and sets `global.pending_levelup = { level, base_reward }`. The Win Screen's BACK button then routes via `room_goto(ph_levelup_pending() ? rm_win : rm_hub)`. The screen lives in the repurposed (formerly dead) **`rm_win` / `obj_win`** pair — the in-game win overlay is drawn inside each puzzle controller, so this room/object slot was free. `obj_win` reads `global.pending_levelup` in Create (bouncing straight to the hub if it's somehow empty), grants the chosen amount via `ph_grant_coins` + `ph_save_write`, clears the flag, and `room_goto(rm_hub)`. The reward is granted exactly once (`claimed` guard). Re-opening an already-solved puzzle (review mode) never grants XP, so it never queues a level-up.
+
+### 2.7 Win Screen (shared)
+
+Every puzzle's completion screen is drawn by **one shared controller** (`ph_win_*` in `scr_economy`) so all four puzzles share identical layout, flow, and animation; each puzzle supplies only its accent colour, name, claim key, and a `draw_recap(cx, top, box_w, box_h)` method that renders its mini solved board. The screen is full-screen on a teal backdrop (no white card) per the Penpot "Win Screen" design, stacking top-to-bottom: **WELL DONE!** → puzzle recap → "You solved todays \<PUZZLE\>" → "in \<mm:ss\>" time pill → level progress bar (star badge + `xp / 500`) → action area.
+
+**Flow / states.**
+
+1. **choose** — shows two buttons: **100 XP** (claim) and **DOUBLE** (watch video).
+2. **DOUBLE** opens the same placeholder rewarded video as the Level-Up screen (`ph_video_overlay`); its top-right close **X** (after ~5 s) advances to **after_video**.
+3. **after_video** — a single **200 XP** claim button.
+4. **claiming** — pressing either claim button grants the XP once (`ph_win_grant`), then a flight of stars animates from the button to the progress bar while the bar fills and the `xp / 500` number counts up. A level-crossing fills the bar to full and queues the Level-Up screen (§2.6).
+5. **done** — **SHARE** and **BACK TO HUB** slide up from the bottom. There is no way back to the hub until the reward is claimed.
+
+**Share.** The SHARE button calls `ph_share_url(PH_SHARE_URL)` — the OS share sheet where a native extension is wired up (`global.ph_native_share`), otherwise a placeholder that copies the App Store link (`https://apps.apple.com/tr/app/puzzle/id1190624509?l=tr`) to the clipboard and shows a "LINK COPIED" confirmation. The celebratory confetti burst is owned by the controller (`ph_win_celebrate`).
+
+**Review mode.** Re-opening an already-solved puzzle starts the controller directly in **done** (Share + Back) with the bar already full and `granted` locked, so XP is never re-claimed.
 
 ---
 
@@ -123,6 +141,8 @@ There is no decline option — both buttons grant coins. The screen shows a star
 - **Board area** (y=200..1180, h=980): crossword grid centred horizontally. 4–7 main words placed on a shared grid. Each word has a `row`, `col`, and direction (`H` or `V`). Words that share a cell must agree on the letter at that cell (validated at load time with a debug warning if not). Cell size shrinks from 140→110 when `max(cols,rows) ≥ 5` so the grid stays clear of the wheel. Empty cells (shared or not) render in a uniform warm cream; yellow tint appears only after a shared cell is *filled*, signalling the crossing reveal.
 - **Wheel area:** letter wheel centred at (540, 1440), R=270, letters on inner radius 195. Sits between the grid (top edge ≈ y=1170) and the bottom toolbar (top edge ≈ y=1765) with ~45 px clearance above and ~55 px below. Node count tracks `puzzle.letters.length`, distributed evenly around the disc. Letter tiles are pink-filled with white text by default; the in-trail (selected) state pops with a soft white glow halo, a deeper-pink fill, and an 8% scale-up. A shuffle button at the centre re-randomises wheel positions. (Original GDD §7 spec was center 1530 / R=300, but that overlapped both the tallest puzzles and the toolbar.)
 - **Bottom toolbar** (~y=1810): bonus-words chest icon with count badge on the left (opens a modal listing every bonus word found this session), wide HINT pill on the right (bulb · "HINT" · cost · coin icon — single tap target). No coin balance lives here; it's in the top HUD pill.
+
+- **Message Prompt** (between the word grid and the wheel): a single unified feedback pill that surfaces **every** in-puzzle prompt — main word found, bonus word found, "already found", "not a key word", "not a valid word", and hint results. It is centred vertically in the gap between the grid bottom and the wheel top (the same slot the live word-preview pill occupies, so the swipe pill swaps seamlessly into the result message on release). Per the Penpot design (`Game Screen - Anygram`), it renders as a fully-rounded pill (design 900×100 px → 648×72 GUI px, expanding to fit longer messages) with bold white display-font text. Colour is semantic per result: teal for FOUND, purple for BONUS, yellow for ALREADY FOUND, gray for NOT A KEY WORD / puzzle-complete, pink for NOT A VALID WORD (with a wheel shake). It auto-hides after `TOAST_DUR` (90 frames). Found/bonus messages use a " - " separator, e.g. `FOUND - OCEAN`.
 
 **Input.** Drag-to-spell on the wheel. The player traces a path through letters and releases to submit. Backtracking by reversing onto the second-to-last letter is allowed.
 

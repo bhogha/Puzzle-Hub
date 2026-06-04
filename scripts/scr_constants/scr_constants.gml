@@ -58,6 +58,10 @@
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"
 
+// ── Sharing ───────────────────────────────────────────────────────────────────
+// URL shared from the Win Screen SHARE button (App Store listing).
+#macro PH_SHARE_URL "https://apps.apple.com/tr/app/puzzle/id1190624509?l=tr"
+
 // ── Debug / testing ───────────────────────────────────────────────────────────
 // When true, Sudoku starts ~90% solved so the win flow is quick to reach.
 // SET BACK TO false BEFORE SHIPPING.

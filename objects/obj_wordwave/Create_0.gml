@@ -106,15 +106,57 @@ CONFETTI_DURATION_FRAMES = 180;
 // Win-review re-entry: hub sets global.wordwave_review_mode before navigating.
 var _review = variable_global_exists("wordwave_review_mode") && global.wordwave_review_mode;
 if (_review) global.wordwave_review_mode = false;
+var _already_solved = _review || ph_wordwave_all_solved(puzzle);
 
-if (_review || ph_wordwave_all_solved(puzzle)) {
+// ── Shared win screen (scr_economy §Shared Win Screen) ────────────────────────
+// 8×8 result grid with the found-word highlights preserved, fitted into the box.
+win_draw_recap = function(_cx, _top, _bw, _bh) {
+    var _gap  = 6;
+    var _cell = floor((min(_bw, _bh) - (GRID_N-1)*_gap) / GRID_N);
+    var _gw   = GRID_N*_cell + (GRID_N-1)*_gap;
+    var _ox   = _cx - _gw/2;
+    var _oy   = _top + (_bh - _gw)/2;
+    var _ctr  = function(_ox0,_oy0,_cm,_gm,_r,_c){ return { x:_ox0+_c*(_cm+_gm)+_cm/2, y:_oy0+_r*(_cm+_gm)+_cm/2 }; };
+    var _tsc  = _cell/256;
+    for (var _r = 0; _r < GRID_N; _r++) for (var _c = 0; _c < GRID_N; _c++) {
+        var _p = _ctr(_ox,_oy,_cell,_gap,_r,_c);
+        draw_sprite_ext(global.spr_tile, 0, _p.x, _p.y, _tsc, _tsc, 0, make_color_rgb(234,216,200), 1);
+    }
+    for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
+        var _cells = puzzle.words[_wi].cells;
+        var _a = _ctr(_ox,_oy,_cell,_gap, _cells[0].r, _cells[0].c);
+        var _b = _ctr(_ox,_oy,_cell,_gap, _cells[array_length(_cells)-1].r, _cells[array_length(_cells)-1].c);
+        draw_set_alpha(0.45); draw_set_color(word_colors[_wi]);
+        draw_circle(_a.x, _a.y, _cell*0.39, false);
+        draw_circle(_b.x, _b.y, _cell*0.39, false);
+        draw_line_width(_a.x, _a.y, _b.x, _b.y, _cell*0.78);
+        draw_set_alpha(1);
+    }
+    var _mfnt = (_cell >= 56) ? global.fnt_disp_sm : global.fnt_body_md;
+    for (var _r = 0; _r < GRID_N; _r++) for (var _c = 0; _c < GRID_N; _c++) {
+        var _p  = _ctr(_ox,_oy,_cell,_gap,_r,_c);
+        var _fc = ww_cell_found_color(_r, _c);
+        var _lc = (_fc != undefined) ? make_color_rgb(58,46,66) : PH_COL_INK_SOFT;
+        ph_draw_text(_p.x, _p.y, puzzle.grid[_r][_c], _mfnt, _lc, fa_center, fa_middle);
+    }
+};
+win = ph_win_create({
+    puzzle_name: "WORDWAVE",
+    title_col:   PH_COL_TEAL_DEEP,
+    bg_col:      PH_COL_TEAL,
+    claim_key:   "wordwave_" + global.selected_date_key,
+    already:     _already_solved,
+    share_url:   PH_SHARE_URL,
+    time_str:    win_time_str,
+    draw_recap:  win_draw_recap,
+});
+
+if (_already_solved) {
     var _time_key = "wordwave_time_" + global.selected_date_key;
-    win_time_str  = variable_struct_exists(global.save, _time_key)
-                    ? global.save[$ _time_key] : "--:--";
-    xp_gained  = PH_XP_PER_PUZZLE;
-    win_phase  = 1;
-    win_anim_t = 1.0;
-    confetti_burst_pending = true;
+    win_time_str  = variable_struct_exists(global.save, _time_key) ? global.save[$ _time_key] : "--:--";
+    win.cfg.time_str = win_time_str;
+    win_phase = 1;
+    ph_win_celebrate(win);
 }
 
 // ── Helper methods ────────────────────────────────────────────────────────────
@@ -204,13 +246,8 @@ ww_check_win = function() {
     }
     ph_wordwave_mark_done(global.save, global.selected_date_key);
 
-    // auto_coins=false: level-up coins are deferred to the Level-Up screen (rm_win).
-    var _lvl_res = ph_grant_xp(global.save, PH_XP_PER_PUZZLE, false);
-    xp_gained = PH_XP_PER_PUZZLE;
-    if (_lvl_res.levels_gained > 0) {
-        global.pending_levelup = { level: _lvl_res.new_level, base_reward: PH_COINS_PER_LEVEL };
-    }
-
+    // XP is claimed on the win screen now (ph_win_grant), which also routes any
+    // level-up to the Level-Up reward screen (rm_win). Nothing granted here.
     var _count = ph_solved_count_on(global.save, global.selected_date_key);
     coins_bonus = 0;
     if (_count >= PH_GIFT_PUZZLE_INDEX + 1 && !ph_has_gift_been_claimed(global.save, global.selected_date_key)) {
@@ -221,7 +258,8 @@ ww_check_win = function() {
     ph_update_streak(global.save);
     ph_save_write(global.save);
     win_phase = 1;
-    confetti_burst_pending = true;
+    win.cfg.time_str = win_time_str;
+    ph_win_celebrate(win);
 };
 
 // ── Hint helpers (used by the shared hint modal) ──────────────────────────────

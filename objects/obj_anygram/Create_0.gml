@@ -166,17 +166,57 @@ CONFETTI_DURATION_FRAMES  = 180;   // 3.0s at 60 fps
 // fall back to checking solved flags in case the flag is missing.
 var _review = variable_global_exists("anygram_review_mode") && global.anygram_review_mode;
 if (_review) global.anygram_review_mode = false;   // consume the flag
+var _already_solved = _review || ph_anygram_all_solved(puzzle);
 
-if (_review || ph_anygram_all_solved(puzzle)) {
+// ── Shared win screen (scr_economy §Shared Win Screen) ────────────────────────
+// Mini-crossword recap, delegated to the shared controller.
+win_draw_recap = function(_cx, _top, _bw, _bh) {
+    var _max_r = grid_min_r, _max_c = grid_min_c;
+    for (var _gi = 0; _gi < array_length(puzzle.cells); _gi++) {
+        var _gc = puzzle.cells[_gi];
+        if (_gc.r > _max_r) _max_r = _gc.r;
+        if (_gc.c > _max_c) _max_c = _gc.c;
+    }
+    var _rows = _max_r - grid_min_r + 1, _cols = _max_c - grid_min_c + 1;
+    var _gap  = 8;
+    var _cell = clamp(floor(min((_bw-(_cols-1)*_gap)/_cols, (_bh-(_rows-1)*_gap)/_rows)), 28, 150);
+    var _gw = _cols*_cell + (_cols-1)*_gap, _gh = _rows*_cell + (_rows-1)*_gap;
+    var _ox = _cx - _gw/2, _oy = _top + (_bh - _gh)/2;
+    var _tsc = _cell/256;
+    for (var _ci = 0; _ci < array_length(puzzle.cells); _ci++) {
+        var _mc  = puzzle.cells[_ci];
+        var _mcx = _ox + (_mc.c-grid_min_c)*(_cell+_gap) + _cell/2;
+        var _mcy = _oy + (_mc.r-grid_min_r)*(_cell+_gap) + _cell/2;
+        var _tint;
+        if      (_mc.shared && _mc.filled) _tint = PH_COL_YELLOW;
+        else if (_mc.hint)                 _tint = make_color_rgb(255,180,220);
+        else if (_mc.filled)               _tint = PH_COL_PINK;
+        else                               _tint = make_color_rgb(234,216,200);
+        draw_sprite_ext(global.spr_tile, 0, _mcx, _mcy, _tsc, _tsc, 0, _tint, 1);
+        if (_mc.filled || _mc.hint) {
+            var _lc  = (_mc.shared && _mc.filled) ? PH_COL_DARK : (_mc.hint ? PH_COL_DARK : PH_COL_WHITE);
+            var _fnt = (_cell >= 90) ? global.fnt_disp_lg : ((_cell >= 55) ? global.fnt_disp_md : global.fnt_body_md);
+            ph_draw_text(_mcx, _mcy, _mc.letter, _fnt, _lc, fa_center, fa_middle);
+        }
+    }
+};
+win = ph_win_create({
+    puzzle_name: "ANYGRAM",
+    title_col:   PH_COL_PINK,
+    bg_col:      PH_COL_TEAL,
+    claim_key:   "anygram_" + global.selected_date_key,
+    already:     _already_solved,
+    share_url:   PH_SHARE_URL,
+    time_str:    win_time_str,
+    draw_recap:  win_draw_recap,
+});
+
+if (_already_solved) {
     var _time_key = "anygram_time_" + global.selected_date_key;
-    win_time_str  = variable_struct_exists(global.save, _time_key)
-                    ? global.save[$ _time_key] : "--:--";
-    // Display only — XP was already granted on first completion via ag_check_win.
-    xp_gained  = PH_XP_PER_PUZZLE;
-    win_phase  = 1;
-    win_anim_t = 1.0;   // skip slide-in, show result card instantly
-    // Queue the centre burst so the celebration also plays on hub re-entry.
-    confetti_burst_pending = true;
+    win_time_str  = variable_struct_exists(global.save, _time_key) ? global.save[$ _time_key] : "--:--";
+    win.cfg.time_str = win_time_str;
+    win_phase = 1;            // jump straight to the (already-claimed) win screen
+    ph_win_celebrate(win);    // celebration replays on hub re-entry
 }
 
 // ── Instance methods (defined once here, called from Step_0 each frame) ───────
@@ -314,14 +354,9 @@ ag_check_win = function() {
         ph_anygram_mark_word(global.save, global.selected_date_key, _wi);
     }
     ph_anygram_mark_done(global.save, global.selected_date_key);
-    // Single XP grant for the whole puzzle — fires exactly once, on completion.
-    // auto_coins=false: any level-up coins are deferred to the Level-Up reward
-    // screen (rm_win), which lets the player double them by watching a video.
-    var _lvl_res = ph_grant_xp(global.save, PH_XP_PER_PUZZLE, false);
-    xp_gained = PH_XP_PER_PUZZLE;
-    if (_lvl_res.levels_gained > 0) {
-        global.pending_levelup = { level: _lvl_res.new_level, base_reward: PH_COINS_PER_LEVEL };
-    }
+    // XP is no longer granted here — the player claims it (and may double it) on
+    // the win screen. ph_win_grant performs the single grant and routes any
+    // resulting level-up to the Level-Up reward screen (rm_win).
     // Gift for 4th puzzle?
     var _count = ph_solved_count_on(global.save, global.selected_date_key);
     coins_bonus = 0;
@@ -333,7 +368,8 @@ ag_check_win = function() {
     ph_update_streak(global.save);
     ph_save_write(global.save);
     win_phase = 1;
-    confetti_burst_pending = true;   // Step_0 will spawn the centre burst next frame.
+    win.cfg.time_str = win_time_str;
+    ph_win_celebrate(win);           // shared controller owns the celebration burst
 };
 
 // ── Hint helpers ──────────────────────────────────────────────────────────────

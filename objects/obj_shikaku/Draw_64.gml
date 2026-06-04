@@ -1,5 +1,13 @@
 // ── Shikaku — Draw GUI ────────────────────────────────────────────────────────
 
+// Win screen drawn by the shared controller (scr_economy §Shared Win Screen);
+// it owns the frame when complete. Legacy win_phase==1 block below is superseded.
+if (win_phase == 1) {
+    win.cfg.time_str = win_time_str;
+    ph_win_draw(win);
+    exit;
+}
+
 // Background — dotted, faded (matches the other puzzles)
 draw_set_color(PH_COL_BG);
 draw_rectangle(0,0,PH_W,PH_H,false);
