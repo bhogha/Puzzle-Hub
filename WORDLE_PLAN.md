@@ -1,7 +1,7 @@
 # Wordle — Implementation Plan (spec + checklist)
 
-_Status: PLAN ONLY. No code written yet. Drafted 2026-06-04 against v0.2._
-_Wordle currently exists as a **locked coming-soon card** (`ph_game_cards()` entry #5, green `card_green.png` + `game_wordle.png`, `btn_type:"locked"`). This plan promotes it to the **5th playable puzzle**, mirroring how Shikaku was added on 2026-06-01._
+_Status: ✅ **IMPLEMENTED** — all phases 0–6 built and verified in-engine (2026-06-05). Drafted 2026-06-04 against v0.2. GDD §4.5 + PROJECT_CACHE.md synced. Remaining (optional, non-blocking): boxing-glove art + exact Penpot key/tile styling (currently in-engine primitives); expand the test validation list for production._
+_Wordle was a **locked coming-soon card**; now the **5th playable puzzle**, mirroring how Shikaku was added on 2026-06-01._
 
 ---
 

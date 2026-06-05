@@ -10,7 +10,9 @@ This document captures **what is actually implemented in code** today, not the l
 
 Puzzle Hub is a daily-puzzle container app. Each calendar day surfaces **10 unique puzzles** on a hub screen; the player earns XP and coins by solving them. Each daily puzzle can be solved exactly once — solving it locks a "finish time" for that day, and the player can travel back to play previous days from the calendar but cannot replay a day already solved. Future days are not accessible.
 
-Four puzzle types — **Anygram**, **Sudoku**, **Word Wave**, and **Shikaku** — are implemented. The remaining slot on the hub (Mix-Up) is a placeholder showing "COMING SOON".
+Five puzzle types — **Anygram**, **Sudoku**, **Word Wave**, **Shikaku**, and **Wordle** — are implemented. The remaining slot on the hub (Mix-Up) is a placeholder showing "COMING SOON".
+
+**Wordle is the one puzzle that can be lost.** Every other puzzle can only be solved or left unfinished; Wordle adds a fail state (running out of guesses). A missed Wordle still records a finish time and pays a small consolation XP reward, but it does **not** count as a daily solve (no gift/streak credit) and shows a distinct "missed" state on the hub. See §4.5.
 
 ---
 
@@ -291,7 +293,33 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 ### 4.5 Wordle
 
-Not implemented. Coming-soon tile only — green card (`card_green.png`) with the `game_wordle.png` icon, `locked: true` and a "COMING SOON" badge. Tapping it does nothing.
+**Genre.** Classic Wordle on a **6-letter × 6-guess** board (the design spells "WORDLE" across the top row). Guess the hidden word; each submitted guess colours its tiles — **green** (right letter, right spot), **yellow** (in word, wrong spot), **gray** (absent) — using true two-pass duplicate-letter logic (`ph_wordle_score_guess`). The accent colour is **green** (`PH_COL_GREEN`, #00be49).
+
+**Reward.** Solving grants the single **+100 XP** (`PH_XP_PER_PUZZLE`), claimed on the shared win screen like the other puzzles; a win counts toward the 4th-puzzle gift box and the streak. **A loss** (see below) instead grants a **25 XP** consolation (`PH_WORDLE_GIVEUP_XP`, doublable to 50) and does **not** count as a solve.
+
+**Layout** (per the Penpot "Game Screen - Wordle"; differs from Sudoku/Shikaku):
+- **Top bar:** back arrow, **"WORDLE"** title centred in green, **coin-balance pill top-right**.
+- **Message-prompt pill** under the HUD — the shared semantic toast (NOT A WORD, HINT USED, etc.).
+- **Guess grid:** 6×6 rounded tiles; the active row fills as you type; submitted rows reveal green/yellow/gray with a per-column staggered settle animation; the on-screen keyboard recolours to each letter's best-known state.
+- **Custom on-screen keyboard** (the OS keyboard is never used): 3 QWERTY rows + a **DEL** key and a centred **SEND** key.
+- **Bottom bar:** **timer pill** (left) and **HINT pill** (right).
+
+**Input.** Tap the custom keyboard to fill the active row, DEL to erase, SEND to submit. A guess must be a valid word in the validation list (`ph_wordle_is_allowed`) or it's rejected ("NOT A WORD"); the current answer is always allowed.
+
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder video). The reveal (`wd_apply_hint`) locks the correct letter at the **leftmost not-yet-revealed position** into the active row as a green, un-deletable tile. Revealed letters **persist across rows and resume** (saved positions are re-applied each new row). When every position is revealed, the pill shows "NO HINTS LEFT".
+
+**Completion (win).** Guessing the answer records `wordle_time_<date>`, sets the `WORDLE` solved flag, grants the gift/streak, and shows the shared win screen (teal backdrop, green accent, recap = the mini guess grid) where the +100 XP is claimed.
+
+**Loss / lost-aversion flow.** When the player runs out of guesses (6th wrong guess), a funnel runs before the loss is final:
+1. **"You can still win!" modal** — buy **+3 extra moves for 100 coins** (`PH_WORDLE_EXTRA_COST` / `PH_WORDLE_EXTRA_MOVES`), or watch a **free** placeholder video for the same, or **Give up**. The extra-moves purchase is **one-time**; using it extends the board to 9 rows (cells shrink to fit the same space).
+2. **"Giving up?" confirm** — Give up / Cancel.
+3. **"UNLUCKY!" lose screen** (red backdrop) — guess-grid recap, **"You finished todays WORDLE in mm:ss"** (a finish time is recorded even on a loss), level progress bar, and a **Claim your reward** of **25 XP** (or **DOUBLE** → 50 via placeholder video), then **BACK TO HUB**. The XP claim routes through the same level-up deferral as the win screen (a crossing queues the Level-Up reward screen). A loss sets `WORDLE_MISSED` (skipped by `ph_solved_count_on`, so no gift/streak credit) and locks the day.
+
+**Hub state.** A solved Wordle shows the finish time (normal). A **missed** Wordle shows the finish time in **red** (the Penpot Pill "Missed" variant), distinct from PLAY/SOLVED, and re-opening it returns to the UNLUCKY screen. A missed day is not replayable.
+
+**Data source.** `datafiles/puzzles_wordle.json` — array of `{ "date"?: "YYYY-MM-DD", "answer": "<6 letters>" }`, two-pass date selection (exact `date` wins, else `seed mod length`), hardcoded fallback `STREAM` if the file is missing. Validation list: `datafiles/wordle_allowed.json` — a flat array of uppercase 6-letter strings (`global.ph_wordle_allowed` map). _Current pool is a small test set; expand the allow-list for production._
+
+**Save shape.** Win → `WORDLE` in `puzzles_solved`; loss → `WORDLE_MISSED` (skipped from the daily count). Finish time `wordle_time_<date>` on both. In-progress + final state in `save.wordle_state[date] = { guesses, extra, hints, status }` for resume (`status` ∈ `in_progress`/`won`/`lost`). XP claim guarded by `save.xp_claimed["wordle_<date>"]`.
 
 ### 4.6 Mix-Up
 
@@ -317,6 +345,11 @@ File: `working_directory + "puzzlehub_save.json"`. JSON struct, currently `versi
 | `sudoku_grid` | Struct keyed by date → 81-char string of the player's in-progress Sudoku grid (resume) |
 | `shikaku_time_<date>` | mm:ss string — recorded Shikaku finish time per date |
 | `shikaku_state` | Struct keyed by date → `{rects, hints}`: the player's in-progress rectangles (`"r,c,w,h;…"`) and revealed hint clue indices (`"i,j,…"`) for resume |
+| `wordle_time_<date>` | mm:ss string — recorded Wordle finish time per date (set on **both** win and loss) |
+| `wordle_state` | Struct keyed by date → `{guesses, extra, hints, status}`: ";"-joined submitted guesses, the one-time extra-moves flag, ";"-joined revealed hint positions, and `status` (`in_progress`/`won`/`lost`) for resume |
+| `xp_claimed` | Struct of `{claim_key: true}` guarding against a second XP grant on re-entry (e.g. `"wordle_<date>"`) |
+
+In `puzzles_solved`, a Wordle **win** sets the `WORDLE` key (counts as a solve); a **loss** sets `WORDLE_MISSED`, which `ph_solved_count_on` skips so it does not count toward the daily total / gift / streak.
 
 The save is rewritten on every solve event, hint purchase, and bonus-word discovery. Forward-compat: missing fields are backfilled to safe defaults on load.
 
@@ -343,7 +376,21 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ---
 
-## 7. Recent code changes (2026-06-02)
+## 7. Recent code changes (2026-06-05)
+
+**New puzzle: Wordle.** Added the fifth playable puzzle (see §4.5), promoting the former coming-soon green card. Built in phases (see `WORDLE_PLAN.md`):
+
+- New logic script `scripts/scr_wordle/scr_wordle.gml`: loader/caches (answers + validation list), two-pass date selection, `ph_wordle_make`, `ph_wordle_score_guess` (green/yellow/gray duplicate logic), allow-list membership, win/loss detection, extra-moves grant, keyboard-state map, guess/state serialise.
+- New controller `obj_wordle` (Create/Step/Draw_64) + room `rm_wordle`: 6×6 board, **custom on-screen keyboard** (QWERTY + DEL + SEND), staggered reveal, shared hint flow (`wd_apply_hint` locks a correct letter in place), win via shared `ph_win_*`, and the full **loss / lost-aversion flow** (aversion modal → give-up confirm → red UNLUCKY screen with 25/50 XP claim).
+- New data `datafiles/puzzles_wordle.json` (6-letter answer pool) + `datafiles/wordle_allowed.json` (validation list). Both registered as IncludedFiles.
+- `scr_constants`: `PH_COL_GREEN`/`_SOFT`/`_DEEP` (#00be49), `PH_WORDLE_LEN`/`GUESSES`/`EXTRA_MOVES`/`EXTRA_COST`/`GIVEUP_XP`/`INDEX`; WORDLE entry in `ph_game_cards()` flipped to playable.
+- `scr_save`: `ph_wordle_is_done`/`mark_done`, `ph_wordle_is_missed`/`mark_missed`, `ph_wordle_save_state`/`load_state`; `WORDLE_MISSED` added to the `ph_solved_count_on` skip list.
+- `obj_hub`: `global.wordle_review_mode` in Step; `wordle_time_` finish-time badge in Draw; **MISSED** card state (finish time in red `#a52424`).
+- **Assets still to add (Phase 6 art, optional):** boxing-glove illustration for the lost-aversion modals and the Penpot key/tile styling are currently drawn as in-engine primitives. The puzzle plays fully without them.
+
+---
+
+## 7a. Recent code changes (2026-06-02)
 
 **Hub-screen art pass — date badges, segmented progress bar, title.**
 

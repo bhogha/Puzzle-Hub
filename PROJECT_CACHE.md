@@ -1,6 +1,6 @@
 # Puzzle Hub — Project Cache (for Claude)
 
-_Internal reference map of the codebase, written to make future work faster. Not player- or design-facing — for design rules see `GDD.md`. Last synced: 2026-06-04 against v0.2 (incl. Shikaku, shared hint modal + rewarded-video flow, Level-Up reward screen)._
+_Internal reference map of the codebase, written to make future work faster. Not player- or design-facing — for design rules see `GDD.md`. Last synced: 2026-06-05 against v0.2 (incl. Wordle — 5th puzzle with custom keyboard + loss/lost-aversion flow, Shikaku, shared hint modal + rewarded-video flow, Level-Up reward screen)._
 
 > Keep this in sync when files move, globals are added, or the boot/save flow changes. If it drifts from the code, the code wins — re-verify before relying on a line here.
 
@@ -10,7 +10,7 @@ _Internal reference map of the codebase, written to make future work faster. Not
 
 GameMaker (IDE `2026.0.0.16`, runtime `2026.0.0.23` — LTS) mobile daily-puzzle app. Portrait, designed at **1080×1920**. Project file: `Puzzle Hub.yyp` (lives in this folder, which is a sibling of the `Daily Puzzle` reference folder — see auto-memory `project_puzzle_hub_paths`).
 
-Four puzzles implemented — **Anygram**, **Sudoku**, **Word Wave**, **Shikaku** — plus a locked **Mix-Up** placeholder. Economy = XP / Levels / Coins. Full design rules in `GDD.md`.
+Five puzzles implemented — **Anygram**, **Sudoku**, **Word Wave**, **Shikaku**, **Wordle** — plus a locked **Mix-Up** placeholder. Economy = XP / Levels / Coins. Full design rules in `GDD.md`. **Wordle is the only puzzle that can be lost** (out of guesses → consolation XP + "missed" state); see `WORDLE_PLAN.md` for its phased build.
 
 ---
 
@@ -46,12 +46,13 @@ All functions are global, prefixed `ph_`. No structs-with-methods except inline 
 |---|---|---|
 | `scr_constants` | 107 | All `#macro`s: palette colors, canvas, **economy numbers**, daily schedule indices, save filename, debug flags. Also `ph_game_cards()` (hub card list). |
 | `scr_economy` | 44 | `ph_level_from_xp`, `ph_xp_in_level`, `ph_grant_xp(save, amt, _auto_coins=true)` (returns `{levels_gained, coins_awarded, new_level}`; pass `false` to **defer** level-up coins to the Level-Up screen), `ph_grant_coins`, `ph_spend_coins`, `ph_levelup_pending()`. |
-| `scr_hint` | ~200 | **Shared hint-acquisition flow** (modal + placeholder rewarded video), struct-based, reused by all 4 puzzles. `ph_hint_create(apply_method, accent)` → struct; `ph_hint_open/tick/input/is_open`; `ph_hint_draw_feedback/modal/video`. `ph_input` returns `"none"/"consumed"/"paid"/"freed"/"poor"`. Also the **generic** `ph_video_overlay(timer, delay, accent)` dark "VIDEO PLAYING" placeholder (shared by hint + Level-Up screens). |
-| `scr_save` | 252 | Load/write/reset save; per-puzzle solved tracking; streak recompute; bonus-word tracking; Sudoku grid persistence. **Central data layer.** |
+| `scr_hint` | ~200 | **Shared hint-acquisition flow** (modal + placeholder rewarded video), struct-based, reused by all 5 puzzles. `ph_hint_create(apply_method, accent)` → struct; `ph_hint_open/tick/input/is_open`; `ph_hint_draw_feedback/modal/video`. `ph_input` returns `"none"/"consumed"/"paid"/"freed"/"poor"`. Also the **generic** `ph_video_overlay(timer, delay, accent)` dark "VIDEO PLAYING" placeholder (shared by hint + Level-Up + Wordle lose screens). |
+| `scr_save` | ~300 | Load/write/reset save; per-puzzle solved tracking; streak recompute; bonus-word tracking; Sudoku grid + Wordle state persistence; `WORDLE_MISSED` skip in `ph_solved_count_on`. **Central data layer.** |
 | `scr_dates` | 44 | Date-key formatting (`ph_today_key`, `ph_date_key`), `ph_seed_from_key` (day-index seed), weekday/month math, `ph_date_add_days`. |
 | `scr_puzzles` | 484 | Anygram + Word Wave loaders, normalizers, classifiers, solved checks. Both puzzles' pure logic. |
 | `scr_sudoku` | 162 | Sudoku loader, normalizer, conflict/row/col/box/all-solved checks, grid serialize. |
 | `scr_shikaku` | ~210 | Shikaku loader, normalizer (clues + solution rects), per-rect correctness, full-partition solution check, state serialize/restore, done flag. |
+| `scr_wordle` | ~190 | Wordle pure logic: answer + validation-list loaders/caches, two-pass date select, `ph_wordle_make`, `ph_wordle_score_guess` (green/yellow/gray dup logic), `ph_wordle_is_allowed`, `ph_wordle_add_guess` (win/loss), `ph_wordle_grant_extra_moves`, `ph_wordle_keyboard_states`, guess serialise. Save-struct helpers (is_done/mark/is_missed/state) live in `scr_save`. |
 | `scr_draw` | 181 | Reusable draw helpers: `ph_draw_rounded/chip/text/text_shadow/icon`, easing, `ph_scissor_gui`, hit tests, `ph_draw_nav` (bottom tab bar), `ph_draw_burst`, cached `ph_draw_dot_bg`. |
 | `scr_fonts` | 19 | `ph_load_fonts()` — registers all `global.fnt_*` via `font_add`. |
 
@@ -76,6 +77,7 @@ Each object owns a screen; logic split across `Create_0` (setup/state), `Step_0`
 | `obj_sudoku` | Create(201), Step(166), Draw(267) | 9×9 board, number pad, conflict highlighting, hint, win overlay. |
 | `obj_shikaku` | Create, Step, Draw | 6×6 grid, drag-corner-to-corner rectangles, tap-to-delete, shape-glyph hint, win overlay. Blue accent; bottom HUD = coin + hint (no chest), like Sudoku. |
 | `obj_wordwave` | Create(221), Step(243), Draw(361) | 8×8 word-search grid, swipe selection, per-word colors, hint, win overlay (centered card). |
+| `obj_wordle` | Create(~330), Step(~110), Draw(~175) | 6×6 board, **custom on-screen keyboard** (slot-based active row so a hint locks a position), staggered reveal, shared hint (`wd_apply_hint`/`wd_can_hint`), win via shared `ph_win_*`. **Loss flow is self-contained here:** `lose_phase` ∈ `none/aversion/confirm/screen` with `wd_lose_step/input/draw`; buy/free +3 moves (board grows to 9 rows, cells shrink), UNLUCKY screen grants 25/50 XP via `wd_lose_claim`. Green accent; HUD = coin top-right, timer+hint bottom bar. |
 | `obj_shop` | Create(2), Step(18), Draw(24) | Shop tab — minimal/stub. |
 | `obj_profile` | Create(18), Step(56), Draw(42) | Profile tab + **hidden triple-tap-Level save-reset** gesture. |
 | `obj_win` | Create, Step, Draw | **Level-Up reward screen** (in `rm_win`). Repurposed from the old dead win-overlay stub. Reads `global.pending_levelup`, shows a purple card ("LEVEL UP!" + "LEVEL N" + confetti) with **100** / **DOUBLE** pill buttons; grants coins (`lu_claim`), clears the flag, `room_goto(rm_hub)`. DOUBLE → `ph_video_overlay` 5 s → 200 coins. NB: its video flag is `vid_open` because `video_open` is a reserved built-in. |
@@ -88,7 +90,7 @@ Pattern: each puzzle controller embeds its own **win overlay** + confetti (not `
 
 ## 5. Rooms — `rooms/`
 
-`rm_boot` (first, per RoomOrderNodes) → `rm_hub`. Then one room per screen: `rm_anygram`, `rm_sudoku`, `rm_wordwave`, `rm_shikaku`, `rm_shop`, `rm_profile`, and `rm_win` (= the **Level-Up reward screen**, no longer unused). Each room hosts its matching object.
+`rm_boot` (first, per RoomOrderNodes) → `rm_hub`. Then one room per screen: `rm_anygram`, `rm_sudoku`, `rm_wordwave`, `rm_shikaku`, `rm_wordle`, `rm_shop`, `rm_profile`, and `rm_win` (= the **Level-Up reward screen**, no longer unused). Each room hosts its matching object.
 
 ---
 
@@ -105,10 +107,10 @@ Set up in `obj_persistent/Create_0`. Most-referenced globals:
 - `global.safe_top_gui` / `global.safe_bottom_gui` — iOS notch / home-indicator insets.
 
 **Puzzle caches** (lazy-loaded, may be `undefined` sentinel if file missing)
-- `global.ph_anygram_cache`, `global.ph_sudoku_cache`, `global.ph_wordwave_cache`.
+- `global.ph_anygram_cache`, `global.ph_sudoku_cache`, `global.ph_wordwave_cache`, `global.ph_shikaku_cache`, `global.ph_wordle_cache` (answers), `global.ph_wordle_allowed` (validation list as a `{WORD:true}` map).
 
-**Review-mode flags** (jump straight to win overlay)
-- `global.anygram_review_mode`, `global.sudoku_review_mode`, `global.wordwave_review_mode`.
+**Review-mode flags** (jump straight to win overlay; set on hub tap)
+- `global.anygram_review_mode`, `global.sudoku_review_mode`, `global.wordwave_review_mode`, `global.shikaku_review_mode`, `global.wordle_review_mode`. (Wordle: a *missed* day isn't "done", so its review flag stays false — `obj_wordle` Create reopens the lose screen from the persisted `status`/`WORDLE_MISSED` instead.)
 
 **Transient anim**
 - `global.fly_tiles` — shared fly-tile particle list (22 refs, Anygram).
@@ -123,6 +125,8 @@ Set up in `obj_persistent/Create_0`. Most-referenced globals:
 - **Anygram** (`puzzles_anygram.json`): array. New shape `{letters:[5], words:[{text,row,col,dir("H"|"V")}], bonus|bonus_pool:[...], date?, grid_size?}`. Legacy 2-word shape still accepted. Date selection: exact `date` match wins, else `seed mod length`.
 - **Sudoku** (`puzzles_sudoku.json`): array of `{date?, difficulty?, givens:"81 chars (0=blank)", solution:"81 chars"}`, row-major.
 - **Word Wave** (`puzzles_wordwave.json`): array of `{date?, grid:[8×"8 chars"], words:[{text,row,col,dir}], bonus_pool:[...]}`. `dir` ∈ H/H_REV/V/V_REV/DR/DL/UR/UL. Each word and bonus word must trace a straight line on the grid.
+- **Shikaku** (`puzzles_shikaku.json`): array of `{date?, size, rects:[{r,c,w,h,cr,cc}]}` (rects are both clue source and unique solution).
+- **Wordle** (`puzzles_wordle.json`): array of `{date?, answer:"<6 uppercase letters>"}`, two-pass date selection, fallback `STREAM`. Plus **`wordle_allowed.json`**: a flat array of uppercase 6-letter validation strings (answers should be a subset). Both registered as `IncludedFiles` in the `.yyp`.
 
 All three: missing file → hardcoded fallback puzzle. Same two-pass date selection.
 
