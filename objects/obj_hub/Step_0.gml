@@ -168,6 +168,12 @@ if (device_mouse_check_button_released(0, mb_left)) {
                             } else {
                                 global.shikaku_review_mode = false;
                             }
+                            if (_card.name == "WORDLE") {
+                                global.wordle_review_mode =
+                                    ph_wordle_is_done(global.save, global.selected_date_key);
+                            } else {
+                                global.wordle_review_mode = false;
+                            }
                             room_goto(_rm_idx);
                         }
                     }

@@ -80,6 +80,7 @@ function ph_solved_count_on(_save, _date_key) {
         var _n = _names[_i];
         if (string_pos("ANYGRAM_", _n) == 1) continue;
         if (string_pos("WW_W", _n) == 1) continue;   // Word Wave per-word flags
+        if (_n == "WORDLE_MISSED") continue;          // a missed Wordle is NOT a solve
         if (_day[$ _n]) _count += 1;
     }
     return _count;
@@ -249,4 +250,57 @@ function ph_wordwave_mark_bonus(_save, _date_key, _word) {
     if (!variable_struct_exists(_save, "wordwave_bonus")) _save.wordwave_bonus = {};
     if (!variable_struct_exists(_save.wordwave_bonus, _date_key)) _save.wordwave_bonus[$ _date_key] = {};
     _save.wordwave_bonus[$ _date_key][$ string_lower(_word)] = true;
+}
+
+// ── Wordle tracking ───────────────────────────────────────────────────────────
+// A WIN is tracked through the generic puzzles_solved map under the "WORDLE" key,
+// so ph_solved_count_on() counts it toward the daily gift/streak automatically.
+// Finish time lives in "wordle_time_<date>". In-progress + final state (the list
+// of submitted guesses, the one-time extra-moves purchase, revealed hints, and
+// the status) live in save.wordle_state[date] so leaving mid-puzzle resumes.
+// A LOSS ("missed") is tracked separately in Phase 5 (WORDLE_MISSED) so it does
+// NOT count as a solve.
+
+/// True if Wordle for the given date has been WON.
+function ph_wordle_is_done(_save, _date_key) {
+    return ph_is_solved(_save, _date_key, "WORDLE");
+}
+
+/// Mark Wordle won for the given date. Hub reads this single flag.
+function ph_wordle_mark_done(_save, _date_key) {
+    ph_mark_solved(_save, _date_key, "WORDLE");
+}
+
+/// Persist in-progress / final play state for resume.
+///   _guesses_str : ";"-joined submitted guesses (see ph_wordle_guesses_to_str)
+///   _extra_bought: bool — the one-time extra-moves purchase was used
+///   _hints_str   : ";"-joined revealed hint positions (Phase 4; "" for now)
+///   _status      : "in_progress" | "won" | "lost"
+function ph_wordle_save_state(_save, _date_key, _guesses_str, _extra_bought, _hints_str, _status) {
+    if (!variable_struct_exists(_save, "wordle_state")) _save.wordle_state = {};
+    _save.wordle_state[$ _date_key] = {
+        guesses: _guesses_str,
+        extra:   _extra_bought,
+        hints:   _hints_str,
+        status:  _status,
+    };
+}
+
+/// Read a previously-saved Wordle state struct, or undefined if none stored.
+function ph_wordle_load_state(_save, _date_key) {
+    if (!variable_struct_exists(_save, "wordle_state")) return undefined;
+    if (!variable_struct_exists(_save.wordle_state, _date_key)) return undefined;
+    return _save.wordle_state[$ _date_key];
+}
+
+/// True if Wordle for the given date was MISSED (out of guesses / gave up).
+/// A miss locks the day and shows the hub MISSED pill, but is NOT a solve, so it
+/// is skipped by ph_solved_count_on (no gift/streak credit).
+function ph_wordle_is_missed(_save, _date_key) {
+    return ph_is_solved(_save, _date_key, "WORDLE_MISSED");
+}
+
+/// Mark Wordle missed for the given date.
+function ph_wordle_mark_missed(_save, _date_key) {
+    ph_mark_solved(_save, _date_key, "WORDLE_MISSED");
 }

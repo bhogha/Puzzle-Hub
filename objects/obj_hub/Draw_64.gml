@@ -326,7 +326,19 @@ for (var _i = 0; _i < array_length(cards); _i++) {
 
     var _btype = variable_struct_exists(_card, "btn_type") ? _card.btn_type : "play";
 
-    if (_is_solved && (_card.name == "ANYGRAM" || _card.name == "SUDOKU" || _card.name == "WORD WAVE" || _card.name == "SHIKAKU")) {
+    if (_card.name == "WORDLE" && ph_wordle_is_missed(_save, _sel)) {
+        // MISSED — out of guesses / gave up. Finish time shown in RED (Penpot
+        // Pill "Missed" variant), distinct from a solved day's white time.
+        var _mt_key = "wordle_time_" + _sel;
+        var _mt     = variable_struct_exists(_save, _mt_key) ? _save[$ _mt_key] : "--:--";
+        var _btn_hw = 140;
+        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
+                     _btn_right,            _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
+        draw_sprite_ext(global.spr_stopwatch, 0,
+                        _btn_right-_btn_hw*2+50, _btn_cy, 72/512, 72/512, 0, c_white, 1);
+        ph_draw_text(_btn_right-_btn_hw*2+102, _btn_cy,
+                     _mt, global.fnt_body_md, make_color_rgb(165,36,36), fa_left, fa_middle);
+    } else if (_is_solved && (_card.name == "ANYGRAM" || _card.name == "SUDOKU" || _card.name == "WORD WAVE" || _card.name == "SHIKAKU" || _card.name == "WORDLE")) {
         // Stopwatch + finish time — translucent pill matching the "COMING SOON"
         // style (white @ 30% alpha) so the underlying card colour shows through.
         // Stopwatch icon is sized slightly larger than the time text per design ref.
@@ -334,6 +346,7 @@ for (var _i = 0; _i < array_length(cards); _i++) {
         if (_card.name == "SUDOKU")    _time_prefix = "sudoku_time_";
         if (_card.name == "WORD WAVE") _time_prefix = "wordwave_time_";
         if (_card.name == "SHIKAKU")   _time_prefix = "shikaku_time_";
+        if (_card.name == "WORDLE")    _time_prefix = "wordle_time_";
         var _time_key = _time_prefix + _sel;
         var _ag_time  = variable_struct_exists(_save, _time_key)
                         ? _save[$ _time_key] : "--:--";

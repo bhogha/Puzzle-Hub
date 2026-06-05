@@ -1,5 +1,5 @@
 // ── obj_wordle — Step ─────────────────────────────────────────────────────────
-// Phase 2: keyboard input, reveal animation, win flow. (Hint = Phase 4, loss = Phase 5.)
+// Keyboard input, reveal animation, hint flow, win flow. (Loss = Phase 5.)
 
 // ── Win screen owns the frame when complete ───────────────────────────────────
 if (win_phase == 1) {
@@ -8,7 +8,18 @@ if (win_phase == 1) {
     exit;
 }
 
+// ── Lose / lost-aversion flow owns the frame while active ─────────────────────
+if (lose_phase != "none") {
+    if (toast_timer > 0) toast_timer--;
+    wd_lose_step();
+    wd_lose_input();
+    exit;
+}
+
 if (toast_timer > 0) toast_timer--;
+
+// Advance the shared hint-flow timers (modal slide / "-100" / video).
+ph_hint_tick(hint);
 
 // ── Reveal animation: advance, then commit the row when it finishes ───────────
 if (revealing) {
@@ -18,11 +29,13 @@ if (revealing) {
         revealing = false;
         var _status = ph_wordle_add_guess(puzzle, reveal_guess);
         kbd_states  = ph_wordle_keyboard_states(puzzle);
+        wd_reset_row();    // next row starts fresh (re-applies any locked hints)
+        wd_save_state();   // persist guesses + status for resume (in_progress / lost / won)
         if (_status == "won") {
             wd_check_win();
+        } else if (_status == "lost") {
+            wd_enter_lose();   // out of guesses → lost-aversion modal (or finalize)
         }
-        // "lost" is handled by the lost-aversion flow in Phase 5; for now the
-        // board simply stops accepting input (status != in_progress).
     }
     exit;
 }
@@ -32,6 +45,15 @@ if (!device_mouse_check_button_pressed(0, mb_left)) exit;
 
 var _mx = device_mouse_x_to_gui(0);
 var _my = device_mouse_y_to_gui(0);
+
+// Hint overlay (modal + placeholder video) eats taps while open.
+var _hr = ph_hint_input(hint);
+if (_hr != "none") {
+    if      (_hr == "paid")  wd_toast("HINT USED  -" + string(PH_HINT_COST) + " COINS", PH_COL_YELLOW);
+    else if (_hr == "freed") wd_toast("HINT REVEALED", PH_COL_GREEN);
+    else if (_hr == "poor")  wd_toast("NOT ENOUGH COINS", PH_COL_PINK);
+    exit;
+}
 
 // Back arrow (top-left) -> hub
 if (ph_point_in_rect(_mx, _my, 0, HUD_Y - 60, 160, HUD_Y + 60)) {
@@ -43,6 +65,17 @@ if (ph_point_in_rect(_mx, _my, 0, HUD_Y - 60, 160, HUD_Y + 60)) {
 // No play input once the puzzle is over.
 if (puzzle.status != "in_progress") exit;
 
+// HINT pill (bottom-right) — opens the shared hint modal (pay coins OR watch a
+// placeholder rewarded video). Bounds set by Draw_64.
+if (ph_point_in_rect(_mx, _my, HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B)) {
+    if (!wd_can_hint()) {
+        wd_toast("NO HINTS LEFT", PH_COL_GRAY);
+    } else {
+        ph_hint_open(hint);
+    }
+    exit;
+}
+
 // ── Keyboard ──────────────────────────────────────────────────────────────────
 var _keys = wd_build_keys();
 for (var _i = 0; _i < array_length(_keys); _i++) {
@@ -50,22 +83,30 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
     if (!ph_point_in_rect(_mx, _my, _k.x1, _k.y1, _k.x2, _k.y2)) continue;
 
     if (_k.type == "letter") {
-        if (string_length(cur_guess) < PH_WORDLE_LEN) cur_guess += _k.ch;
+        // Fill the leftmost empty slot.
+        for (var _s = 0; _s < COLS; _s++) {
+            if (row_slots[_s] == "") { row_slots[_s] = _k.ch; break; }
+        }
     } else if (_k.type == "del") {
-        if (string_length(cur_guess) > 0) cur_guess = string_copy(cur_guess, 1, string_length(cur_guess) - 1);
+        // Clear the rightmost filled, non-locked slot.
+        for (var _s = COLS - 1; _s >= 0; _s--) {
+            if (!row_lock[_s] && row_slots[_s] != "") { row_slots[_s] = ""; break; }
+        }
     } else if (_k.type == "send") {
-        if (string_length(cur_guess) < PH_WORDLE_LEN) {
+        if (!wd_row_full()) {
             wd_toast("NOT ENOUGH LETTERS", PH_COL_GRAY);
-        } else if (!ph_wordle_is_allowed(cur_guess, puzzle.answer)) {
-            wd_toast("NOT A WORD", PH_COL_PINK);
         } else {
-            // Begin the reveal of this row; it commits in the reveal block above.
-            reveal_guess = cur_guess;
-            reveal_score = ph_wordle_score_guess(puzzle.answer, cur_guess);
-            reveal_row   = array_length(puzzle.guesses);
-            reveal_t     = 0;
-            revealing    = true;
-            cur_guess    = "";
+            var _guess = wd_row_string();
+            if (!ph_wordle_is_allowed(_guess, puzzle.answer)) {
+                wd_toast("NOT A WORD", PH_COL_PINK);
+            } else {
+                // Begin the reveal of this row; it commits in the reveal block above.
+                reveal_guess = _guess;
+                reveal_score = ph_wordle_score_guess(puzzle.answer, _guess);
+                reveal_row   = array_length(puzzle.guesses);
+                reveal_t     = 0;
+                revealing    = true;
+            }
         }
     }
     break;   // one key per press
