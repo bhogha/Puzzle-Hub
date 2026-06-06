@@ -20,6 +20,9 @@
 #macro PH_COL_GREEN       make_color_rgb(  0,190, 73)   // Wordle accent (#00be49)
 #macro PH_COL_GREEN_SOFT  make_color_rgb(200,240,210)
 #macro PH_COL_GREEN_DEEP  make_color_rgb(  0,140, 55)
+#macro PH_COL_VIOLET      make_color_rgb(168, 56,222)   // Hue Sort accent (#a838de)
+#macro PH_COL_VIOLET_SOFT make_color_rgb(235,205,250)
+#macro PH_COL_VIOLET_DEEP make_color_rgb(108, 24,158)
 #macro PH_COL_GOLD        make_color_rgb(245,180,  0)
 #macro PH_COL_DARK        make_color_rgb( 31, 20, 48)
 #macro PH_COL_INK_SOFT    make_color_rgb( 80, 60,100)
@@ -65,6 +68,10 @@
 #macro PH_WORDWAVE_INDEX     2
 #macro PH_SHIKAKU_INDEX      3
 #macro PH_WORDLE_INDEX       4
+#macro PH_HUESORT_INDEX      5
+
+// ── Hue Sort ──────────────────────────────────────────────────────────────────
+#macro PH_HUESORT_SIZE       5   // N×N board (4 locked corner anchors)
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"
@@ -129,6 +136,16 @@ function ph_game_cards() {
         card_spr: global.spr_card_green,
         icon_spr: global.spr_game_wordle,
         text_col: make_color_rgb(0, 90, 40),
+        btn_type: "play_light",
+    });
+    array_push(_cards, {
+        name:     "HUE SORT",
+        subtitle: "Sort the colours",
+        room:     "rm_huesort",
+        locked:   false,
+        card_spr: global.spr_card_orange,
+        icon_spr: global.spr_game_huesort,
+        text_col: PH_COL_ORANGE_DEEP,
         btn_type: "play_light",
     });
     array_push(_cards, {

@@ -95,6 +95,7 @@ global.spr_card_teal   = sprite_add(_d + "card_teal.png",   1, false, false, 700
 global.spr_card_orange = sprite_add(_d + "card_orange.png", 1, false, false, 700, 200);
 global.spr_card_blue   = sprite_add(_d + "card_blue.png",   1, false, false, 700, 200);
 global.spr_card_green  = sprite_add(_d + "card_green.png",  1, false, false, 700, 200);
+// Hue Sort reuses the orange card tile (shared with the locked Mix-Up card).
 
 // ── Game icons (512×512, origin centred) ──────────────────────────────────────
 global.spr_game_anygram  = sprite_add(_d + "game_anygram.png",  1, false, false, 256, 256);
@@ -103,6 +104,9 @@ global.spr_game_wordwave = sprite_add(_d + "game_wordwave.png", 1, false, false,
 global.spr_game_mixup    = sprite_add(_d + "game_mixup.png",    1, false, false, 256, 256);
 global.spr_game_shikaku  = sprite_add(_d + "game_shikaku.png",  1, false, false, 256, 256);
 global.spr_game_wordle   = sprite_add(_d + "game_wordle.png",   1, false, false, 256, 256);
+// Hue Sort icon is pending; fall back to the mix-up icon until art lands.
+global.spr_game_huesort  = sprite_add(_d + "game_huesort.png",  1, false, false, 256, 256);
+if (global.spr_game_huesort < 0) global.spr_game_huesort = global.spr_game_mixup;
 
 // ── Anygram tile (256×256, origin centred) ────────────────────────────────────
 global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);

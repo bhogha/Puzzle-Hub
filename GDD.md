@@ -321,7 +321,41 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 **Save shape.** Win → `WORDLE` in `puzzles_solved`; loss → `WORDLE_MISSED` (skipped from the daily count). Finish time `wordle_time_<date>` on both. In-progress + final state in `save.wordle_state[date] = { guesses, extra, hints, status }` for resume (`status` ∈ `in_progress`/`won`/`lost`). XP claim guarded by `save.xp_claimed["wordle_<date>"]`.
 
-### 4.6 Mix-Up
+### 4.6 Hue Sort
+
+**Genre.** Colour-gradient sorting puzzle (the "I Love Hue" mechanic) on a **5×5 grid** (`PH_HUESORT_SIZE`). The tiles form a smooth two-dimensional colour gradient; at the start the interior tiles are scrambled and the player rearranges them so the colour field reads smoothly again. The accent colour is **violet** (`PH_COL_VIOLET`, #a838de).
+
+**Reward.** Solving grants the single **+100 XP** (`PH_XP_PER_PUZZLE`), claimed on the shared win screen like the other puzzles; it counts toward the 4th-puzzle gift box and the streak. There is **no loss state** — the puzzle can always be solved.
+
+**Board & gradient.** The four **corner tiles are locked anchors** (drawn with a small white pin dot) and define the whole board: every cell's target colour is the **bilinear interpolation** of the four corner colours (`tl`, `tr`, `bl`, `br`). With a 5×5 board that leaves **21 movable interior tiles**. Geometry mirrors Shikaku — a 960 px board centred horizontally, sat below the HUD.
+
+**Layout** (1080×1920 portrait).
+- **Top HUD strip:** back arrow on the left, **"HUE SORT"** title centred in violet, coin-balance pill top-right.
+- **Instruction line** above the board: "Swap tiles so the colours blend smoothly".
+- **Board:** the 5×5 grid of rounded colour swatches on a white backing card; locked corners carry a pin dot.
+- **Bottom toolbar:** **timer pill** (centre) and **HINT pill** (right) — same structure as Shikaku (no chest, no number pad).
+
+**Input — drag-and-drop swap.** Press a movable tile to pick it up (it lifts onto the finger, slightly enlarged with a halo; its home cell shows an empty slot). Release over another movable tile to **swap** the two. Releasing over a locked tile, an already-anchored tile, the source cell, or off the board cancels the move. Each committed swap saves the board and checks for a win (`hs_swap` → `hs_check_win`).
+
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`hs_apply_hint`) takes the **first still-wrong interior tile**, brings its correct colour into place, and **anchors** that position (it gains a pin dot and can no longer be moved), so a hint is permanent progress. When no wrong interior tile remains, the pill shows "NO HINTS LEFT".
+
+**Completion.** When every position matches its target colour (`ph_huesort_is_solved_arr`), `hs_check_win` fires: records `huesort_time_<date>` (mm:ss), sets the `HUESORT` solved flag, triggers the 4th-puzzle gift if applicable, updates the streak, and shows the shared win screen (violet accent, recap = the mini solved gradient) where the +100 XP is claimed.
+
+**Review mode.** Tapping a completed Hue Sort on the hub re-enters with `global.huesort_review_mode = true`, going straight to the win overlay with the solved board and recorded time. The hub queries `ph_huesort_is_done` for the solved-state badge.
+
+**Data source.** `datafiles/puzzles_huesort.json` — an array of puzzles, cached in `global.ph_huesort_cache`. Each entry:
+
+```json
+{ "date": "YYYY-MM-DD",
+  "size": 5,
+  "corners": { "tl": "RRGGBB", "tr": "RRGGBB", "bl": "RRGGBB", "br": "RRGGBB" } }
+```
+
+`date` and `size` are optional (size defaults to `PH_HUESORT_SIZE`). Corner colours are `RRGGBB` hex (a leading `#` is tolerated). **Date selection** uses the same two-pass logic as the other puzzles (exact `date` match wins, else `seed mod length`). If the file is missing, a hardcoded pink→yellow→purple→teal fallback is used. Authoring is just four corner colours — the gradient and the scramble are generated; the scramble is seeded by the date so every device sees the same daily board.
+
+**Save shape.** Completion is tracked through the generic `puzzles_solved` map under the `HUESORT` key (a single flag, no per-tile bookkeeping keys, so `ph_solved_count_on` counts it automatically). Finish time is `huesort_time_<date>`. The in-progress board + anchored hint positions are persisted under `save.huesort_state[date] = { tiles, hints }` (`tiles` = comma-joined `RRGGBB`, `hints` = comma-joined indices) for resume. XP claim guarded by `save.xp_claimed["huesort_<date>"]`.
+
+### 4.7 Mix-Up
 
 Not implemented. The card renders on the hub with `locked: true` and a "COMING SOON" badge. Tapping it does nothing.
 
@@ -347,7 +381,9 @@ File: `working_directory + "puzzlehub_save.json"`. JSON struct, currently `versi
 | `shikaku_state` | Struct keyed by date → `{rects, hints}`: the player's in-progress rectangles (`"r,c,w,h;…"`) and revealed hint clue indices (`"i,j,…"`) for resume |
 | `wordle_time_<date>` | mm:ss string — recorded Wordle finish time per date (set on **both** win and loss) |
 | `wordle_state` | Struct keyed by date → `{guesses, extra, hints, status}`: ";"-joined submitted guesses, the one-time extra-moves flag, ";"-joined revealed hint positions, and `status` (`in_progress`/`won`/`lost`) for resume |
-| `xp_claimed` | Struct of `{claim_key: true}` guarding against a second XP grant on re-entry (e.g. `"wordle_<date>"`) |
+| `huesort_time_<date>` | mm:ss string — recorded Hue Sort finish time per date |
+| `huesort_state` | Struct keyed by date → `{tiles, hints}`: the player's in-progress board (comma-joined `RRGGBB`) and anchored hint positions (comma-joined indices) for resume |
+| `xp_claimed` | Struct of `{claim_key: true}` guarding against a second XP grant on re-entry (e.g. `"wordle_<date>"`, `"huesort_<date>"`) |
 
 In `puzzles_solved`, a Wordle **win** sets the `WORDLE` key (counts as a solve); a **loss** sets `WORDLE_MISSED`, which `ph_solved_count_on` skips so it does not count toward the daily total / gift / streak.
 
@@ -376,7 +412,20 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ---
 
-## 7. Recent code changes (2026-06-05)
+## 7. Recent code changes (2026-06-06)
+
+**New puzzle: Hue Sort.** Added the sixth playable puzzle (see §4.6) — an "I Love Hue"-style colour-gradient sort — inserted on the hub before the locked Mix-Up card.
+
+- New logic script `scripts/scr_huesort/scr_huesort.gml`: JSON loader/cache, hex⇄`{r,g,b}` helpers, bilinear corner-gradient build (`ph_huesort_make`), two-pass date selection, date-seeded interior scramble (`ph_huesort_scramble`), solved check, board serialise/restore, and completion tracking (`ph_huesort_is_done`/`mark_done`, `ph_huesort_save_state`/`load_state` — kept in this script, mirroring Shikaku).
+- New controller `obj_huesort` (Create/Step/Draw_64) + room `rm_huesort`: 5×5 board with locked corner anchors, **drag-and-drop swap**, shared hint flow (`hs_apply_hint` anchors one correct tile), win via shared `ph_win_*`. No loss state.
+- New data `datafiles/puzzles_huesort.json` (corner-colour palettes; one dated entry for 2026-06-06), registered as an IncludedFile.
+- `scr_constants`: `PH_COL_VIOLET`/`_SOFT`/`_DEEP` (#a838de), `PH_HUESORT_INDEX`, `PH_HUESORT_SIZE`; HUE SORT entry added to `ph_game_cards()`.
+- Hub card reuses the **orange card tile** (`spr_card_orange`, shared with the locked Mix-Up card) with orange-deep title text. `obj_persistent` loads `spr_game_huesort` for the card icon with a graceful fallback (mix-up icon) until dedicated icon art lands.
+- `obj_hub`: `global.huesort_review_mode` wired in Step.
+- Project manifest (`.yyp`): registered `obj_huesort`, `rm_huesort`, `scr_huesort`, the room order, and the data file.
+- **Icon art pending:** `datafiles/icons/game_huesort.png` (drop in + register as an Included File to replace the mix-up-icon fallback). The card tile is final (orange).
+
+## 7a. Recent code changes (2026-06-05)
 
 **New puzzle: Wordle.** Added the fifth playable puzzle (see §4.5), promoting the former coming-soon green card. Built in phases (see `WORDLE_PLAN.md`):
 
@@ -390,7 +439,7 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ---
 
-## 7a. Recent code changes (2026-06-02)
+## 7b. Recent code changes (2026-06-02)
 
 **Hub-screen art pass — date badges, segmented progress bar, title.**
 
@@ -431,7 +480,7 @@ Changes:
 
 ---
 
-## 7b. Recent code changes (2026-06-01)
+## 7c. Recent code changes (2026-06-01)
 
 **New puzzle: Shikaku.** Added a fourth playable puzzle (see §4.4).
 

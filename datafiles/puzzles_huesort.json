@@ -1,0 +1,12 @@
+[
+  { "date": "2026-06-06", "size": 5, "corners": { "tl": "FF5E62", "tr": "FF9966", "bl": "6A3093", "br": "A044FF" } },
+
+  { "size": 5, "corners": { "tl": "2BC0E4", "tr": "EAECC6", "bl": "005C97", "br": "363795" } },
+  { "size": 5, "corners": { "tl": "F7971E", "tr": "FFD200", "bl": "56AB2F", "br": "A8E063" } },
+  { "size": 5, "corners": { "tl": "DA22FF", "tr": "FF2D6F", "bl": "4A00E0", "br": "8E2DE2" } },
+  { "size": 5, "corners": { "tl": "00F5A0", "tr": "00D9F5", "bl": "FF6FD8", "br": "3813C2" } },
+  { "size": 5, "corners": { "tl": "FF512F", "tr": "DD2476", "bl": "F09819", "br": "FFC837" } },
+  { "size": 5, "corners": { "tl": "1FA2FF", "tr": "12D8FA", "bl": "A6FFCB", "br": "12FFF7" } },
+  { "size": 5, "corners": { "tl": "7F00FF", "tr": "E100FF", "bl": "00C9FF", "br": "92FE9D" } },
+  { "size": 5, "corners": { "tl": "FFC371", "tr": "FFE259", "bl": "FFA751", "br": "FF5858" } }
+]
