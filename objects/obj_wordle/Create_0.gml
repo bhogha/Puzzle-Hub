@@ -6,6 +6,8 @@ accent = PH_COL_GREEN;
 
 // ── Puzzle + session ──────────────────────────────────────────────────────────
 puzzle           = ph_wordle_for_date(global.selected_date_key);
+timer_key        = "wordle_" + global.selected_date_key;
+timer_base_secs  = ph_timer_get(global.save, timer_key);
 session_start_ms = current_time;
 
 // Input / play state. The active (unsubmitted) row is slot-based so a hint can
@@ -68,6 +70,15 @@ grid_y = HUD_Y + 175;
 // Keyboard
 KEY_W = 94; KEY_H = 120; KEY_GAP = 10; KEY_ROW_GAP = 16;
 DEL_W = 150; SEND_W = 300; SEND_H = 110;
+
+// Bottom-anchor the board + keyboard cluster just above the bottom bar instead of
+// top-anchoring under the HUD. KB_TOP (below) derives from grid_y, so the whole
+// keyboard follows. Keyboard height = 3 letter rows + 1 space/enter row.
+var _kb_h       = 3 * (KEY_H + KEY_ROW_GAP) + KEY_H;
+var _cluster_h  = GRID_H + 60 + _kb_h;
+var _target_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP;
+grid_y += max(0, _target_bot - (grid_y + _cluster_h));
+
 KB_TOP = grid_y + GRID_H + 60;
 kb_rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
 
@@ -162,7 +173,7 @@ hint = ph_hint_create(wd_apply_hint, PH_COL_GREEN);
 
 // ── Win bookkeeping — fires once when the answer is guessed ────────────────────
 wd_check_win = function() {
-    var _fin_s  = floor((current_time - session_start_ms) / 1000);
+    var _fin_s  = ph_timer_now(timer_base_secs, session_start_ms);
     var _fin_m  = _fin_s div 60;
     var _fin_ss = _fin_s mod 60;
     win_time_str = string(_fin_m) + ":" + ((_fin_ss < 10) ? "0" : "") + string(_fin_ss);
@@ -222,6 +233,13 @@ win_draw_recap = function(_cx, _top, _bw, _bh) {
 // ── Lose / lost-aversion flow (Phase 5) ───────────────────────────────────────
 lose_phase     = "none";   // "none" | "aversion" | "confirm" | "screen"
 lose_anim_t    = 0;
+// Boxing-glove rotation (deg). The aversion→confirm switch keeps the sheet in
+// place and just spins the glove 180° while the text/buttons swap; cancel spins
+// it back. Animated from _from→_to over _t (0..1).
+glove_rot      = 0;
+glove_rot_from = 0;
+glove_rot_to   = 0;
+glove_rot_t    = 1;        // 1 = settled
 lose_time_str  = "0:00";
 lose_claimed   = false;
 lose_granted   = false;
@@ -237,9 +255,21 @@ lb_buy={l:0,t:0,r:0,b:0}; lb_free={l:0,t:0,r:0,b:0}; lb_giveup={l:0,t:0,r:0,b:0}
 lc_giveup={l:0,t:0,r:0,b:0}; lc_cancel={l:0,t:0,r:0,b:0};
 ls_claim={l:0,t:0,r:0,b:0}; ls_double={l:0,t:0,r:0,b:0}; ls_back={l:0,t:0,r:0,b:0};
 
+// Claim star-flight animation (mirrors the win screen): on claim, stars fly from
+// the reward button up to the bar's star badge while the bar fills, then the HOME
+// button appears.
+lose_claiming    = false;
+lose_claim_t     = 1;                            // 0..1 during the flight
+lose_stars       = [];
+lose_xp_from     = ph_xp_in_level(global.save.xp);
+lose_xp_to       = ph_xp_in_level(global.save.xp);
+lose_xp_anim_t   = 1;
+lose_bar_star_x  = 168;  lose_bar_star_y  = 0;   // fly target (set by draw)
+lose_claim_src_x = PH_W/2; lose_claim_src_y = 0; // fly origin (set by draw)
+
 /// Record the miss (time + WORDLE_MISSED flag) and open the red lose screen.
 wd_finalize_loss = function() {
-    var _s = floor((current_time - session_start_ms) / 1000);
+    var _s = ph_timer_now(timer_base_secs, session_start_ms);
     lose_time_str = string(_s div 60) + ":" + (((_s mod 60) < 10) ? "0" : "") + string(_s mod 60);
     global.save[$ "wordle_time_" + global.selected_date_key] = lose_time_str;
     ph_wordle_mark_missed(global.save, global.selected_date_key);
@@ -271,25 +301,66 @@ wd_grant_free_moves = function() {
 wd_lose_claim = function(_amount) {
     if (lose_granted) { lose_claimed = true; return; }
     lose_granted = true;
+    lose_xp_from = ph_xp_in_level(global.save.xp);
     var _key = "wordle_" + global.selected_date_key;
     if (!ph_xp_claimed(global.save, _key)) {
         var _res = ph_grant_xp(global.save, _amount, false);
         ph_mark_xp_claimed(global.save, _key);
         if (_res.levels_gained > 0) {
             global.pending_levelup = { level: _res.new_level, base_reward: PH_COINS_PER_LEVEL };
+            lose_xp_to = PH_XP_PER_LEVEL;                    // fill to full; Level-Up screen continues
+        } else {
+            lose_xp_to = ph_xp_in_level(global.save.xp);
         }
+    } else {
+        lose_xp_to = ph_xp_in_level(global.save.xp);
     }
     ph_save_write(global.save);
-    lose_claimed = true;
+
+    // Start the star flight → the HOME button appears when it completes.
+    lose_claiming  = true;
+    lose_claim_t   = 0;
+    lose_xp_anim_t = 0;
+    lose_stars     = [];
+    for (var _i = 0; _i < 14; _i++) {
+        array_push(lose_stars, {
+            t:  -_i * 0.05,
+            x:  lose_claim_src_x + random_range(-30, 30),
+            y:  lose_claim_src_y + random_range(-20, 20),
+            tx: lose_bar_star_x,
+            ty: lose_bar_star_y,
+            sz: 0.10 + random(0.06),
+        });
+    }
+};
+
+/// Begin spinning the glove toward _deg (0 = upright, 180 = upside-down).
+wd_glove_spin_to = function(_deg) {
+    glove_rot_from = glove_rot;
+    glove_rot_to   = _deg;
+    glove_rot_t    = 0;
 };
 
 wd_lose_step = function() {
     if (lose_anim_t < 1) lose_anim_t = min(1, lose_anim_t + 0.08);
     if (emv_open)      emv_timer++;
     if (lose_vid_open) lose_vid_timer++;
+
+    if (glove_rot_t < 1) {
+        glove_rot_t = min(1, glove_rot_t + 1/16);
+        glove_rot   = lerp(glove_rot_from, glove_rot_to, ph_ease_out(glove_rot_t));
+    }
+
+    if (lose_claiming) {
+        lose_claim_t = min(1, lose_claim_t + 1/45);
+        for (var _i = 0; _i < array_length(lose_stars); _i++) lose_stars[_i].t += 1/18;
+        lose_xp_anim_t = clamp((lose_claim_t - 0.30) / 0.70, 0, 1);
+        if (lose_claim_t >= 1) { lose_claiming = false; lose_claimed = true; }
+    }
 };
 
 wd_lose_input = function() {
+    if (lose_claiming) return;                       // taps are inert during the star flight
     if (!device_mouse_check_button_pressed(0, mb_left)) return;
     var _mx = device_mouse_x_to_gui(0);
     var _my = device_mouse_y_to_gui(0);
@@ -312,12 +383,12 @@ wd_lose_input = function() {
         if (ph_point_in_rect(_mx,_my, lb_buy.l,lb_buy.t,lb_buy.r,lb_buy.b))       { wd_buy_moves(); return; }
         if (ph_point_in_rect(_mx,_my, lb_free.l,lb_free.t,lb_free.r,lb_free.b))    { emv_open = true; emv_timer = 0; return; }
         if (ph_point_in_rect(_mx,_my, lb_giveup.l,lb_giveup.t,lb_giveup.r,lb_giveup.b)
-         || ph_point_in_rect(_mx,_my, lb_x.l,lb_x.t,lb_x.r,lb_x.b))               { lose_phase = "confirm"; lose_anim_t = 0; return; }
+         || ph_point_in_rect(_mx,_my, lb_x.l,lb_x.t,lb_x.r,lb_x.b))               { lose_phase = "confirm"; wd_glove_spin_to(180); return; }   // sheet stays; spin the glove
         return;
     }
     if (lose_phase == "confirm") {
         if (ph_point_in_rect(_mx,_my, lc_giveup.l,lc_giveup.t,lc_giveup.r,lc_giveup.b)) { wd_finalize_loss(); return; }
-        if (ph_point_in_rect(_mx,_my, lc_cancel.l,lc_cancel.t,lc_cancel.r,lc_cancel.b)) { lose_phase = "aversion"; lose_anim_t = 0; return; }
+        if (ph_point_in_rect(_mx,_my, lc_cancel.l,lc_cancel.t,lc_cancel.r,lc_cancel.b)) { lose_phase = "aversion"; wd_glove_spin_to(0); return; }     // spin back upright
         return;
     }
     if (lose_phase == "screen") {
@@ -339,35 +410,62 @@ wd_lose_draw = function() {
 
     if (lose_phase == "screen") {
         draw_set_color(LOSE_RED); draw_rectangle(0, 0, PH_W, PH_H, false);
-        ph_draw_text(PH_W/2, 200 + _st, "UNLUCKY!", global.fnt_disp_lg, LOSE_DARK, fa_center, fa_middle);
+        ph_draw_text(PH_W/2, 200 + _st, "UNLUCKY!", global.fnt_disp_xxl, LOSE_DARK, fa_center, fa_middle);
         win_draw_recap(PH_W/2, 300 + _st, 520, 520);                       // mini guess grid
-        ph_draw_text(PH_W/2, 980 + _st, "You finished todays", global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
+        ph_draw_text(PH_W/2, 980 + _st, "You finished todays", global.fnt_body_reg, PH_COL_DARK, fa_center, fa_middle);
         ph_draw_text(PH_W/2, 1042 + _st, "WORDLE",            global.fnt_disp_md, c_white,     fa_center, fa_middle);
+        // "in  [stopwatch] mm:ss" — same time pill as the win screen (with the "in").
         var _ty = 1140 + _st;
-        ph_draw_chip(PH_W/2-150, _ty-40, PH_W/2+150, _ty+40, 40, PH_COL_WHITE, LOSE_DARK, 6);
-        draw_sprite_ext(global.spr_stopwatch, 0, PH_W/2-95, _ty, 120/512, 120/512, 0, c_white, 1);
-        ph_draw_text(PH_W/2-30, _ty, lose_time_str, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
-        // level progress bar
-        var _by = 1300 + _st, _bl = 140, _br = PH_W - 140;
-        var _frac = ph_xp_in_level(global.save.xp) / PH_XP_PER_LEVEL;
-        draw_set_color(make_color_rgb(206,184,180)); draw_roundrect_ext(_bl, _by-26, _br, _by+26, 26, 26, false);
-        draw_set_color(PH_COL_PURPLE);               draw_roundrect_ext(_bl, _by-26, _bl + (_br-_bl)*_frac, _by+26, 26, 26, false);
-        // reward area
+        ph_draw_text(PH_W/2 - 165, _ty, "in", global.fnt_body_reg, PH_COL_DARK, fa_center, fa_middle);
+        var _pl = PH_W/2 - 75, _pr = PH_W/2 + 180;
+        ph_draw_chip(_pl, _ty-38, _pr, _ty+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+        draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _ty, 150/512, 150/512, 0, c_white, 1);
+        ph_draw_text(_pl+102, _ty, lose_time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
+        // Level progress bar — full win-screen style: grey track, purple fill, the
+        // "xp / 500" count above-right, and the oversized star level badge. The fill
+        // animates from the pre-claim snapshot once the player claims.
+        var _by = 1300 + _st, _bl = 150, _br = PH_W - 140, _bh = 70;
+        var _disp;
+        if      (lose_claiming) _disp = lerp(lose_xp_from, lose_xp_to, ph_ease_out(lose_xp_anim_t));
+        else if (lose_claimed)  _disp = lose_xp_to;
+        else                    _disp = ph_xp_in_level(global.save.xp);
+        ph_draw_text(_br, _by - 78, string(round(_disp)) + " / " + string(PH_XP_PER_LEVEL),
+                     global.fnt_body_md, PH_COL_GRAY, fa_right, fa_middle);
+        ph_draw_rounded(_bl, _by-_bh/2, _br, _by+_bh/2, _bh/2, make_color_rgb(220,210,205));
+        var _frac = clamp(_disp / PH_XP_PER_LEVEL, 0, 1);
+        var _fw   = floor((_br - _bl) * _frac);
+        if (_fw > _bh) ph_draw_rounded(_bl, _by-_bh/2, _bl+_fw, _by+_bh/2, _bh/2, PH_COL_PURPLE);
+        var _lvl     = ph_level_from_xp(global.save.xp);
+        var _badge_x = _bl + 18;
+        draw_sprite_ext(global.spr_star, 0, _badge_x, _by, 200/512, 200/512, 0, c_white, 1);
+        ph_draw_text(_badge_x, _by, string(_lvl), global.fnt_disp_lg, PH_COL_WHITE, fa_center, fa_middle);
+        lose_bar_star_x = _badge_x;  lose_bar_star_y = _by;   // star-flight target
+
+        // ── Reward area ────────────────────────────────────────────────────────
         var _ay = PH_H - 240 - _sb;
-        if (!lose_claimed) {
-            ph_draw_text(PH_W/2, _ay-92, "Claim your reward", global.fnt_disp_md, LOSE_DARK, fa_center, fa_middle);
-            ls_claim = {l:120, t:_ay-50, r:PH_W/2-25, b:_ay+50};
-            ph_draw_chip(ls_claim.l, ls_claim.t, ls_claim.r, ls_claim.b, 50, PH_COL_WHITE, LOSE_DARK, 6);
-            ph_draw_text((ls_claim.l+ls_claim.r)/2-24, _ay, string(PH_WORDLE_GIVEUP_XP), global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
-            draw_sprite_ext(global.spr_star3d, 0, (ls_claim.l+ls_claim.r)/2+56, _ay, 110/512, 110/512, 0, c_white, 1);
+        lose_claim_src_x = PH_W/2;  lose_claim_src_y = _ay;   // star-flight origin
+        if (!lose_claimed && !lose_claiming) {
+            ph_draw_text(PH_W/2, _ay-92, "Claim your reward", global.fnt_body_semi, LOSE_DARK, fa_center, fa_middle);
+            // New blue reward-button design (shared with the win / level-up screens).
+            ls_claim  = {l:120,      t:_ay-50, r:PH_W/2-25, b:_ay+50};
+            ph_draw_reward_btn(ls_claim.l, _ay, ls_claim.r, 50, string(PH_WORDLE_GIVEUP_XP), global.spr_star, false);
             ls_double = {l:PH_W/2+25, t:_ay-50, r:PH_W-120, b:_ay+50};
-            ph_draw_chip(ls_double.l, ls_double.t, ls_double.r, ls_double.b, 50, PH_COL_WHITE, LOSE_DARK, 6);
-            ph_draw_text((ls_double.l+ls_double.r)/2-30, _ay, "DOUBLE", global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
-            draw_sprite_ext(global.spr_tv, 0, (ls_double.l+ls_double.r)/2+78, _ay, 104/512, 104/512, 0, c_white, 1);
+            ph_draw_reward_btn(ls_double.l, _ay, ls_double.r, 50, string(PH_WORDLE_GIVEUP_XP*2), global.spr_star, true);
+        } else if (lose_claiming) {
+            // Flying stars from the reward button up to the bar's star badge.
+            for (var _si = 0; _si < array_length(lose_stars); _si++) {
+                var _s = lose_stars[_si];
+                if (_s.t < 0) continue;
+                var _e  = ph_ease_out(clamp(_s.t, 0, 1));
+                var _sx = lerp(_s.x, _s.tx, _e);
+                var _sy = lerp(_s.y, _s.ty, _e) - sin(min(_s.t,1) * pi) * 90;
+                var _sa = (_s.t > 0.85) ? (1 - (_s.t - 0.85)/0.15) : 1;
+                draw_sprite_ext(global.spr_star, 0, _sx, _sy, _s.sz, _s.sz, 0, c_white, _sa);
+            }
         } else {
+            // Claimed → blue HOME button (matches the win screen).
             ls_back = {l:PH_W/2-280, t:_ay-50, r:PH_W/2+280, b:_ay+50};
-            ph_draw_chip(ls_back.l, ls_back.t, ls_back.r, ls_back.b, 50, PH_COL_DARK, make_color_rgb(20,20,20), 6);
-            ph_draw_text(PH_W/2, _ay, "BACK TO HUB", global.fnt_disp_md, PH_COL_WHITE, fa_center, fa_middle);
+            ph_draw_nav_btn(ls_back.l, _ay, ls_back.r, 50, "HOME", global.spr_home, noone, noone);
         }
         if (lose_vid_open) ph_video_overlay(lose_vid_timer, LOSE_VIDEO_X_DELAY, PH_COL_GREEN);
         return;
@@ -381,6 +479,11 @@ wd_lose_draw = function() {
     var _dy     = _slide - _sb_top;
     var _sheet_col = (lose_phase == "aversion") ? PH_COL_YELLOW_SOFT : make_color_rgb(255,243,205);
     ph_draw_rounded(40, _sb_top + _dy, PH_W-40, _sb_bot + _dy + 40, 48, _sheet_col);
+
+    // Boxing-glove mascot above the title (overflows the sheet top, like the hint
+    // bulb). Spins 180° on the aversion↔confirm switch (glove_rot, animated in Step)
+    // so "Giving up?" shows it upside-down without re-sliding the sheet.
+    draw_sprite_ext(global.spr_boxing_glove, 0, PH_W/2, _sb_top + 95 + _dy, 0.60, 0.60, glove_rot, c_white, 1);
 
     if (lose_phase == "aversion") {
         // close X (top-right of sheet)
@@ -396,12 +499,9 @@ wd_lose_draw = function() {
         var _by = _sb_top + 480 + _dy;
         lb_buy  = {l:90,        t:_by-58, r:PH_W/2-20, b:_by+58};
         lb_free = {l:PH_W/2+20, t:_by-58, r:PH_W-90,   b:_by+58};
-        ph_draw_chip(lb_buy.l, lb_buy.t, lb_buy.r, lb_buy.b, 58, PH_COL_WHITE, make_color_rgb(190,170,120), 6);
-        ph_draw_text((lb_buy.l+lb_buy.r)/2-30, _by, string(PH_WORDLE_EXTRA_COST), global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
-        draw_sprite_ext(global.spr_gold_coin, 0, (lb_buy.l+lb_buy.r)/2+60, _by, 120/512, 120/512, 0, c_white, 1);
-        ph_draw_chip(lb_free.l, lb_free.t, lb_free.r, lb_free.b, 58, PH_COL_WHITE, make_color_rgb(190,170,120), 6);
-        ph_draw_text((lb_free.l+lb_free.r)/2-30, _by, "FREE", global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
-        draw_sprite_ext(global.spr_tv, 0, (lb_free.l+lb_free.r)/2+70, _by, 104/512, 104/512, 0, c_white, 1);
+        // Green reward buttons (uniform with the blue claim buttons), per the design.
+        ph_draw_reward_btn(lb_buy.l,  _by, lb_buy.r,  58, "Buy " + string(PH_WORDLE_EXTRA_COST), global.spr_gold_coin, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+        ph_draw_reward_btn(lb_free.l, _by, lb_free.r, 58, "FREE",                                global.spr_tv,        false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
 
         var _gy = _sb_bot + _dy - 40;
         lb_giveup = {l:PH_W/2-130, t:_gy-40, r:PH_W/2+130, b:_gy+40};
@@ -416,10 +516,9 @@ wd_lose_draw = function() {
         var _by = _sb_top + 520 + _dy;
         lc_giveup = {l:90,        t:_by-58, r:PH_W/2-20, b:_by+58};
         lc_cancel = {l:PH_W/2+20, t:_by-58, r:PH_W-90,   b:_by+58};
-        ph_draw_chip(lc_giveup.l, lc_giveup.t, lc_giveup.r, lc_giveup.b, 58, PH_COL_PINK,  PH_COL_PINK_DEEP, 6);
-        ph_draw_text((lc_giveup.l+lc_giveup.r)/2, _by, "Give up", global.fnt_disp_md, PH_COL_WHITE, fa_center, fa_middle);
-        ph_draw_chip(lc_cancel.l, lc_cancel.t, lc_cancel.r, lc_cancel.b, 58, PH_COL_GREEN, PH_COL_GREEN_DEEP, 6);
-        ph_draw_text((lc_cancel.l+lc_cancel.r)/2, _by, "Cancel", global.fnt_disp_md, PH_COL_WHITE, fa_center, fa_middle);
+        // GIVE UP (red) + CANCEL (blue) — uniform nav buttons, Nunito Bold, per design.
+        ph_draw_nav_btn(lc_giveup.l, _by, lc_giveup.r, 58, "GIVE UP", noone, make_color_rgb(235,90,90), make_color_rgb(190,55,55));
+        ph_draw_nav_btn(lc_cancel.l, _by, lc_cancel.r, 58, "CANCEL", noone, noone, noone);
     }
 };
 

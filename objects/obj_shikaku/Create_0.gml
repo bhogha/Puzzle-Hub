@@ -11,6 +11,11 @@ grid_x = floor((PH_W - BOARD) / 2);           // 60
 grid_y = 280 + global.safe_top_gui;
 grid_h = BOARD;
 
+// Bottom-anchor the board just above the bottom toolbar instead of top-anchoring
+// under the HUD (clue glyphs and rects all derive from grid_y at draw time).
+var _target_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP;
+grid_y += max(0, _target_bot - (grid_y + grid_h));
+
 // ── Player state ──────────────────────────────────────────────────────────────
 // player_rects: array of { r, c, w, h } the player has drawn (top-left + size).
 player_rects = [];
@@ -50,6 +55,8 @@ coins_bonus      = 0;
 win_anim_t       = 0;
 win_btn_back_y   = 0;
 win_time_str     = "0:00";
+timer_key        = "shikaku_" + global.selected_date_key;
+timer_base_secs  = ph_timer_get(global.save, timer_key);
 session_start_ms = current_time;
 
 // ── Confetti state (mirrors the other puzzles' celebration) ───────────────────
@@ -94,7 +101,7 @@ sk_commit_rect = function(_r0, _c0, _w, _h) {
 /// Win bookkeeping — fires once when the player's rectangles form a valid solve.
 sk_check_win = function() {
     if (!ph_shikaku_check_solution(puzzle, player_rects)) return;
-    var _fin_s  = floor((current_time - session_start_ms) / 1000);
+    var _fin_s  = ph_timer_now(timer_base_secs, session_start_ms);
     var _fin_m  = _fin_s div 60;
     var _fin_ss = _fin_s mod 60;
     win_time_str = string(_fin_m) + ":" + ((_fin_ss < 10) ? "0" : "") + string(_fin_ss);

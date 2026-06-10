@@ -152,6 +152,9 @@ if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 // Advance the shared hint-flow timers (modal slide / "-100" / video).
 ph_hint_tick(hint);
 
+// Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
+if (win_phase == 0) ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
+
 // ── Hint overlay input (modal + placeholder video) — eats taps while open. ────
 var _hr = ph_hint_input(hint);
 if (_hr != "none") {
@@ -207,9 +210,11 @@ var _my = device_mouse_y_to_gui(0);
 
 // Back button + Hint button
 if (device_mouse_check_button_pressed(0, mb_left)) {
-    // Back arrow hit rect — aligned to the new HUD strip centred at y=95.
-    if (ph_point_in_rect(_mx,_my, 0,40,130,150)) {
+    // Back arrow hit rect — aligned to the HUD strip centred at y=95 + safe-area inset.
+    if (ph_point_in_rect(_mx,_my, 0, 40 + global.safe_top_gui, 130, 150 + global.safe_top_gui)) {
         global.input_locked_until = current_time + 200;
+        ph_timer_commit(global.save, timer_key, timer_base_secs, session_start_ms);
+        ph_save_write(global.save);
         room_goto(rm_hub);
         exit;
     }

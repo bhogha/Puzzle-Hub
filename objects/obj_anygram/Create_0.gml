@@ -32,14 +32,12 @@ var _grid_w = _cols * CELL + (_cols-1) * GAP;
 // pill and the toast halfway between the grid bottom and the wheel top.
 grid_h = _rows * CELL + (_rows-1) * GAP;
 grid_x = floor((PH_W - _grid_w) / 2);
-// Top-anchor with a small gap below the HUD strip; clamp so the grid never
-// crosses the wheel area (top edge = WHEEL_CY - WHEEL_R). HUD now sits at
-// y=95 (see Draw_64 §HUD), so the grid can start ~70px higher than before.
-grid_y = 200 + global.safe_top_gui;
+// Bottom-anchor the grid just above the wheel (the wheel is already bottom-
+// aligned), leaving room for the word-preview pill between them, instead of
+// top-anchoring it under the HUD. Clamp so a tall grid never rides up under the
+// HUD strip.
 var _wheel_top_y = WHEEL_CY - WHEEL_R;
-if (grid_y + grid_h > _wheel_top_y - 20) {
-    grid_y = max(170 + global.safe_top_gui, _wheel_top_y - 20 - grid_h);
-}
+grid_y = max(170 + global.safe_top_gui, _wheel_top_y - 130 - grid_h);
 
 // Per-cell animation
 tile_scales = array_create(array_length(puzzle.cells), 1.0);
@@ -144,6 +142,8 @@ coins_bonus      = 0;
 win_anim_t       = 0;
 win_btn_back_y   = 0;
 win_time_str     = "0:00";
+timer_key        = "anygram_" + global.selected_date_key;
+timer_base_secs  = ph_timer_get(global.save, timer_key);
 session_start_ms = current_time;
 
 // ── Confetti state ────────────────────────────────────────────────────────────
@@ -343,7 +343,7 @@ _ag_find_cell_idx = function(_r, _c) {
 ag_check_win = function() {
     if (!ph_anygram_all_solved(puzzle)) return;
     // Snapshot elapsed time the instant the puzzle is completed
-    var _fin_s  = floor((current_time - session_start_ms) / 1000);
+    var _fin_s  = ph_timer_now(timer_base_secs, session_start_ms);
     var _fin_m  = _fin_s div 60;
     var _fin_ss = _fin_s mod 60;
     win_time_str = string(_fin_m) + ":" + ((_fin_ss < 10) ? "0" : "") + string(_fin_ss);

@@ -20,9 +20,15 @@
 #macro PH_COL_GREEN       make_color_rgb(  0,190, 73)   // Wordle accent (#00be49)
 #macro PH_COL_GREEN_SOFT  make_color_rgb(200,240,210)
 #macro PH_COL_GREEN_DEEP  make_color_rgb(  0,140, 55)
+#macro PH_COL_LIME        make_color_rgb(199,231, 15)   // Color Link accent (#c7e70f)
+#macro PH_COL_LIME_DEEP   make_color_rgb(120,150,  0)
 #macro PH_COL_VIOLET      make_color_rgb(168, 56,222)   // Hue Sort accent (#a838de)
 #macro PH_COL_VIOLET_SOFT make_color_rgb(235,205,250)
 #macro PH_COL_VIOLET_DEEP make_color_rgb(108, 24,158)
+#macro PH_COL_TANGERINE      make_color_rgb(255, 91, 56) // Word Bend accent (#ff5b38)
+#macro PH_COL_TANGERINE_DEEP make_color_rgb(200, 60, 28)
+#macro PH_COL_WB_FOUND       make_color_rgb(170,202, 49) // Word Bend found cell (#aaca31)
+#macro PH_COL_WB_FOUND_DEEP  make_color_rgb( 95,118, 18) // letter on a found cell
 #macro PH_COL_GOLD        make_color_rgb(245,180,  0)
 #macro PH_COL_DARK        make_color_rgb( 31, 20, 48)
 #macro PH_COL_INK_SOFT    make_color_rgb( 80, 60,100)
@@ -31,6 +37,28 @@
 #macro PH_COL_WHITE       make_color_rgb(255,255,255)
 #macro PH_COL_TILE        make_color_rgb(255,250,245)
 #macro PH_COL_TILE_DARK   make_color_rgb(234,220,210)
+// Word Wave "words to find" tiles (Penpot design): found = solid pink (#d63789)
+// with white text + strike-through; to-find = tan (#e7d5bd) with faint-ink text.
+#macro PH_COL_WORD_FOUND      make_color_rgb(214, 55,137)
+#macro PH_COL_WORD_FOUND_DEEP make_color_rgb(170, 35,105)
+#macro PH_COL_WORD_TODO       make_color_rgb(231,213,189)
+#macro PH_COL_WORD_TODO_DEEP  make_color_rgb(200,180,150)
+// Hue Sort board (Penpot redesign): flat base/empty tile + locked-corner dot.
+#macro PH_COL_HUE_TILE_BG make_color_rgb(241,234,225)   // #f1eae1 board / empty tile
+#macro PH_COL_HUE_LOCK    make_color_rgb( 72, 70, 68)   // #484644 locked-corner dot
+// Shared puzzle-board background (Penpot Sudoku/Shikaku): flat cream #f1eae1.
+#macro PH_COL_BOARD_BG    make_color_rgb(241,234,225)
+#macro PH_COL_SKYBLUE     make_color_rgb(110,165,230)   // #6ea5e6 Hue Sort title
+#macro PH_COL_SILVER      make_color_rgb(184,185,189)   // Arrows accent (#b8b9bd)
+#macro PH_COL_SILVER_SOFT make_color_rgb(226,227,231)
+#macro PH_COL_SILVER_DEEP make_color_rgb(108,110,118)
+// Ladder (Word Ladder): amber accent/title/selected tile (#ffc04c), soft amber
+// hint highlight (#ffe5a8), green correct flash (= PH_COL_WB_FOUND #aaca31),
+// red wrong flash (#eb5a5a). Base/empty tile reuses PH_COL_BOARD_BG (#f1eae1).
+#macro PH_COL_AMBER       make_color_rgb(255,192, 76)   // #ffc04c
+#macro PH_COL_AMBER_DEEP  make_color_rgb(205,150, 40)
+#macro PH_COL_AMBER_SOFT  make_color_rgb(255,229,168)   // #ffe5a8 hint highlight
+#macro PH_COL_LADDER_BAD  make_color_rgb(235, 90, 90)   // #eb5a5a wrong flash
 
 // ── Canvas ────────────────────────────────────────────────────────────────────
 // PH_W is fixed. PH_H is set at runtime in obj_persistent to match the device's
@@ -39,6 +67,23 @@
 #macro PH_W     1080
 #macro PH_H     global.PH_H_dyn
 #macro PH_SCALE (1080/390)
+
+// ── Safe-area comfort padding ─────────────────────────────────────────────────
+// Extra breathing room added ON TOP of the OS-reported iOS safe-area insets
+// (global.safe_top_gui / safe_bottom_gui). Mobile-UI guidance recommends keeping
+// content a comfortable distance from the Dynamic Island / status bar (top) and
+// the home indicator (bottom) rather than flush against the raw inset — and on
+// devices/sims that report a 0 inset this is the only thing preventing content
+// from touching the very edge. Use the ph_safe_top()/ph_safe_bottom() helpers
+// (scr_draw) instead of reading the raw insets for full-screen layouts.
+#macro PH_PAD_TOP        40
+#macro PH_PAD_BOTTOM     52
+
+// Core-game screens bottom-anchor their play content (board + any pad/keyboard/
+// list/wheel) so it sits just above the bottom HUD toolbar rather than crowding
+// the top under the HUD. This is the gap left between the lowest play element and
+// the bottom toolbar. Bump it to lift all puzzle content higher off the toolbar.
+#macro PH_PLAY_BOTTOM_GAP 40
 
 // ── Economy ──────────────────────────────────────────────────────────────────
 #macro PH_XP_PER_PUZZLE     100
@@ -69,9 +114,17 @@
 #macro PH_SHIKAKU_INDEX      3
 #macro PH_WORDLE_INDEX       4
 #macro PH_HUESORT_INDEX      5
+#macro PH_COLORLINK_INDEX    6
+#macro PH_WORDBEND_INDEX     7
+#macro PH_ARROWS_INDEX       8
+#macro PH_LADDER_INDEX       9
 
 // ── Hue Sort ──────────────────────────────────────────────────────────────────
 #macro PH_HUESORT_SIZE       5   // N×N board (4 locked corner anchors)
+
+// ── Arrows ────────────────────────────────────────────────────────────────────
+#macro PH_ARROWS_SIZE          8   // N×N board
+#macro PH_ARROWS_PENALTY_SECS  5   // time added on a blocked tap (no loss state — only time is lost)
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"
@@ -84,6 +137,11 @@
 // When true, Sudoku starts ~90% solved so the win flow is quick to reach.
 // SET BACK TO false BEFORE SHIPPING.
 #macro PH_SUDOKU_TEST_PREFILL true
+
+// When true, the hub draws a small safe-area readout (source + inset values) so
+// you can confirm whether the insets came from the extension or the estimate.
+// SET BACK TO false BEFORE SHIPPING.
+#macro PH_DEBUG_SAFEAREA false
 
 // ── Game cards ────────────────────────────────────────────────────────────────
 function ph_game_cards() {
@@ -140,24 +198,75 @@ function ph_game_cards() {
     });
     array_push(_cards, {
         name:     "HUE SORT",
-        subtitle: "Sort the colours",
+        subtitle: "Sort color tiles",
         room:     "rm_huesort",
         locked:   false,
-        card_spr: global.spr_card_orange,
+        card_spr: global.spr_card_skyblue,
         icon_spr: global.spr_game_huesort,
-        text_col: PH_COL_ORANGE_DEEP,
+        text_col: PH_COL_BLUE_DEEP,
         btn_type: "play_light",
     });
     array_push(_cards, {
-        name:     "MIX-UP",
-        subtitle: "Rearrange",
-        room:     "",
-        locked:   true,
+        name:     "COLOR LINK",
+        subtitle: "Link colors",
+        room:     "rm_colorlink",
+        locked:   false,
+        card_spr: global.spr_card_lime,
+        icon_spr: global.spr_game_colorlink,
+        text_col: PH_COL_LIME_DEEP,
+        btn_type: "play_light",
+    });
+    array_push(_cards, {
+        name:     "WORD BEND",
+        subtitle: "Fill the grid with words",
+        room:     "rm_wordbend",
+        locked:   false,
+        card_spr: global.spr_card_tangerine,
+        icon_spr: global.spr_game_wordbend,
+        text_col: PH_COL_TANGERINE_DEEP,
+        btn_type: "play_light",
+    });
+    array_push(_cards, {
+        name:     "ARROWS",
+        subtitle: "Slide the arrows out",
+        room:     "rm_arrows",
+        locked:   false,
+        card_spr: global.spr_card_silver,
+        icon_spr: global.spr_game_arrows,
+        text_col: PH_COL_SILVER_DEEP,
+        btn_type: "play_light",
+    });
+    array_push(_cards, {
+        name:     "LADDER",
+        subtitle: "Change one letter at a time",
+        room:     "rm_ladder",
+        locked:   false,
         card_spr: global.spr_card_orange,
-        icon_spr: global.spr_game_mixup,
-        text_col: PH_COL_ORANGE_DEEP,
-        btn_type: "locked",
+        icon_spr: global.spr_game_ladder,
+        text_col: PH_COL_AMBER_DEEP,
+        btn_type: "play_light",
     });
     return _cards;
+}
+
+// ── Game tips ─────────────────────────────────────────────────────────────────
+// One-line objective hint shown above each puzzle's grid (Nunito-regular, faint
+// ink — see ph_draw_game_tip in scr_draw). Player-facing copy lives here so it
+// stays in one place; mirror any change in GDD.md. Keys match the puzzle's
+// controller (anygram / sudoku / wordwave / shikaku / wordle / huesort).
+function ph_game_tip(_key) {
+    switch (_key) {
+        case "anygram":  return "Find the hidden words";
+        case "sudoku":   return "Fill the grid with missing numbers";
+        case "wordwave": return "Find the hidden words on the grid";
+        case "shikaku":  return "Draw a rectangle for each number";
+        case "wordle":   return "Find the hidden word of the day";
+        case "huesort":  return "Swap tiles so the colors blend smoothly";
+        case "colorlink": return "Connect colors without leaving empty spaces";
+        case "wordbend":  return "Find words using every letter on the board";
+        case "arrows":    return "Guide arrows out without causing any collisions";
+        case "ladder":    return "Change one letter at a time";
+        default:         return "";
+    }
 }
 

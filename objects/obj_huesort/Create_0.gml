@@ -10,6 +10,11 @@ grid_x = floor((PH_W - BOARD) / 2);           // 60
 grid_y = 320 + global.safe_top_gui;
 TILE_GAP = 7;                                 // inset between tiles
 
+// Bottom-anchor the board just above the bottom toolbar instead of top-anchoring
+// under the HUD (tiles derive from grid_y at draw time).
+var _target_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP;
+grid_y += max(0, _target_bot - (grid_y + BOARD));
+
 ACCENT      = PH_COL_VIOLET;
 ACCENT_DEEP = PH_COL_VIOLET_DEEP;
 
@@ -45,6 +50,8 @@ coin_overshoot_t = 1.0;
 win_phase        = 0;
 coins_bonus      = 0;
 win_time_str     = "0:00";
+timer_key        = "huesort_" + global.selected_date_key;
+timer_base_secs  = ph_timer_get(global.save, timer_key);
 session_start_ms = current_time;
 
 // ── Instance methods ──────────────────────────────────────────────────────────
@@ -60,7 +67,7 @@ hs_save = function() {
 /// Win bookkeeping — fires once when the board matches the target gradient.
 hs_check_win = function() {
     if (!ph_huesort_is_solved_arr(puzzle, tiles)) return;
-    var _fin_s = floor((current_time - session_start_ms) / 1000);
+    var _fin_s = ph_timer_now(timer_base_secs, session_start_ms);
     win_time_str = string(_fin_s div 60) + ":" + (((_fin_s mod 60) < 10) ? "0" : "") + string(_fin_s mod 60);
     global.save[$ "huesort_time_" + global.selected_date_key] = win_time_str;
 
@@ -132,20 +139,18 @@ hs_apply_hint = function() {
 // Shared hint-flow controller (modal + placeholder video). Violet accent.
 hint = ph_hint_create(hs_apply_hint, PH_COL_VIOLET);
 
-/// Draw a single tile (rounded swatch + soft shadow; pin dot if anchored).
+/// Draw a single tile (flat swatch, no shadow; solid dark dot if anchored —
+/// Penpot redesign: corner radius 10, no drop shadow, locked dot = #484644).
 hs_draw_tile = function(_r, _c, _rgb, _anchored) {
     var _x0 = grid_x + _c * CELL + TILE_GAP;
     var _y0 = grid_y + _r * CELL + TILE_GAP;
     var _x1 = grid_x + (_c + 1) * CELL - TILE_GAP;
     var _y1 = grid_y + (_r + 1) * CELL - TILE_GAP;
-    ph_draw_rounded(_x0, _y0 + 5, _x1, _y1 + 5, 16, make_color_rgb(205,190,180));  // shadow
-    ph_draw_rounded(_x0, _y0,     _x1, _y1,     16, ph_huesort_col(_rgb));          // fill
+    ph_draw_rounded(_x0, _y0, _x1, _y1, 10, ph_huesort_col(_rgb));   // fill only
     if (_anchored) {
         var _cx = (_x0 + _x1) / 2, _cy = (_y0 + _y1) / 2;
-        draw_set_color(PH_COL_WHITE);
-        draw_circle(_cx, _cy, 13, false);
-        draw_set_color(make_color_rgb(40,30,50));
-        draw_circle(_cx, _cy, 7, false);
+        draw_set_color(PH_COL_HUE_LOCK);
+        draw_circle(_cx, _cy, 19, false);
     }
 };
 

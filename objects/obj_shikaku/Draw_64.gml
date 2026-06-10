@@ -25,8 +25,12 @@ draw_sk_rect = function(_r0, _c0, _w, _h, _border, _fill, _bw) {
     var _y1 = grid_y + _r0 * CELL + 8;
     var _x2 = grid_x + (_c0 + _w) * CELL - 8;
     var _y2 = grid_y + (_r0 + _h) * CELL - 8;
-    ph_draw_rounded(_x1, _y1, _x2, _y2, 22, _border);
-    ph_draw_rounded(_x1+_bw, _y1+_bw, _x2-_bw, _y2-_bw, 18, _fill);
+    // Single rounded-rect primitives (no stacked corner circles → no overlap
+    // seams / alpha-doubled corner arcs under the translucent drag preview).
+    draw_set_color(_border);
+    draw_roundrect_ext(_x1, _y1, _x2, _y2, 22, 22, false);
+    draw_set_color(_fill);
+    draw_roundrect_ext(_x1+_bw, _y1+_bw, _x2-_bw, _y2-_bw, 18, 18, false);
 };
 
 if (win_phase == 0) {
@@ -57,19 +61,13 @@ hint.coin_x = COIN_BAL_X;
 hint.coin_y = COIN_BAL_Y;
 ph_hint_draw_feedback(hint);
 
-// ── Board background ──────────────────────────────────────────────────────────
-ph_draw_chip(grid_x-12, grid_y-12, grid_x+BOARD+12, grid_y+BOARD+12, 24,
-             PH_COL_WHITE, _chip_sh, 8);
+// Game tip — objective hint above the board (shared style).
+ph_draw_game_tip(grid_y, ph_game_tip("shikaku"));
 
-// ── Base cells (cream tiles) ──────────────────────────────────────────────────
-for (var _r = 0; _r < N; _r++) {
-    for (var _c = 0; _c < N; _c++) {
-        var _x0 = grid_x + _c * CELL;
-        var _y0 = grid_y + _r * CELL;
-        draw_set_color(PH_COL_TILE);
-        draw_rectangle(_x0+2, _y0+2, _x0+CELL-2, _y0+CELL-2, false);
-    }
-}
+// ── Board background ──────────────────────────────────────────────────────────
+// Penpot design: a flat cream (#f1eae1) panel with sharp corners and no border.
+draw_set_color(PH_COL_BOARD_BG);
+draw_rectangle(grid_x-12, grid_y-12, grid_x+BOARD+12, grid_y+BOARD+12, false);
 
 // ── Player rectangles ─────────────────────────────────────────────────────────
 // Blue soft fill for all; border signals correctness (teal = valid, pink = not).
@@ -109,24 +107,24 @@ for (var _i = 0; _i < n_clues; _i++) {
     var _ccx = _x0 + CELL/2;
     var _ccy = _y0 + CELL/2;
 
-    // Soft white backing disc so the number reads over any rect fill.
-    draw_set_alpha(0.9);
-    ph_draw_rounded(_ccx-38, _ccy-38, _ccx+38, _ccy+38, 18, PH_COL_WHITE);
+    // Clue number drawn directly on the cream board (no white backing disc), in
+    // black @ 70% to match the Penpot design.
+    draw_set_alpha(0.7);
+    ph_draw_text(_ccx, _ccy, string(_cl.val), global.fnt_disp_md, c_black, fa_center, fa_middle);
     draw_set_alpha(1);
-    ph_draw_text(_ccx, _ccy, string(_cl.val), global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
 
     // Hint glyph — a small rounded rectangle in the cell's top-right corner whose
     // proportions match the correct rectangle's w×h (orientation cue, kept small).
     if (hint_shown[_i]) {
         var _s   = puzzle.sol_rects[_i];
         var _mx  = max(_s.w, _s.h);
-        var _u   = 30 / _mx;            // longest side ≈ 30px (smaller than the number)
+        var _u   = 36 / _mx;            // longest side ≈ 36px (~20% larger)
         var _gw  = _s.w * _u;
         var _gh  = _s.h * _u;
         var _gx  = _x0 + CELL - 38;
         var _gy  = _y0 + 38;
-        ph_draw_rounded(_gx-_gw/2-3, _gy-_gh/2-3, _gx+_gw/2+3, _gy+_gh/2+3, 6, PH_COL_BLUE_DEEP);
-        ph_draw_rounded(_gx-_gw/2,   _gy-_gh/2,   _gx+_gw/2,   _gy+_gh/2,   4, PH_COL_BLUE_SOFT);
+        ph_draw_rounded(_gx-_gw/2-3, _gy-_gh/2-3, _gx+_gw/2+3, _gy+_gh/2+3, 3, PH_COL_BLUE_DEEP);
+        ph_draw_rounded(_gx-_gw/2,   _gy-_gh/2,   _gx+_gw/2,   _gy+_gh/2,   2, PH_COL_BLUE_SOFT);
     }
 }
 
@@ -134,7 +132,7 @@ for (var _i = 0; _i < n_clues; _i++) {
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
 
 // Timer pill — centre of the strip (moved down from the top HUD).
-var _b_e_s  = floor((current_time - session_start_ms) / 1000);
+var _b_e_s  = ph_timer_now(timer_base_secs, session_start_ms);
 var _b_time = string(_b_e_s div 60) + ":" + (((_b_e_s mod 60) < 10) ? "0" : "") + string(_b_e_s mod 60);
 var _tp_l = PH_W/2 - 105;
 var _tp_r = PH_W/2 + 105;
@@ -152,14 +150,7 @@ draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0
 ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
 // ── Toast — centred below the board ───────────────────────────────────────────
-if (toast_timer > 0) {
-    var _toast_y = grid_y + BOARD + 110;
-    var _alpha = min(1, toast_timer/15);
-    draw_set_alpha(_alpha);
-    ph_draw_chip(PH_W/2-360, _toast_y-34, PH_W/2+360, _toast_y+34, 30, toast_col, make_color_rgb(20,20,20), 5);
-    ph_draw_text(PH_W/2, _toast_y, toast_text, global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
-    draw_set_alpha(1);
-}
+if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
 
 // ── Hint modal — slide-up bottom sheet (pay coins OR watch a placeholder video).
 ph_hint_draw_modal(hint);

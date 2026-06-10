@@ -92,6 +92,99 @@ function ph_draw_share_glyph(_cx, _cy, _s, _col) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Win-screen navigation shortcuts (Next Game / Yesterday)
+// ──────────────────────────────────────────────────────────────────────────────
+// Two power-user shortcuts on the win screen let the player keep going without a
+// detour through the hub:
+//   • NEXT GAME → the next *unsolved* puzzle on the SAME day, in hub-card order,
+//     wrapping around; if every puzzle that day is done, the caller falls back to
+//     the hub.
+//   • YESTERDAY → the SAME puzzle on the most recent earlier day the player has
+//     not finished yet.
+// Both treat a missed (lost) Wordle as "done" — it can't be replayed that day.
+
+/// True if the puzzle in room `_room_name` (a "rm_*" string) is finished — solved,
+/// or for Wordle solved-or-missed — on the given date key.
+function ph_puzzle_is_solved(_room_name, _date_key) {
+    switch (_room_name) {
+        case "rm_anygram":  return ph_anygram_is_done(global.save, _date_key);
+        case "rm_sudoku":   return ph_sudoku_is_done(global.save, _date_key);
+        case "rm_wordwave": return ph_wordwave_is_done(global.save, _date_key);
+        case "rm_shikaku":  return ph_shikaku_is_done(global.save, _date_key);
+        case "rm_wordle":   return ph_wordle_is_done(global.save, _date_key)
+                                 || ph_wordle_is_missed(global.save, _date_key);
+        case "rm_huesort":  return ph_huesort_is_done(global.save, _date_key);
+    }
+    return false;
+}
+
+/// Room name ("rm_*") of the next unsolved puzzle after the current room, in
+/// hub-card order, wrapping around. Skips locked / placeholder cards and puzzles
+/// already finished on `_date_key`. Returns "" when none remain (all done).
+function ph_win_next_unsolved_room(_date_key) {
+    var _cards = ph_game_cards();
+    var _n     = array_length(_cards);
+    var _cur   = room_get_name(room);
+    var _ci    = -1;
+    for (var _i = 0; _i < _n; _i++) if (_cards[_i].room == _cur) { _ci = _i; break; }
+    for (var _k = 1; _k <= _n; _k++) {
+        var _c = _cards[(_ci + _k) mod _n];
+        if (_c.locked || _c.room == "") continue;
+        if (ph_puzzle_is_solved(_c.room, _date_key)) continue;
+        return _c.room;
+    }
+    return "";
+}
+
+/// Date key of the most recent day BEFORE `_from_key` on which the puzzle in
+/// `_room_name` is still unsolved. Walks back up to ~2 years; returns "" if none.
+function ph_win_prev_unsolved_date(_room_name, _from_key) {
+    var _y  = real(string_copy(_from_key, 1, 4));
+    var _m  = real(string_copy(_from_key, 6, 2));
+    var _d  = real(string_copy(_from_key, 9, 2));
+    var _dt = date_create_datetime(_y, _m, _d, 0, 0, 0);
+    for (var _k = 1; _k <= 750; _k++) {
+        var _pk = ph_date_key(ph_date_add_days(_dt, -_k));
+        if (!ph_puzzle_is_solved(_room_name, _pk)) return _pk;
+    }
+    return "";
+}
+
+/// Navigate to (room asset, date key). If a level-up is queued, show the Level-Up
+/// reward screen first and have it continue to this destination afterwards — coins
+/// are still granted there, but the hub coin-flow animation is skipped (we're not
+/// landing on the hub). Otherwise go straight to the target room.
+function ph_win_route(_room, _date_key) {
+    if (ph_levelup_pending()) {
+        // Explicit assignment (no non-constant struct literals — YYC linker gotcha).
+        var _post  = {};
+        _post.kind = "room";
+        _post.room = _room;
+        _post.date = _date_key;
+        global.post_levelup = _post;
+        room_goto(rm_win);
+    } else {
+        global.selected_date_key = _date_key;
+        room_goto(_room);
+    }
+}
+
+/// NEXT GAME shortcut: next unsolved puzzle on the same day (wrap); else the hub.
+function ph_win_go_next() {
+    var _rn = ph_win_next_unsolved_room(global.selected_date_key);
+    if (_rn == "") { room_goto(ph_levelup_pending() ? rm_win : rm_hub); return; }
+    ph_win_route(asset_get_index(_rn), global.selected_date_key);
+}
+
+/// YESTERDAY shortcut: same puzzle, most recent earlier day still unsolved.
+function ph_win_go_yesterday() {
+    var _cur  = room_get_name(room);
+    var _date = ph_win_prev_unsolved_date(_cur, global.selected_date_key);
+    if (_date == "") { room_goto(ph_levelup_pending() ? rm_win : rm_hub); return; }
+    ph_win_route(asset_get_index(_cur), _date);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Shared Win Screen controller
 // ──────────────────────────────────────────────────────────────────────────────
 // One source of truth for the per-puzzle completion screen, shared by all four
@@ -141,8 +234,10 @@ function ph_win_create(_cfg) {
         // button bounds + targets (written by draw at settled positions)
         XP_L:0, XP_R:0, XP_T:0, XP_B:0,
         DBL_L:0, DBL_R:0, DBL_T:0, DBL_B:0,
-        SHARE_L:0, SHARE_R:0, SHARE_T:0, SHARE_B:0,
-        BACK_L:0, BACK_R:0, BACK_T:0, BACK_B:0,
+        SHARE_L:0, SHARE_R:0, SHARE_T:0, SHARE_B:0,   // done-state row 1 (left)
+        HOME_L:0, HOME_R:0, HOME_T:0, HOME_B:0,       // done-state row 1 (right)
+        NEXT_L:0, NEXT_R:0, NEXT_T:0, NEXT_B:0,       // done-state row 2
+        YEST_L:0, YEST_R:0, YEST_T:0, YEST_B:0,       // done-state row 3
         claim_src_x: PH_W/2, claim_src_y: 0,
         bar_star_x:  150,     bar_star_y:  0,
     };
@@ -273,8 +368,12 @@ function ph_win_input(_w) {
             if (ph_point_in_rect(_mx,_my, _w.SHARE_L,_w.SHARE_T,_w.SHARE_R,_w.SHARE_B)) {
                 ph_share_url(_w.cfg.share_url);
                 _w.share_msg_t = 100;
-            } else if (ph_point_in_rect(_mx,_my, _w.BACK_L,_w.BACK_T,_w.BACK_R,_w.BACK_B)) {
-                room_goto(ph_levelup_pending() ? rm_win : rm_hub);
+            } else if (ph_point_in_rect(_mx,_my, _w.HOME_L,_w.HOME_T,_w.HOME_R,_w.HOME_B)) {
+                room_goto(ph_levelup_pending() ? rm_win : rm_hub);   // HOME (level-up first → coin flow on hub)
+            } else if (ph_point_in_rect(_mx,_my, _w.NEXT_L,_w.NEXT_T,_w.NEXT_R,_w.NEXT_B)) {
+                ph_win_go_next();
+            } else if (ph_point_in_rect(_mx,_my, _w.YEST_L,_w.YEST_T,_w.YEST_R,_w.YEST_B)) {
+                ph_win_go_yesterday();
             }
             break;
     }
@@ -284,8 +383,10 @@ function ph_win_input(_w) {
 function ph_win_draw(_w) {
     var _cfg   = _w.cfg;
     var _intro = ph_ease_out(_w.intro_t);
-    var _st    = global.safe_top_gui;
-    var _sb    = global.safe_bottom_gui;
+    // Inset + comfort padding so "WELL DONE!" clears the Dynamic Island and the
+    // reward buttons (with their oversized star/TV icons) clear the home indicator.
+    var _st    = ph_safe_top();
+    var _sb    = ph_safe_bottom();
 
     // Full-screen backdrop (fades in). Fixed mint per the Penpot Win Screen design.
     draw_set_alpha(_intro);
@@ -299,7 +400,7 @@ function ph_win_draw(_w) {
     // screens (recap height + inter-block gaps absorb the slack). Element sizes
     // still track the design where space allows.
     var _avail = PH_H - _st - _sb;
-    var _H_TITLE = 150, _H_SOLVED = 165, _H_TIME = 100, _H_BAR = 120, _H_CLAIM = 90, _H_BTN = 150;
+    var _H_TITLE = 180, _H_SOLVED = 165, _H_TIME = 100, _H_BAR = 120, _H_CLAIM = 90, _H_BTN = 150;
     var _GAP0 = 24, _NGAP = 6;
     var _fixed   = _H_TITLE + _H_SOLVED + _H_TIME + _H_BAR + _H_CLAIM + _H_BTN;
     var _recap_h = clamp(_avail - _fixed - _GAP0*_NGAP, 240, 640);
@@ -315,63 +416,61 @@ function ph_win_draw(_w) {
     var _claim_cy  = _cy + _H_CLAIM/2;   _cy += _H_CLAIM  + _gap;
     var _btn_cy    = _cy + _H_BTN/2;
 
-    // Title.
-    ph_draw_text(PH_W/2, _title_cy, "WELL DONE!", global.fnt_disp_xl, _cfg.title_col, fa_center, fa_middle);
+    // Title (updated to the larger Lilita display per the new Win Screen design).
+    ph_draw_text(PH_W/2, _title_cy, "WELL DONE!", global.fnt_disp_xxl, _cfg.title_col, fa_center, fa_middle);
 
     // Puzzle recap (delegated to the puzzle).
     _cfg.draw_recap(PH_W/2, _recap_top, _recap_w, _recap_h);
 
-    // "You solved todays  <PUZZLE>".
-    ph_draw_text(PH_W/2, _solved_top + 48,  "You solved todays", global.fnt_disp_xlg, PH_COL_DARK,     fa_center, fa_middle);
+    // "You solved todays  <PUZZLE>".  (Flavour line → Nunito Regular per design.)
+    ph_draw_text(PH_W/2, _solved_top + 48,  "You solved todays", global.fnt_body_reg, PH_COL_DARK,     fa_center, fa_middle);
     ph_draw_text(PH_W/2, _solved_top + 122, _cfg.puzzle_name,    global.fnt_disp_lg,  _cfg.title_col,  fa_center, fa_middle);
 
     // "in  [stopwatch] mm:ss".
-    ph_draw_text(PH_W/2 - 165, _time_cy, "in", global.fnt_disp_lg, PH_COL_DARK, fa_center, fa_middle);
+    ph_draw_text(PH_W/2 - 165, _time_cy, "in", global.fnt_body_reg, PH_COL_DARK, fa_center, fa_middle);
     var _pl = PH_W/2 - 75, _pr = PH_W/2 + 180;
     ph_draw_chip(_pl, _time_cy-38, _pr, _time_cy+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
     draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _time_cy, 150/512, 150/512, 0, c_white, 1);
     ph_draw_text(_pl+102, _time_cy, _cfg.time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
 
     // ── Level progress bar + animated number + level star badge ───────────────
-    var _bl = 150, _br = PH_W - 110, _bh = 70;
-    var _disp = lerp(_w.xp_anim_from, _w.xp_anim_to, ph_ease_out(_w.xp_anim_t));
-    ph_draw_text(_br, _bar_cy - 78, string(round(_disp)) + " / " + string(PH_XP_PER_LEVEL),
-                 global.fnt_body_md, PH_COL_GRAY, fa_right, fa_middle);
-    ph_draw_rounded(_bl, _bar_cy-_bh/2, _br, _bar_cy+_bh/2, _bh/2, make_color_rgb(220,210,205));
-    var _frac = clamp(_disp / PH_XP_PER_LEVEL, 0, 1);
-    var _fw   = floor((_br - _bl) * _frac);
-    if (_fw > _bh) ph_draw_rounded(_bl, _bar_cy-_bh/2, _bl+_fw, _bar_cy+_bh/2, _bh/2, PH_COL_PURPLE);
-    // Level star badge (overlaps the bar's left end; oversized vs the bar).
-    var _lvl = ph_level_from_xp(global.save.xp);
-    var _badge_x = _bl + 18;
-    draw_sprite_ext(global.spr_star, 0, _badge_x, _bar_cy, 200/512, 200/512, 0, c_white, 1);
-    ph_draw_text(_badge_x, _bar_cy, string(_lvl), global.fnt_disp_lg, PH_COL_WHITE, fa_center, fa_middle);
-    _w.bar_star_x = _badge_x;
-    _w.bar_star_y = _bar_cy;
+    // Hidden once we reach the "done" state — that lower band becomes the
+    // SHARE / HOME / NEXT GAME / YESTERDAY button stack instead (per the new design).
+    var _bh3 = 55;   // reward/nav button half-height (design ~110 px tall)
+    if (_w.state != "done") {
+        var _bl = 150, _br = PH_W - 110, _bh = 70;
+        var _disp = lerp(_w.xp_anim_from, _w.xp_anim_to, ph_ease_out(_w.xp_anim_t));
+        ph_draw_text(_br, _bar_cy - 78, string(round(_disp)) + " / " + string(PH_XP_PER_LEVEL),
+                     global.fnt_body_md, PH_COL_GRAY, fa_right, fa_middle);
+        ph_draw_rounded(_bl, _bar_cy-_bh/2, _br, _bar_cy+_bh/2, _bh/2, make_color_rgb(220,210,205));
+        var _frac = clamp(_disp / PH_XP_PER_LEVEL, 0, 1);
+        var _fw   = floor((_br - _bl) * _frac);
+        if (_fw > _bh) ph_draw_rounded(_bl, _bar_cy-_bh/2, _bl+_fw, _bar_cy+_bh/2, _bh/2, PH_COL_PURPLE);
+        // Level star badge (overlaps the bar's left end; oversized vs the bar).
+        var _lvl = ph_level_from_xp(global.save.xp);
+        var _badge_x = _bl + 18;
+        draw_sprite_ext(global.spr_star, 0, _badge_x, _bar_cy, 200/512, 200/512, 0, c_white, 1);
+        ph_draw_text(_badge_x, _bar_cy, string(_lvl), global.fnt_disp_lg, PH_COL_WHITE, fa_center, fa_middle);
+        _w.bar_star_x = _badge_x;
+        _w.bar_star_y = _bar_cy;
+    }
 
-    // ── Action area ───────────────────────────────────────────────────────────
-    var _bh3 = 55;   // pill half-height (design 110 px tall)
+    // ── Action area: claim buttons (new blue reward-button design) ─────────────
     if (_w.state == "choose" || _w.state == "after_video") {
-        ph_draw_text(PH_W/2, _claim_cy, "Claim your reward", global.fnt_disp_xlg, make_color_rgb(132,59,254), fa_center, fa_middle);
+        ph_draw_text(PH_W/2, _claim_cy, "Claim your reward", global.fnt_body_semi, PH_COL_DARK, fa_center, fa_middle);
         if (_w.state == "choose") {
-            var _xl = 25,  _xr = 400;
-            var _dl = 520, _dr = 960;
-            // 100 XP + star (oversized icon spills past the pill cap, per design)
-            ph_draw_chip(_xl, _btn_cy-_bh3, _xr, _btn_cy+_bh3, _bh3, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-            ph_draw_text(_xl+34, _btn_cy, string(_w.xp_base) + " XP", global.fnt_disp_lg, PH_COL_DARK, fa_left, fa_middle);
-            draw_sprite_ext(global.spr_star, 0, _xr-8, _btn_cy, 220/512, 220/512, 0, c_white, 1);
+            var _xl = 70,            _xr = PH_W/2 - 15;
+            var _dl = PH_W/2 + 15,   _dr = PH_W - 70;
+            // base claim: "<base>" + star
+            ph_draw_reward_btn(_xl, _btn_cy, _xr, _bh3, string(_w.xp_base), global.spr_star, false);
             _w.XP_L=_xl; _w.XP_R=_xr; _w.XP_T=_btn_cy-_bh3; _w.XP_B=_btn_cy+_bh3;
             _w.claim_src_x=(_xl+_xr)/2; _w.claim_src_y=_btn_cy;
-            // DOUBLE + TV
-            ph_draw_chip(_dl, _btn_cy-_bh3, _dr, _btn_cy+_bh3, _bh3, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-            ph_draw_text(_dl+25, _btn_cy, "DOUBLE", global.fnt_disp_lg, PH_COL_DARK, fa_left, fa_middle);
-            draw_sprite_ext(global.spr_tv, 0, _dr-8, _btn_cy, 220/512, 220/512, 0, c_white, 1);
+            // DOUBLE via video: doubled amount + star + TV badge
+            ph_draw_reward_btn(_dl, _btn_cy, _dr, _bh3, string(_w.xp_base*2), global.spr_star, true);
             _w.DBL_L=_dl; _w.DBL_R=_dr; _w.DBL_T=_btn_cy-_bh3; _w.DBL_B=_btn_cy+_bh3;
-        } else { // after_video — single centred claim
+        } else { // after_video — single centred claim of the doubled amount
             var _cxl = PH_W/2 - 235, _cxr = PH_W/2 + 235;
-            ph_draw_chip(_cxl, _btn_cy-_bh3, _cxr, _btn_cy+_bh3, _bh3, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-            ph_draw_text(_cxl+45, _btn_cy, string(_w.xp_amount) + " XP", global.fnt_disp_lg, PH_COL_DARK, fa_left, fa_middle);
-            draw_sprite_ext(global.spr_star, 0, _cxr-8, _btn_cy, 220/512, 220/512, 0, c_white, 1);
+            ph_draw_reward_btn(_cxl, _btn_cy, _cxr, _bh3, string(_w.xp_amount), global.spr_star, false);
             _w.XP_L=_cxl; _w.XP_R=_cxr; _w.XP_T=_btn_cy-_bh3; _w.XP_B=_btn_cy+_bh3;
             _w.claim_src_x=PH_W/2; _w.claim_src_y=_btn_cy;
         }
@@ -390,26 +489,39 @@ function ph_win_draw(_w) {
         }
     }
 
-    // ── Done state: Share + Back, occupying the claim/button slots ─────────────
+    // ── Done state: SHARE | HOME, then NEXT GAME, then YESTERDAY ───────────────
+    // Three rows of buttons fill the band that held the bar + claim controls. The
+    // two shortcuts (NEXT GAME / YESTERDAY) skip the hub; HOME returns to it.
     if (_w.state == "done") {
-        var _slide = (1 - ph_ease_back(min(_w.outro_t, 1))) * 240;
-        // SHARE (pink) — settled bounds for input, slide only the drawing.
-        var _sl = PH_W/2 - 235, _sr = PH_W/2 + 235;
-        _w.SHARE_L=_sl; _w.SHARE_R=_sr; _w.SHARE_T=_claim_cy-_bh3; _w.SHARE_B=_claim_cy+_bh3;
-        var _scy = _claim_cy + _slide;
-        ph_draw_chip(_sl, _scy-_bh3, _sr, _scy+_bh3, _bh3, PH_COL_PINK, PH_COL_PINK_DEEP, 6);
-        ph_draw_share_glyph(PH_W/2 - 130, _scy, 70, PH_COL_WHITE);
-        ph_draw_text(PH_W/2 + 35, _scy, "SHARE", global.fnt_disp_lg, PH_COL_WHITE, fa_center, fa_middle);
+        var _slide   = (1 - ph_ease_back(min(_w.outro_t, 1))) * 240;
+        var _row_h   = 132;                         // spacing between row centres
+        var _r1cy    = _bar_cy - 30;                // settled row centres
+        var _r2cy    = _r1cy + _row_h;
+        var _r3cy    = _r1cy + _row_h * 2;
+        var _half    = PH_W/2;
+
+        // Row 1 — SHARE (pink, left half)
+        var _sl = 70, _sr = _half - 15;
+        _w.SHARE_L=_sl; _w.SHARE_R=_sr; _w.SHARE_T=_r1cy-_bh3; _w.SHARE_B=_r1cy+_bh3;
+        ph_draw_nav_btn(_sl, _r1cy + _slide, _sr, _bh3, "SHARE", noone, PH_COL_PINK, PH_COL_PINK_DEEP);
+        ph_draw_share_glyph(_sl + 92, _r1cy + _slide, 44, PH_COL_WHITE);
         if (_w.share_msg_t > 0) {
             draw_set_alpha(min(1, _w.share_msg_t/20));
-            ph_draw_text(PH_W/2, _scy - 95, "LINK COPIED", global.fnt_body_sm, PH_COL_DARK, fa_center, fa_middle);
+            ph_draw_text((_sl+_sr)/2, _r1cy + _slide - 88, "LINK COPIED", global.fnt_body_sm, PH_COL_DARK, fa_center, fa_middle);
             draw_set_alpha(1);
         }
-        // BACK TO HUB (dark).
-        _w.BACK_L=80; _w.BACK_R=PH_W-80; _w.BACK_T=_btn_cy-_bh3; _w.BACK_B=_btn_cy+_bh3;
-        var _bcy2 = _btn_cy + _slide;
-        ph_draw_chip(80, _bcy2-_bh3, PH_W-80, _bcy2+_bh3, 28, PH_COL_DARK, make_color_rgb(10,5,20), 6);
-        ph_draw_text(PH_W/2, _bcy2, "BACK TO HUB", global.fnt_disp_lg, PH_COL_WHITE, fa_center, fa_middle);
+        // Row 1 — HOME (blue, right half)
+        var _hl = _half + 15, _hr = PH_W - 70;
+        _w.HOME_L=_hl; _w.HOME_R=_hr; _w.HOME_T=_r1cy-_bh3; _w.HOME_B=_r1cy+_bh3;
+        ph_draw_nav_btn(_hl, _r1cy + _slide, _hr, _bh3, "HOME", global.spr_home, noone, noone);
+
+        // Row 2 — NEXT GAME (blue, full width)
+        _w.NEXT_L=70; _w.NEXT_R=PH_W-70; _w.NEXT_T=_r2cy-_bh3; _w.NEXT_B=_r2cy+_bh3;
+        ph_draw_nav_btn(70, _r2cy + _slide, PH_W-70, _bh3, "NEXT GAME", global.spr_puzzle, noone, noone);
+
+        // Row 3 — YESTERDAY (blue, full width)
+        _w.YEST_L=70; _w.YEST_R=PH_W-70; _w.YEST_T=_r3cy-_bh3; _w.YEST_B=_r3cy+_bh3;
+        ph_draw_nav_btn(70, _r3cy + _slide, PH_W-70, _bh3, "YESTERDAY", global.spr_cal, noone, noone);
     }
 
     // ── Confetti (top layer) ──────────────────────────────────────────────────

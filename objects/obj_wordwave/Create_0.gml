@@ -15,7 +15,41 @@ CELL    = floor((BOARD_W - (GRID_N - 1) * GAP) / GRID_N);
 grid_w  = GRID_N * CELL + (GRID_N - 1) * GAP;
 grid_h  = grid_w;   // square
 grid_x  = floor((PH_W - grid_w) / 2);
-grid_y  = 250 + global.safe_top_gui;
+
+// ── "Words to find" list — NEW Penpot layout: ABOVE the grid ──────────────────
+// Two columns of pill tiles (drawn by ph_draw_word_tile). Metrics are exposed so
+// Draw can place them and the game tip can sit above the whole block.
+WL_COLS    = 2;
+WL_GAP_X   = 24;
+WL_GAP_Y   = 22;
+WL_TILE_H  = 72;
+WL_RADIUS  = 22;
+
+// Tile width AUTO-FITS the longest word so long words never clip. Measured at the
+// pill font (fnt_tip, the same font ph_draw_word_tile renders with), plus inner
+// padding (and room for the found-word strike-through). Clamped to the original
+// design width as a minimum and to a maximum that still keeps both columns on
+// screen with a comfortable side margin.
+draw_set_font(global.fnt_tip);
+var _wl_need = 0;
+for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
+    _wl_need = max(_wl_need, string_width(puzzle.words[_wi].text));
+}
+var _wl_min = 223;                                       // original design tile width
+var _wl_max = floor((PH_W - 80 - (WL_COLS - 1) * WL_GAP_X) / WL_COLS);
+WL_TILE_W  = clamp(_wl_need + 56, _wl_min, _wl_max);     // +56 = inner padding + strike room
+WL_BLOCK_W = WL_COLS * WL_TILE_W + (WL_COLS - 1) * WL_GAP_X;
+WL_X0      = floor((PH_W - WL_BLOCK_W) / 2);   // left edge of the 2-col block
+WL_ROWS    = ceil(array_length(puzzle.words) / WL_COLS);
+WL_BLOCK_H = WL_ROWS * WL_TILE_H + (WL_ROWS - 1) * WL_GAP_Y;
+WL_TO_GRID = 44;   // gap between the list block bottom and the grid top
+
+// Bottom-anchor the grid just above the toolbar, with the word list stacked above
+// it; clamp so the list never rides up under the top HUD / game tip.
+var _target_bot   = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP;
+var _grid_top_min = 250 + global.safe_top_gui + WL_BLOCK_H + WL_TO_GRID;
+grid_y = max(_grid_top_min, _target_bot - grid_h);
+WL_Y0  = grid_y - WL_TO_GRID - WL_BLOCK_H;   // top of the list block
 
 // Per-cell pop animation (indexed r*GRID_N + c).
 cell_flash  = array_create(GRID_N * GRID_N, 0.0);
@@ -59,9 +93,14 @@ SHAKE_DUR      = 16;
 
 // ── Bottom toolbar targets (re-written every frame by Draw, mirrored here) ────
 bonus_modal_open = false;
-BONUS_ICON_X = 100;
-BONUS_ICON_Y = PH_H - 120 - global.safe_bottom_gui;
+BONUS_ICON_X = 77;
+BONUS_ICON_Y = PH_H - 110 - global.safe_bottom_gui;
 BONUS_ICON_R = 60;
+// Bonus pill hit box (rect now, not a bare chest circle) — rewritten by Draw.
+BONUS_PILL_L = 50;
+BONUS_PILL_R = 340;
+BONUS_PILL_T = PH_H - 143 - global.safe_bottom_gui;
+BONUS_PILL_B = PH_H - 77  - global.safe_bottom_gui;
 COIN_BAL_X   = PH_W / 2 - 80;
 COIN_BAL_Y   = PH_H - 110 - global.safe_bottom_gui;
 coin_pulse_t     = 1.0;
@@ -84,6 +123,12 @@ for (var _i = 0; _i < array_length(puzzle.bonus_pool); _i++) {
     puzzle.bonus_found[_i] = ph_wordwave_is_bonus_found(
         global.save, global.selected_date_key, puzzle.bonus_pool[_i]);
 }
+// Restore any hinted letters revealed earlier this day (persisted by ww_apply_hint).
+var _hk = "wordwave_hints_" + global.selected_date_key;
+if (variable_struct_exists(global.save, _hk)) {
+    var _harr = global.save[$ _hk];
+    for (var _i = 0; _i < array_length(_harr); _i++) hint_cells[$ _harr[_i]] = true;
+}
 
 // ── Flying tiles (coin reward arc) ────────────────────────────────────────────
 global.fly_tiles = [];
@@ -95,6 +140,8 @@ coins_bonus      = 0;
 win_anim_t       = 0;
 win_btn_back_y   = 0;
 win_time_str     = "0:00";
+timer_key        = "wordwave_" + global.selected_date_key;
+timer_base_secs  = ph_timer_get(global.save, timer_key);
 session_start_ms = current_time;
 
 confetti_pieces          = [];
@@ -126,11 +173,7 @@ win_draw_recap = function(_cx, _top, _bw, _bh) {
         var _cells = puzzle.words[_wi].cells;
         var _a = _ctr(_ox,_oy,_cell,_gap, _cells[0].r, _cells[0].c);
         var _b = _ctr(_ox,_oy,_cell,_gap, _cells[array_length(_cells)-1].r, _cells[array_length(_cells)-1].c);
-        draw_set_alpha(0.45); draw_set_color(word_colors[_wi]);
-        draw_circle(_a.x, _a.y, _cell*0.39, false);
-        draw_circle(_b.x, _b.y, _cell*0.39, false);
-        draw_line_width(_a.x, _a.y, _b.x, _b.y, _cell*0.78);
-        draw_set_alpha(1);
+        ph_draw_highlight(_a.x, _a.y, _b.x, _b.y, _cell*0.78, word_colors[_wi], 0.45);
     }
     var _mfnt = (_cell >= 56) ? global.fnt_disp_sm : global.fnt_body_md;
     for (var _r = 0; _r < GRID_N; _r++) for (var _c = 0; _c < GRID_N; _c++) {
@@ -235,7 +278,7 @@ ww_spawn_coin_drop = function() {
 /// Finalise the puzzle: time, persistence, XP, gift, streak, save, celebrate.
 ww_check_win = function() {
     if (!ph_wordwave_all_solved(puzzle)) return;
-    var _fin_s  = floor((current_time - session_start_ms) / 1000);
+    var _fin_s  = ph_timer_now(timer_base_secs, session_start_ms);
     var _fin_m  = _fin_s div 60;
     var _fin_ss = _fin_s mod 60;
     win_time_str = string(_fin_m) + ":" + ((_fin_ss < 10) ? "0" : "") + string(_fin_ss);
@@ -263,30 +306,47 @@ ww_check_win = function() {
 };
 
 // ── Hint helpers (used by the shared hint modal) ──────────────────────────────
-/// Index of the first unfound word whose start cell isn't already ringed, or -1.
-ww_next_hint_word = function() {
+/// Cells eligible to be hinted: any letter of an unfound hidden word that isn't
+/// already ringed and isn't already part of a found word. (A hint reveals ANY one
+/// letter of a hidden word — not necessarily its first.) Deduped across crossings.
+ww_hint_candidates = function() {
+    var _cands = [];
+    var _seen  = {};
     for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
         if (puzzle.words[_wi].found) continue;
-        var _start = puzzle.words[_wi].cells[0];
-        var _key   = string(_start.r) + "," + string(_start.c);
-        if (!variable_struct_exists(hint_cells, _key)) return _wi;
+        var _cells = puzzle.words[_wi].cells;
+        for (var _k = 0; _k < array_length(_cells); _k++) {
+            var _r = _cells[_k].r, _c = _cells[_k].c;
+            var _key = string(_r) + "," + string(_c);
+            if (variable_struct_exists(_seen, _key))      continue;   // dedupe crossings
+            if (variable_struct_exists(hint_cells, _key)) continue;   // already revealed
+            if (ww_cell_found_color(_r, _c) != undefined) continue;   // already in a found word
+            _seen[$ _key] = true;
+            array_push(_cands, { r:_r, c:_c });
+        }
     }
-    return -1;
+    return _cands;
 };
 
-/// True if a first-letter hint is still available.
+/// True if at least one un-revealed letter of a hidden word remains.
 ww_can_hint = function() {
-    return ww_next_hint_word() >= 0;
+    return array_length(ww_hint_candidates()) > 0;
 };
 
-/// Ring the first letter of the next eligible unfound word. Returns true on
-/// success. Does NOT touch coins.
+/// Ring one random un-revealed letter of a hidden word (persisted so it survives a
+/// resume). Returns true on success. Does NOT touch coins.
 ww_apply_hint = function() {
-    var _wi = ww_next_hint_word();
-    if (_wi < 0) return false;
-    var _s = puzzle.words[_wi].cells[0];
-    hint_cells[$ string(_s.r) + "," + string(_s.c)] = true;
-    cell_flash[_s.r * GRID_N + _s.c] = 12;
+    var _cands = ww_hint_candidates();
+    if (array_length(_cands) == 0) return false;
+    var _pick = _cands[irandom(array_length(_cands) - 1)];
+    var _key  = string(_pick.r) + "," + string(_pick.c);
+    hint_cells[$ _key] = true;
+    cell_flash[_pick.r * GRID_N + _pick.c] = 12;
+    // Persist the revealed letter for this date so resume restores it.
+    var _hk  = "wordwave_hints_" + global.selected_date_key;
+    var _arr = variable_struct_exists(global.save, _hk) ? global.save[$ _hk] : [];
+    array_push(_arr, _key);
+    global.save[$ _hk] = _arr;
     ph_save_write(global.save);
     return true;
 };

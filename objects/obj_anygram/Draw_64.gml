@@ -58,6 +58,9 @@ hint.coin_x = COIN_BAL_X;
 hint.coin_y = COIN_BAL_Y;
 ph_hint_draw_feedback(hint);
 
+// Game tip — objective hint above the board (shared style).
+ph_draw_game_tip(grid_y, ph_game_tip("anygram"));
+
 // ── Crossword grid ────────────────────────────────────────────────────────────
 var _base_sc = CELL / 256;   // tile_empty.png is 256×256, origin centred
 for (var _i = 0; _i < array_length(puzzle.cells); _i++) {
@@ -174,32 +177,15 @@ var _bonus_count = 0;
 for (var _bi = 0; _bi < array_length(puzzle.bonus_found); _bi++) {
     if (puzzle.bonus_found[_bi]) _bonus_count++;
 }
-BONUS_PILL_L = 50;
-BONUS_PILL_R = 340;
-BONUS_PILL_T = _tool_y - 33;
-BONUS_PILL_B = _tool_y + 33;
-ph_draw_chip(BONUS_PILL_L, BONUS_PILL_T, BONUS_PILL_R, BONUS_PILL_B, 33,
-             PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-// Chest: matches the coin icon's height (numerator differs because each icon's
-// transparent padding differs). Vertically centred on the pill, pinned to the
-// left cap so it spills past the edges. Always full-colour (never greyed).
-var _chest_s = 118 / 512;
-draw_sprite_ext(global.spr_chest, 0, BONUS_PILL_L + 27, _tool_y, _chest_s, _chest_s, 0, c_white, 1);
-ph_draw_text(BONUS_PILL_L + 82, _tool_y, "BONUS",
-             global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
-// Keep the fly-tile target pointing at the chest centre.
-BONUS_ICON_X = BONUS_PILL_L + 27;
-BONUS_ICON_Y = _tool_y;
-// Count badge (only visible if at least one bonus found) — chest's upper-right.
-if (_bonus_count > 0) {
-    draw_set_color(PH_COL_PINK);
-    draw_circle(BONUS_PILL_L + 60, _tool_y - 30, 20, false);
-    ph_draw_text(BONUS_PILL_L + 60, _tool_y - 30, string(_bonus_count),
-                 global.fnt_body_xs, PH_COL_WHITE, fa_center, fa_middle);
-}
+// Shared bonus pill (white capsule · chest · "BONUS" · count badge). Bounds are
+// read by Step_0.gml as BONUS_PILL_{L,R,T,B}; chest centre is the fly target.
+var _bp = ph_draw_bonus_pill(50, _tool_y, _bonus_count);
+BONUS_PILL_L = _bp.l;  BONUS_PILL_R = _bp.r;
+BONUS_PILL_T = _bp.t;  BONUS_PILL_B = _bp.b;
+BONUS_ICON_X = _bp.icon_x;  BONUS_ICON_Y = _bp.icon_y;
 
 // Centre — live timer pill (moved down from the top HUD per design ref).
-var _hud_e_s   = floor((current_time - session_start_ms) / 1000);
+var _hud_e_s   = ph_timer_now(timer_base_secs, session_start_ms);
 var _hud_e_m   = _hud_e_s div 60;
 var _hud_e_ss  = _hud_e_s mod 60;
 var _hud_time  = string(_hud_e_m) + ":" + ((_hud_e_ss < 10) ? "0" : "") + string(_hud_e_ss);
@@ -230,17 +216,7 @@ ph_draw_text(HINT_PILL_L + 51, _tool_y, "HINT",
 //           design: a fully-rounded teal pill (design 900×100 → 648×72 GUI px),
 //           bold white display text, centred between the word grid and the wheel.
 //           Width adapts to the message, never below the design minimum. ──
-if (toast_timer > 0) {
-    var _alpha = min(1, toast_timer/15);
-    var _mp_hh = 36;                                     // half-height (design 100 → 72)
-    draw_set_font(global.fnt_disp_md);
-    var _mp_hw = max(324, string_width(toast_text)/2 + 48);   // design min 900 → 648; +pad
-    draw_set_alpha(_alpha);
-    ph_draw_chip(PH_W/2-_mp_hw,_pill_y-_mp_hh, PH_W/2+_mp_hw,_pill_y+_mp_hh, _mp_hh,
-                 toast_col, make_color_rgb(20,20,20), 5);
-    ph_draw_text(PH_W/2, _pill_y, toast_text, global.fnt_disp_md, PH_COL_WHITE, fa_center, fa_middle);
-    draw_set_alpha(1);
-}
+if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
 
 // ── Flying tiles (letters for main/bonus, coin for the reward arc) ────────────
 if (is_array(global.fly_tiles)) {

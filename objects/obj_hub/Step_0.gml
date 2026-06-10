@@ -1,6 +1,34 @@
 // ── Date roll-over (hub left open past midnight) ──────────────────────────────
 if (ph_today_key() != today_key) hub_refresh_dates();
 
+// ── Coin-flow reward animation ────────────────────────────────────────────────
+// Advances independently of the input lock so it still plays during the brief
+// post-room-transition lock. Coins ride an eased arc into the pill; once the
+// first ones land the "+N" label rises and fades, then the whole thing ends.
+if (coinflow_active) {
+    coinflow_t++;
+    var _all_done = true;
+    for (var _ci = 0; _ci < array_length(coinflow_coins); _ci++) {
+        var _c = coinflow_coins[_ci];
+        if (coinflow_t >= _c.delay && _c.t < 1) {
+            _c.t = min(1, _c.t + 1/_c.dur);
+            if (_c.t >= 1 && !_c.arrived) {
+                _c.arrived  = true;
+                coinflow_pop = 1;          // pulse the pill coin on each landing
+            }
+            coinflow_coins[_ci] = _c;
+        }
+        if (_c.t < 1) _all_done = false;
+    }
+    // Start the "+N" label once coins begin streaming in.
+    if (coinflow_label_t < 0 && coinflow_t > 16) coinflow_label_t = 0;
+    if (coinflow_label_t >= 0 && coinflow_label_t < 1)
+        coinflow_label_t = min(1, coinflow_label_t + 0.012);
+    if (coinflow_pop > 0) coinflow_pop = max(0, coinflow_pop - 0.08);
+    // Done when every coin has landed and the label has finished.
+    if (_all_done && coinflow_label_t >= 1) coinflow_active = false;
+}
+
 // ── Input lock ────────────────────────────────────────────────────────────────
 if (current_time < global.input_locked_until) exit;
 
@@ -179,6 +207,30 @@ if (device_mouse_check_button_released(0, mb_left)) {
                                     ph_huesort_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.huesort_review_mode = false;
+                            }
+                            if (_card.name == "COLOR LINK") {
+                                global.colorlink_review_mode =
+                                    ph_colorlink_is_done(global.save, global.selected_date_key);
+                            } else {
+                                global.colorlink_review_mode = false;
+                            }
+                            if (_card.name == "WORD BEND") {
+                                global.wordbend_review_mode =
+                                    ph_wordbend_is_done(global.save, global.selected_date_key);
+                            } else {
+                                global.wordbend_review_mode = false;
+                            }
+                            if (_card.name == "ARROWS") {
+                                global.arrows_review_mode =
+                                    ph_arrows_is_done(global.save, global.selected_date_key);
+                            } else {
+                                global.arrows_review_mode = false;
+                            }
+                            if (_card.name == "LADDER") {
+                                global.ladder_review_mode =
+                                    ph_ladder_is_done(global.save, global.selected_date_key);
+                            } else {
+                                global.ladder_review_mode = false;
                             }
                             room_goto(_rm_idx);
                         }

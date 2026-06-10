@@ -53,12 +53,29 @@ if (valid) {
     }
 }
 
-/// Grant the chosen reward once, clear the pending flag, and return to the hub.
+/// Grant the chosen reward once, clear the pending flag, and continue. Normally
+/// returns to the hub (with the coin-flow animation). When the player reached this
+/// screen via a win-screen shortcut (NEXT GAME / YESTERDAY), global.post_levelup
+/// carries the real destination: go there instead and skip the hub coin animation
+/// (the coins are still granted to the wallet here).
 lu_claim = function(_amount) {
     if (claimed) return;
     claimed = true;
     ph_grant_coins(global.save, _amount);
     ph_save_write(global.save);
     global.pending_levelup = undefined;
+
+    var _post = variable_global_exists("post_levelup") ? global.post_levelup : undefined;
+    if (!is_undefined(_post)) {
+        global.post_levelup     = undefined;
+        global.coin_flow_amount = 0;            // shortcut → no hub coin animation
+        global.selected_date_key = _post.date;
+        room_goto(_post.room);
+        return;
+    }
+
+    // Hand the amount to the hub so it can play the coin-flow animation + "+N"
+    // label once the hub room loads. Consumed (reset to 0) in obj_hub.Create_0.
+    global.coin_flow_amount = _amount;
     room_goto(rm_hub);
 };

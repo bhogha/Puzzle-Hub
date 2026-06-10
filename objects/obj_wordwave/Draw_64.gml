@@ -18,17 +18,12 @@ draw_set_alpha(1);
 /// Local: draw a rounded capsule highlight along a straight line of cells.
 var _draw_capsule = function(_inst, _path, _col, _alpha) {
     if (array_length(_path) == 0) return;
-    var _w = _inst.CELL * 0.78;
-    var _a = _inst.ww_cell_center(_path[0].r, _path[0].c);
-    var _b = _inst.ww_cell_center(_path[array_length(_path)-1].r, _path[array_length(_path)-1].c);
-    draw_set_alpha(_alpha);
-    draw_set_color(_col);
-    // Rounded end caps.
-    draw_circle(_a.x + _inst.shake_offset_x, _a.y, _w/2, false);
-    draw_circle(_b.x + _inst.shake_offset_x, _b.y, _w/2, false);
-    draw_line_width(_a.x + _inst.shake_offset_x, _a.y,
-                    _b.x + _inst.shake_offset_x, _b.y, _w);
-    draw_set_alpha(1);
+    var _w  = _inst.CELL * 0.78;
+    var _a  = _inst.ww_cell_center(_path[0].r, _path[0].c);
+    var _b  = _inst.ww_cell_center(_path[array_length(_path)-1].r, _path[array_length(_path)-1].c);
+    var _sx = _inst.shake_offset_x;
+    // Single capsule sprite (clean round caps, no primitive self-overlap).
+    ph_draw_highlight(_a.x + _sx, _a.y, _b.x + _sx, _b.y, _w, _col, _alpha);
 };
 
 if (win_phase == 0) {
@@ -58,6 +53,9 @@ COIN_BAL_Y = _hud_y;
 hint.coin_x = COIN_BAL_X;
 hint.coin_y = COIN_BAL_Y;
 ph_hint_draw_feedback(hint);
+
+// Game tip — objective hint above the words-to-find list (which sits above grid).
+ph_draw_game_tip(WL_Y0, ph_game_tip("wordwave"));
 
 // ── Found-word highlights (behind letters) ────────────────────────────────────
 for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
@@ -97,75 +95,50 @@ for (var _r = 0; _r < GRID_N; _r++) {
         var _found_col = ww_cell_found_color(_r, _c);
 
         var _hkey = string(_r) + "," + string(_c);
-        if (variable_struct_exists(hint_cells, _hkey) && _found_col == undefined) {
-            draw_set_color(PH_COL_YELLOW);
-            draw_circle(_cx, _cy, CELL*0.46, true);
-            draw_circle(_cx, _cy, CELL*0.46 - 3, true);
+        var _is_hint = (variable_struct_exists(hint_cells, _hkey) && _found_col == undefined);
+        if (_is_hint) {
+            // Full filled disc so the hint reads clearly (was a faint thin ring).
+            draw_set_color(PH_COL_PURPLE);
+            draw_circle(_cx, _cy, CELL*0.44, false);
         }
 
-        // Dark slate-grey letters everywhere — visible over both cream and ink.
-        var _lcol = (_found_col != undefined) ? make_color_rgb(58,46,66) : PH_COL_DARK;
+        // Dark slate-grey letters everywhere — visible over both cream and ink;
+        // white on a filled hint disc.
+        var _lcol = (_found_col != undefined) ? make_color_rgb(58,46,66)
+                  : (_is_hint ? PH_COL_WHITE : PH_COL_DARK);
         ph_draw_text(_cx, _cy, puzzle.grid[_r][_c], global.fnt_disp_md, _lcol, fa_center, fa_middle);
     }
 }
 
-// ── Hidden-word list (below the grid) ─────────────────────────────────────────
-// One stretched rounded tile per word, in two tidy columns. Found words get a
-// soft-tinted tile in their highlight colour with a coloured strike-through;
-// unfound words sit on a plain cream tile.
-var _list_y0   = grid_y + grid_h + 50;
-var _cols      = 2;
-var _col_w     = grid_w / _cols;
-var _row_h     = 84;
-var _list_gap  = 18;
-var _list_h    = 60;
+// ── "Words to find" list (ABOVE the grid) ─────────────────────────────────────
+// Two columns of pill tiles (shared ph_draw_word_tile). Found = solid fill in the
+// word's own grid-highlight colour (matches the capsule in the grid) with a white
+// strike-through; to-find = tan with faint-ink text.
 for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
-    var _col   = _wi mod _cols;
-    var _row   = _wi div _cols;
-    var _chip_l = grid_x + _col * _col_w;
-    var _chip_r = _chip_l + _col_w - _list_gap;
-    var _ly     = _list_y0 + _row * _row_h;
-    var _w      = puzzle.words[_wi];
-
-    if (_w.found) {
-        var _soft = merge_color(word_colors[_wi], PH_COL_WHITE, 0.72);
-        ph_draw_chip(_chip_l, _ly - _list_h/2, _chip_r, _ly + _list_h/2, 18,
-                     _soft, merge_color(word_colors[_wi], PH_COL_DARK, 0.25), 4);
-        var _mid = (_chip_l + _chip_r) / 2;
-        ph_draw_text(_mid, _ly, _w.text, global.fnt_body_md, word_colors[_wi], fa_center, fa_middle);
-        var _tw = string_width(_w.text);
-        draw_set_color(word_colors[_wi]);
-        draw_line_width(_mid - _tw/2, _ly, _mid + _tw/2, _ly, 4);
-    } else {
-        ph_draw_chip(_chip_l, _ly - _list_h/2, _chip_r, _ly + _list_h/2, 18,
-                     make_color_rgb(234,216,200), make_color_rgb(205,188,175), 4);
-        ph_draw_text((_chip_l + _chip_r) / 2, _ly, _w.text,
-                     global.fnt_body_md, PH_COL_INK_SOFT, fa_center, fa_middle);
-    }
+    var _col = _wi mod WL_COLS;
+    var _row = _wi div WL_COLS;
+    var _cx  = WL_X0 + _col * (WL_TILE_W + WL_GAP_X) + WL_TILE_W/2;
+    var _cy  = WL_Y0 + _row * (WL_TILE_H + WL_GAP_Y) + WL_TILE_H/2;
+    ph_draw_word_tile(_cx, _cy, WL_TILE_W, WL_TILE_H, WL_RADIUS,
+                      puzzle.words[_wi].text, puzzle.words[_wi].found, word_colors[_wi]);
 }
 
-// ── Bottom toolbar : chest · coins · hint ─────────────────────────────────────
+// ── Bottom toolbar : bonus · timer · hint ─────────────────────────────────────
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
-BONUS_ICON_Y = _tool_y;
 
-// Chest (bonus words)
+// Shared bonus pill (white capsule · chest · "BONUS" · count badge). Bounds are
+// read by Step_0.gml as BONUS_PILL_{L,R,T,B}; chest centre is the fly target.
 var _bonus_count = 0;
 for (var _bi = 0; _bi < array_length(puzzle.bonus_found); _bi++) {
     if (puzzle.bonus_found[_bi]) _bonus_count++;
 }
-var _chest_s = 118 / 512;   // matches the coin icon's visible height
-// Always full-colour (never greyed) so it doesn't read as disabled before the
-// first bonus word is found.
-draw_sprite_ext(global.spr_chest, 0, BONUS_ICON_X, _tool_y, _chest_s, _chest_s, 0, c_white, 1);
-if (_bonus_count > 0) {
-    draw_set_color(PH_COL_PURPLE);
-    draw_circle(BONUS_ICON_X + 42, _tool_y - 32, 20, false);
-    ph_draw_text(BONUS_ICON_X + 42, _tool_y - 32, string(_bonus_count),
-                 global.fnt_body_xs, PH_COL_WHITE, fa_center, fa_middle);
-}
+var _bp = ph_draw_bonus_pill(50, _tool_y, _bonus_count);
+BONUS_PILL_L = _bp.l;  BONUS_PILL_R = _bp.r;
+BONUS_PILL_T = _bp.t;  BONUS_PILL_B = _bp.b;
+BONUS_ICON_X = _bp.icon_x;  BONUS_ICON_Y = _bp.icon_y;
 
 // Timer pill (centre, moved down from the top HUD)
-var _b_e_s  = floor((current_time - session_start_ms) / 1000);
+var _b_e_s  = ph_timer_now(timer_base_secs, session_start_ms);
 var _b_time = string(_b_e_s div 60) + ":" + (((_b_e_s mod 60) < 10) ? "0" : "") + string(_b_e_s mod 60);
 var _tp_l = PH_W/2 - 105;
 var _tp_r = PH_W/2 + 105;
@@ -184,16 +157,8 @@ ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33,
 draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L + 12, _tool_y, 101/512, 101/512, 0, c_white, 1);
 ph_draw_text(HINT_PILL_L + 51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
-// ── Toast (centred just above the toolbar) ────────────────────────────────────
-if (toast_timer > 0) {
-    var _toast_y = _tool_y - 150;
-    var _alpha = min(1, toast_timer/15);
-    draw_set_alpha(_alpha);
-    ph_draw_chip(PH_W/2-380, _toast_y-34, PH_W/2+380, _toast_y+34, 30,
-                 toast_col, make_color_rgb(20,20,20), 5);
-    ph_draw_text(PH_W/2, _toast_y, toast_text, global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
-    draw_set_alpha(1);
-}
+// ── Message Prompt (shared toast) — just above the game tip ────────────────────
+if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), WL_Y0);
 
 // ── Flying coins ──────────────────────────────────────────────────────────────
 if (is_array(global.fly_tiles)) {
@@ -283,11 +248,7 @@ if (win_phase == 1) {
         var _cells = puzzle.words[_wi].cells;
         var _a = _mini_center(_mini_x, _mini_y, _cell_m, _gap_m, _cells[0].r, _cells[0].c);
         var _b = _mini_center(_mini_x, _mini_y, _cell_m, _gap_m, _cells[array_length(_cells)-1].r, _cells[array_length(_cells)-1].c);
-        draw_set_alpha(0.45); draw_set_color(word_colors[_wi]);
-        draw_circle(_a.x, _a.y, _cell_m*0.39, false);
-        draw_circle(_b.x, _b.y, _cell_m*0.39, false);
-        draw_line_width(_a.x, _a.y, _b.x, _b.y, _cell_m*0.78);
-        draw_set_alpha(1);
+        ph_draw_highlight(_a.x, _a.y, _b.x, _b.y, _cell_m*0.78, word_colors[_wi], 0.45);
     }
     // Letters on top — dark slate-grey so they stay readable through the ink.
     var _mfnt = (_cell_m >= 56) ? global.fnt_disp_sm : global.fnt_body_md;

@@ -21,6 +21,11 @@ if (toast_timer > 0) toast_timer--;
 // Advance the shared hint-flow timers (modal slide / "-100" / video).
 ph_hint_tick(hint);
 
+// Persist the play timer (≤ once/sec) while the puzzle is still live, so leaving
+// or an app kill resumes here. Won/lost states freeze the clock.
+if (puzzle.status == "in_progress")
+    ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
+
 // ── Reveal animation: advance, then commit the row when it finishes ───────────
 if (revealing) {
     reveal_t++;
@@ -58,6 +63,10 @@ if (_hr != "none") {
 // Back arrow (top-left) -> hub
 if (ph_point_in_rect(_mx, _my, 0, HUD_Y - 60, 160, HUD_Y + 60)) {
     global.input_locked_until = current_time + 200;
+    if (puzzle.status == "in_progress") {
+        ph_timer_commit(global.save, timer_key, timer_base_secs, session_start_ms);
+        ph_save_write(global.save);
+    }
     room_goto(rm_hub);
     exit;
 }

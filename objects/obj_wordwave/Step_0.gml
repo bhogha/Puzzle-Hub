@@ -103,6 +103,9 @@ if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 // Advance the shared hint-flow timers (modal slide / "-100" / video).
 ph_hint_tick(hint);
 
+// Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
+if (win_phase == 0) ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
+
 // ── Win-screen input (precedence over everything else) ────────────────────────
 if (win_phase == 1) {
     if (device_mouse_check_button_pressed(0, mb_left)) {
@@ -156,13 +159,15 @@ if (_hr != "none") {
 // Toolbar / back-button taps (only on a fresh press, before grid swipe logic).
 if (device_mouse_check_button_pressed(0, mb_left)) {
     // Back arrow
-    if (ph_point_in_rect(_mx,_my, 0,40,130,150)) {
+    if (ph_point_in_rect(_mx,_my, 0, 40 + global.safe_top_gui, 130, 150 + global.safe_top_gui)) {
         global.input_locked_until = current_time + 200;
+        ph_timer_commit(global.save, timer_key, timer_base_secs, session_start_ms);
+        ph_save_write(global.save);
         room_goto(rm_hub);
         exit;
     }
-    // Bonus chest → modal (only if a bonus word has been found)
-    if (ph_point_in_circle(_mx, _my, BONUS_ICON_X, BONUS_ICON_Y, BONUS_ICON_R)) {
+    // Bonus pill → modal (only if a bonus word has been found)
+    if (ph_point_in_rect(_mx, _my, BONUS_PILL_L, BONUS_PILL_T, BONUS_PILL_R, BONUS_PILL_B)) {
         var _have_any = false;
         for (var _bi = 0; _bi < array_length(puzzle.bonus_found); _bi++) {
             if (puzzle.bonus_found[_bi]) { _have_any = true; break; }

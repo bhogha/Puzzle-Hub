@@ -43,9 +43,18 @@ hint.coin_x = COIN_BAL_X;
 hint.coin_y = COIN_BAL_Y;
 ph_hint_draw_feedback(hint);
 
+// Game tip — objective hint above the board (shared style).
+ph_draw_game_tip(grid_y, ph_game_tip("sudoku"));
+
 // ── Board background ──────────────────────────────────────────────────────────
-ph_draw_chip(grid_x-12, grid_y-12, grid_x+BOARD+12, grid_y+BOARD+12, 24,
-             PH_COL_WHITE, make_color_rgb(190,170,155), 8);
+// Penpot design: flat cream (#f1eae1) board with a thick black rounded border.
+var _bd_pad = 12;                 // cells-to-border gap
+var _bd_w   = 13;                 // outer border thickness (1290px design → 17px)
+var _bd_r   = 38;                 // corner radius (1290px design → 50px)
+ph_draw_rounded(grid_x-_bd_pad-_bd_w, grid_y-_bd_pad-_bd_w,
+                grid_x+BOARD+_bd_pad+_bd_w, grid_y+BOARD+_bd_pad+_bd_w, _bd_r+_bd_w, c_black);
+ph_draw_rounded(grid_x-_bd_pad, grid_y-_bd_pad,
+                grid_x+BOARD+_bd_pad, grid_y+BOARD+_bd_pad, _bd_r, PH_COL_BOARD_BG);
 
 // Selection context (row / column / box of the selected cell)
 var _sel_r = (sel_idx >= 0) ? sel_idx div 9 : -1;
@@ -59,16 +68,16 @@ for (var _i = 0; _i < 81; _i++) {
     var _y0 = grid_y + _r * CELL;
     var _v  = puzzle.grid[_i];
 
-    // Cell fill — priority: green flash > selected > peer highlight > white.
-    var _fill = PH_COL_WHITE;
+    // Cell fill — flat cream base (design); only highlights are drawn over it.
+    var _fill = -1;
     var _peer = (sel_idx >= 0)
                 && (_r == _sel_r || _c == _sel_c
                     || (_r div 3 == _sel_r div 3 && _c div 3 == _sel_c div 3));
-    if      (cell_flash[_i] > 0) _fill = merge_color(PH_COL_WHITE, PH_COL_TEAL_SOFT, min(1, cell_flash[_i]/18));
+    if      (cell_flash[_i] > 0) _fill = merge_color(PH_COL_BOARD_BG, PH_COL_TEAL_SOFT, min(1, cell_flash[_i]/18));
     else if (_i == sel_idx)      _fill = PH_COL_PURPLE_SOFT;
-    else if (_peer)              _fill = make_color_rgb(241,236,252);
+    else if (_peer)              _fill = make_color_rgb(235,228,240);
 
-    if (_fill != PH_COL_WHITE) {
+    if (_fill != -1) {
         draw_set_color(_fill);
         draw_rectangle(_x0+1, _y0+1, _x0+CELL-1, _y0+CELL-1, false);
     }
@@ -85,10 +94,12 @@ for (var _i = 0; _i < 81; _i++) {
 }
 
 // ── Grid lines ────────────────────────────────────────────────────────────────
+// Design: only the black 3×3 box dividers are drawn; thin faint lines mark cells.
 for (var _k = 0; _k <= 9; _k++) {
     var _bold = (_k mod 3 == 0);
-    var _lw   = _bold ? 5 : 2;
-    draw_set_color(_bold ? PH_COL_DARK : make_color_rgb(205,195,200));
+    if (_k == 0 || _k == 9) continue;     // outer edge handled by the board border
+    var _lw   = _bold ? 6 : 2;
+    draw_set_color(_bold ? c_black : make_color_rgb(214,203,192));
     var _gx = grid_x + _k * CELL;
     draw_line_width(_gx, grid_y, _gx, grid_y + BOARD, _lw);
     var _gy = grid_y + _k * CELL;
@@ -113,7 +124,7 @@ ph_draw_text(DEL_L + DEL_W/2 + 26, DEL_Y + DEL_H/2, "DELETE", global.fnt_body_md
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
 
 // Timer pill — centre of the strip (moved down from the top HUD).
-var _b_e_s  = floor((current_time - session_start_ms) / 1000);
+var _b_e_s  = ph_timer_now(timer_base_secs, session_start_ms);
 var _b_time = string(_b_e_s div 60) + ":" + (((_b_e_s mod 60) < 10) ? "0" : "") + string(_b_e_s mod 60);
 var _tp_l = PH_W/2 - 105;
 var _tp_r = PH_W/2 + 105;
@@ -130,15 +141,8 @@ ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHIT
 draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
 ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
-// ── Toast — centred between the board and the number pad ───────────────────────
-if (toast_timer > 0) {
-    var _toast_y = floor((grid_y + BOARD + NUM_Y) / 2);
-    var _alpha = min(1, toast_timer/15);
-    draw_set_alpha(_alpha);
-    ph_draw_chip(PH_W/2-360, _toast_y-34, PH_W/2+360, _toast_y+34, 30, toast_col, make_color_rgb(20,20,20), 5);
-    ph_draw_text(PH_W/2, _toast_y, toast_text, global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
-    draw_set_alpha(1);
-}
+// ── Message Prompt — above the game tip, just below the HUD (Penpot design) ────
+if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
 
 // ── Hint modal — slide-up bottom sheet (pay coins OR watch a placeholder video).
 ph_hint_draw_modal(hint);

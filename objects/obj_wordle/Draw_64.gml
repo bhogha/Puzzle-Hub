@@ -28,14 +28,13 @@ hint.coin_x = (_cb_l + _cb_r) / 2;
 hint.coin_y = HUD_Y;
 ph_hint_draw_feedback(hint);
 
-// ── Message prompt / toast (under the HUD) ────────────────────────────────────
+// ── Message prompt (shared toast) + game tip ──────────────────────────────────
+// Wordle's board sits high, so the prompt and the tip would collide. Show the
+// prompt OVER the tip line (just above the board) and hide the tip while it's up.
 if (toast_timer > 0) {
-    var _msg_y = HUD_Y + 95;
-    var _a = min(1, toast_timer/15);
-    draw_set_alpha(_a);
-    ph_draw_chip(PH_W/2-324, _msg_y-36, PH_W/2+324, _msg_y+36, 36, toast_col, make_color_rgb(20,20,20), 5);
-    ph_draw_text(PH_W/2, _msg_y, toast_text, global.fnt_body_md, PH_COL_WHITE, fa_center, fa_middle);
-    draw_set_alpha(1);
+    ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y, grid_y - 58);
+} else {
+    ph_draw_game_tip(grid_y, ph_game_tip("wordle"));
 }
 
 // ── Guess grid ────────────────────────────────────────────────────────────────
@@ -155,7 +154,7 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
 
 // ── Bottom bar: timer pill (left) · HINT pill (right) ─────────────────────────
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
-var _e_s    = floor((current_time - session_start_ms) / 1000);
+var _e_s    = ph_timer_now(timer_base_secs, session_start_ms);
 var _t_str  = string(_e_s div 60) + ":" + (((_e_s mod 60) < 10) ? "0" : "") + string(_e_s mod 60);
 var _tp_l = 60, _tp_r = 60 + 210;
 ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);

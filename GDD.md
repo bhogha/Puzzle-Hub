@@ -10,7 +10,7 @@ This document captures **what is actually implemented in code** today, not the l
 
 Puzzle Hub is a daily-puzzle container app. Each calendar day surfaces **10 unique puzzles** on a hub screen; the player earns XP and coins by solving them. Each daily puzzle can be solved exactly once — solving it locks a "finish time" for that day, and the player can travel back to play previous days from the calendar but cannot replay a day already solved. Future days are not accessible.
 
-Five puzzle types — **Anygram**, **Sudoku**, **Word Wave**, **Shikaku**, and **Wordle** — are implemented. The remaining slot on the hub (Mix-Up) is a placeholder showing "COMING SOON".
+Ten puzzle types — **Anygram**, **Sudoku**, **Word Wave**, **Shikaku**, **Wordle**, **Hue Sort**, **Color Link**, **Word Bend**, **Arrows**, and **Ladder** — are implemented.
 
 **Wordle is the one puzzle that can be lost.** Every other puzzle can only be solved or left unfinished; Wordle adds a fail state (running out of guesses). A missed Wordle still records a finish time and pays a small consolation XP reward, but it does **not** count as a daily solve (no gift/streak credit) and shows a distinct "missed" state on the hub. See §4.5.
 
@@ -98,25 +98,55 @@ When a puzzle's completion pushes the player past a level boundary, a dedicated 
 - **Take 100 coins** — grants `base_reward` (100, = `PH_COINS_PER_LEVEL`) and returns to the hub.
 - **DOUBLE** — opens the shared placeholder rewarded video (`ph_video_overlay`, the same dark "VIDEO PLAYING" screen as the hint flow). After 5 s a close X appears; tapping it grants `base_reward × 2` (200) and returns to the hub.
 
-There is no decline option — both buttons grant coins. The screen shows a star icon, "LEVEL UP!", a "LEVEL N" badge, a one-shot confetti burst, and the two pill buttons (100 + coin, DOUBLE + TV) on a purple backdrop.
+There is no decline option — both buttons grant coins. Per the design the screen is a **full lighter-violet backdrop** (`#ad51f6`, no white card) stacking top-to-bottom: **"Congratulations"** (Lilita, deep purple `#6227c5`) → the **new level number** (Lilita, white) → **"LEVEL UP!"** (Lilita, deep purple) → a **plain 3-D purple star** (`spr_star3d`, no number overlay) → a big gap → **"Claim your reward!"** (Nunito SemiBold, black) → the two blue reward buttons (100 + coin, 200 + coin + TV) bottom-anchored. A one-shot confetti burst plays on entry. (The old white-card + "LEVEL N" badge layout is gone.)
 
-**Flow / state.** When the player **claims** their XP on the Win Screen (§2.7) and that grant crosses a level boundary, `ph_win_grant` defers the coins (see §2.2) and sets `global.pending_levelup = { level, base_reward }`. The Win Screen's BACK button then routes via `room_goto(ph_levelup_pending() ? rm_win : rm_hub)`. The screen lives in the repurposed (formerly dead) **`rm_win` / `obj_win`** pair — the in-game win overlay is drawn inside each puzzle controller, so this room/object slot was free. `obj_win` reads `global.pending_levelup` in Create (bouncing straight to the hub if it's somehow empty), grants the chosen amount via `ph_grant_coins` + `ph_save_write`, clears the flag, and `room_goto(rm_hub)`. The reward is granted exactly once (`claimed` guard). Re-opening an already-solved puzzle (review mode) never grants XP, so it never queues a level-up.
+**Flow / state.** When the player **claims** their XP on the Win Screen (§2.7) and that grant crosses a level boundary, `ph_win_grant` defers the coins (see §2.2) and sets `global.pending_levelup = { level, base_reward }`. The Win Screen's **HOME** button then routes via `room_goto(ph_levelup_pending() ? rm_win : rm_hub)`, and the **NEXT GAME / YESTERDAY** shortcuts route via `ph_win_route` (which detours through `rm_win` first when a level-up is pending). The screen lives in the repurposed (formerly dead) **`rm_win` / `obj_win`** pair — the in-game win overlay is drawn inside each puzzle controller, so this room/object slot was free. `obj_win` reads `global.pending_levelup` in Create (bouncing straight to the hub if it's somehow empty), grants the chosen amount via `ph_grant_coins` + `ph_save_write`, clears the flag, and then **either** returns to the hub with the coin-flow animation (`global.coin_flow_amount`) **or**, if `global.post_levelup` is set (the player came via a shortcut), continues to that `{ room, date }` instead with no coin animation. The reward is granted exactly once (`claimed` guard). Re-opening an already-solved puzzle (review mode) never grants XP, so it never queues a level-up.
 
 ### 2.7 Win Screen (shared)
 
-Every puzzle's completion screen is drawn by **one shared controller** (`ph_win_*` in `scr_economy`) so all four puzzles share identical layout, flow, and animation; each puzzle supplies only its accent colour, name, claim key, and a `draw_recap(cx, top, box_w, box_h)` method that renders its mini solved board. The screen is full-screen on a teal backdrop (no white card) per the Penpot "Win Screen" design, stacking top-to-bottom: **WELL DONE!** → puzzle recap → "You solved todays \<PUZZLE\>" → "in \<mm:ss\>" time pill → level progress bar (star badge + `xp / 500`) → action area.
+Every puzzle's completion screen is drawn by **one shared controller** (`ph_win_*` in `scr_economy`) so all puzzles share identical layout, flow, and animation; each puzzle supplies only its accent colour, name, claim key, and a `draw_recap(cx, top, box_w, box_h)` method that renders its mini solved board. The screen is full-screen on a teal backdrop (no white card) per the Penpot "Win Screen" design, stacking top-to-bottom: **WELL DONE!** (large Lilita display, `fnt_disp_xxl`) → puzzle recap → "You solved todays \<PUZZLE\>" → "in \<mm:ss\>" time pill → level progress bar (star badge + `xp / 500`) → action area. **Typography:** headings/amounts stay on Lilita One (the puzzle name, "WELL DONE!"), but the flavour lines use Nunito per the design — "You solved todays" in Nunito Regular (`fnt_body_reg`) and "Claim your reward" in Nunito SemiBold (`fnt_body_semi`); the same two fonts are reused for the equivalent lines on the Lose and Level-Up screens.
+
+**Claim buttons (shared blue design).** The claim / reward buttons use one shared widget — `ph_draw_reward_btn` (in `scr_draw`): a blue 3-D rounded button (`PH_COL_BLUE` body, `PH_COL_BLUE_DEEP` drop edge) with a white centred amount, a value icon (star for XP, gold coin on the Level-Up screen) to its right, and a small **TV badge** in the top-right corner for the rewarded-video (DOUBLE) variant. The same widget is used on the Win Screen, the Level-Up screen (§2.6), and the Wordle "Unlucky" lose screen (§4.5) so every "claim" reads identically. Optional body/edge colours give the **green** variant used by the Hint and Lost-Aversion modals (`PH_COL_GREEN` / `PH_COL_GREEN_DEEP`). **All button labels** (this widget and the `ph_draw_nav_btn` SHARE/HOME/NEXT GAME/YESTERDAY buttons) render in **Nunito Bold** (`fnt_btn`) per the design — not Lilita.
 
 **Flow / states.**
 
-1. **choose** — shows two buttons: **100 XP** (claim) and **DOUBLE** (watch video).
+1. **choose** — shows two buttons: **100** + star (claim) and **200** + star + TV badge (watch video to double).
 2. **DOUBLE** opens the same placeholder rewarded video as the Level-Up screen (`ph_video_overlay`); its top-right close **X** (after ~5 s) advances to **after_video**.
-3. **after_video** — a single **200 XP** claim button.
+3. **after_video** — a single centred **200** + star claim button.
 4. **claiming** — pressing either claim button grants the XP once (`ph_win_grant`), then a flight of stars animates from the button to the progress bar while the bar fills and the `xp / 500` number counts up. A level-crossing fills the bar to full and queues the Level-Up screen (§2.6).
-5. **done** — **SHARE** and **BACK TO HUB** slide up from the bottom. There is no way back to the hub until the reward is claimed.
+5. **done** — the bar + claim controls are replaced by a **button stack** that slides up: **SHARE | HOME** (row 1), **NEXT GAME** (row 2), **YESTERDAY** (row 3). There is no way off the screen until the reward is claimed.
+
+**Done-state navigation.**
+
+- **HOME** → the hub (`rm_hub`), or the Level-Up screen first if a level-up is pending (which then continues to the hub with its coin-flow animation).
+- **NEXT GAME** (`ph_win_go_next`) → the **next unsolved puzzle on the same day**, in hub-card order, wrapping around; if every puzzle that day is finished it falls back to the hub. Skips the hub entirely. A missed (lost) Wordle counts as finished.
+- **YESTERDAY** (`ph_win_go_yesterday`) → the **same puzzle on the most recent earlier day** the player hasn't finished yet (walks back up to ~2 years; `ph_win_prev_unsolved_date`).
+- **Level-up + shortcut.** If a level-up is pending when the player taps NEXT GAME or YESTERDAY, `ph_win_route` shows the Level-Up screen first, stashing the real destination in `global.post_levelup = { kind, room, date }`. `obj_win.lu_claim` grants the level-up coins to the wallet and then continues to that destination instead of the hub — **without** the hub coin-flow animation (we never land on the hub). Solved-state per room/date is resolved by `ph_puzzle_is_solved`.
 
 **Share.** The SHARE button calls `ph_share_url(PH_SHARE_URL)` — the OS share sheet where a native extension is wired up (`global.ph_native_share`), otherwise a placeholder that copies the App Store link (`https://apps.apple.com/tr/app/puzzle/id1190624509?l=tr`) to the clipboard and shows a "LINK COPIED" confirmation. The celebratory confetti burst is owned by the controller (`ph_win_celebrate`).
 
 **Review mode.** Re-opening an already-solved puzzle starts the controller directly in **done** (Share + Back) with the bar already full and `granted` locked, so XP is never re-claimed.
+
+---
+
+### 2.8 Game tip line (shared)
+
+Every puzzle shows an **objective hint** in the empty band between the top HUD and the grid (per the Penpot "Game Tip" element on each puzzle screen). It is drawn by the shared helper `ph_draw_game_tip(grid_top, str)` (`scr_draw`): Nunito Regular at 44 px (`fnt_tip` — the Penpot design's 60 px is on a ~1.4× frame, so 44 px is the faithful canvas scale), centred horizontally, in **faint ink** (black at 60% alpha). It is **bottom-anchored ~26 px above the grid top** and **auto-wraps to a second line** (via `draw_text_ext`) if a tip is wider than the play area, growing upward so it never crowds the board. It is part of the normal-play frame only — the win/lose overlays cover it.
+
+The copy lives in one place, `ph_game_tip(key)` in `scr_constants` (player-facing text — keep in sync here):
+
+| Puzzle | Tip |
+|---|---|
+| Anygram | Find the hidden words |
+| Sudoku | Fill the grid with missing numbers |
+| Word Wave | Find the hidden words on the grid |
+| Shikaku | Draw a rectangle for each number |
+| Wordle | Find the hidden word of the day |
+| Hue Sort | Swap tiles so the colors blend smoothly |
+| Color Link | Connect colors without leaving empty spaces |
+| Word Bend | Find words using every letter on the board |
+| Arrows | Guide arrows out without causing any collisions |
+| Ladder | Change one letter at a time |
 
 ---
 
@@ -142,7 +172,7 @@ Every puzzle's completion screen is drawn by **one shared controller** (`ph_win_
 - **HUD strip** (y=0..200): back arrow on the far left, live timer pill next to it, "ANYGRAM" title centred, coin-balance pill on the right (coin icon + balance; pulses on coin gain, doubles as the coin-fly target).
 - **Board area** (y=200..1180, h=980): crossword grid centred horizontally. 4–7 main words placed on a shared grid. Each word has a `row`, `col`, and direction (`H` or `V`). Words that share a cell must agree on the letter at that cell (validated at load time with a debug warning if not). Cell size shrinks from 140→110 when `max(cols,rows) ≥ 5` so the grid stays clear of the wheel. Empty cells (shared or not) render in a uniform warm cream; yellow tint appears only after a shared cell is *filled*, signalling the crossing reveal.
 - **Wheel area:** letter wheel centred at (540, 1440), R=270, letters on inner radius 195. Sits between the grid (top edge ≈ y=1170) and the bottom toolbar (top edge ≈ y=1765) with ~45 px clearance above and ~55 px below. Node count tracks `puzzle.letters.length`, distributed evenly around the disc. Letter tiles are pink-filled with white text by default; the in-trail (selected) state pops with a soft white glow halo, a deeper-pink fill, and an 8% scale-up. A shuffle button at the centre re-randomises wheel positions. (Original GDD §7 spec was center 1530 / R=300, but that overlapped both the tallest puzzles and the toolbar.)
-- **Bottom toolbar** (~y=1810): bonus-words chest icon with count badge on the left (opens a modal listing every bonus word found this session), wide HINT pill on the right (bulb · "HINT" · cost · coin icon — single tap target). No coin balance lives here; it's in the top HUD pill.
+- **Bottom toolbar** (~y=1810): the shared **bonus pill** on the left (`ph_draw_bonus_pill` — white capsule · 3D chest · "BONUS" · pink count badge; opens a modal listing every bonus word found this session), live **timer** pill in the centre, wide **HINT** pill on the right (bulb · "HINT"). No coin balance lives here; it's in the top HUD pill. The bonus pill is a shared widget reused by Word Wave (§4.3).
 
 - **Message Prompt** (between the word grid and the wheel): a single unified feedback pill that surfaces **every** in-puzzle prompt — main word found, bonus word found, "already found", "not a key word", "not a valid word", and hint results. It is centred vertically in the gap between the grid bottom and the wheel top (the same slot the live word-preview pill occupies, so the swipe pill swaps seamlessly into the result message on release). Per the Penpot design (`Game Screen - Anygram`), it renders as a fully-rounded pill (design 900×100 px → 648×72 GUI px, expanding to fit longer messages) with bold white display-font text. Colour is semantic per result: teal for FOUND, purple for BONUS, yellow for ALREADY FOUND, gray for NOT A KEY WORD / puzzle-complete, pink for NOT A VALID WORD (with a wheel shake). It auto-hides after `TOAST_DUR` (90 frames). Found/bonus messages use a " - " separator, e.g. `FOUND - OCEAN`.
 
@@ -223,13 +253,14 @@ Indexing is row-major (`index = row*9 + col`). `date` is optional. **Date select
 
 ### 4.3 Word Wave
 
-**Genre.** Classic word-search on an **8×8 letter grid**. Hidden words are listed below the grid; the player finds each by swiping a straight line across the letters. The grid letters are always visible (unlike Anygram, where tiles fill in).
+**Genre.** Classic word-search on an **8×8 letter grid**. The words to find are listed **above the grid**; the player finds each by swiping a straight line across the letters. The grid letters are always visible (unlike Anygram, where tiles fill in).
 
-**Layout** (1080×1920 portrait).
-- **HUD strip** (top): back arrow on the far left, "WORD WAVE" title centred (teal), live timer pill on the right — identical structure to Anygram/Sudoku.
-- **Board area:** an 8×8 grid centred horizontally (`BOARD_W = 900`, `GAP = 10`, so `CELL ≈ 103`), top-anchored at `y = 250 + safe_top`. Cells render as warm-cream tiles with dark letters.
-- **Word list:** the hidden words appear directly below the grid in a 2-column list. Unfound words show a hollow dot + ink-soft text; found words show a filled coloured dot, the word in its highlight colour, and a strike-through line.
-- **Bottom toolbar** (identical to Anygram): bonus-words **chest** icon with count badge on the left (opens the bonus-words modal), **coin balance** pill in the centre (pulses on coin gain, doubles as the coin-fly target), wide **HINT** pill on the right (bulb · "HINT" · cost · coin icon).
+**Layout** (1080×1920 portrait), top→bottom per the updated Penpot design.
+- **HUD strip** (top): back arrow on the far left, "WORD WAVE" title centred (teal), coin-balance pill on the right.
+- **Message prompt** (shared toast) then the **game tip** line (§2.8).
+- **"Words to find" list:** the hidden words sit **above** the grid as a centred **2-column block of pill tiles** (`ph_draw_word_tile`; `WL_*` metrics in Create, `WL_TILE_W×72`, radius 22). **To-find** tiles are **tan** (`PH_COL_WORD_TODO`, #e7d5bd) with faint-ink text; **found** tiles are **solid pink** (`PH_COL_WORD_FOUND`, #d63789) with **white text and a white strike-through**. (This list is single-accent; the per-word rainbow colours still drive the on-grid highlights.)
+- **Board area:** an 8×8 grid centred horizontally (`BOARD_W = 900`, `GAP = 10`, so `CELL ≈ 103`). The grid is **bottom-anchored** just above the toolbar, with the word list stacked above it and clamped so the list never rides under the HUD.
+- **Bottom toolbar:** the shared **bonus pill** on the left (`ph_draw_bonus_pill` — white capsule · 3D chest spilling off the left · "BONUS" · pink count badge; opens the bonus-words modal), **timer** pill in the centre, **HINT** pill on the right.
 
 **Input.** Press on a cell to anchor the selection, drag to another cell, release to submit. The selection snaps to a straight line only when the start and current cell are colinear along one of **8 directions** — horizontal, vertical, both diagonals, each playable forwards **and** backwards (`ph_ww_delta` / `ww_build_path`). Non-colinear drags keep the last valid straight-line selection. The in-progress selection is drawn as a translucent teal capsule behind the letters.
 
@@ -239,9 +270,9 @@ Indexing is row-major (`index = row*9 + col`). `date` is optional. **Date select
 - `dup` → already-found word/bonus; "ALREADY FOUND" toast, no reward.
 - `bad` → otherwise; "NOT A WORD" toast, grid shakes briefly.
 
-**Highlight colours.** Each hidden word is assigned a distinct strong colour from the hub palette (`PH_COL_PINK`, `TEAL`, `PURPLE`, `ORANGE`, `YELLOW_DEEP`, plus the `_DEEP` variants), cycled by word index. The colour is used for the on-grid capsule, the word's letters (white over the capsule), and its entry in the word list.
+**Highlight colours.** Each hidden word is assigned a distinct strong colour from the hub palette (`PH_COL_PINK`, `TEAL`, `PURPLE`, `ORANGE`, `YELLOW_DEEP`, plus the `_DEEP` variants), cycled by word index. The colour is used for the on-grid capsule and the word's letters (white over the capsule). The **"words to find" tiles are not** colour-coded per word — they use the shared pink/tan found/to-find states above.
 
-**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`ww_apply_hint`) rings **only the first letter** of the first unfound word whose start isn't already ringed (the player still traces the rest). If none qualifies or the puzzle is complete, the modal doesn't open and a toast explains why. Hinted cells persist via re-derivation on resume (the rings re-appear because they mark word starts; only hinted starts are stored in the live `hint_cells` map for the session).
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`ww_apply_hint`) rings **one random un-revealed letter of a hidden (unfound) word — not necessarily its first** (the player still traces the whole word). Candidate cells (`ww_hint_candidates`) are any letters of unfound words that aren't already ringed and aren't already part of a found word, deduped across crossings; if none remain or the puzzle is complete, the modal doesn't open and a toast explains why. Hinted cells are **persisted** under `wordwave_hints_<date>` (an array of `"r,c"` keys) and restored on resume, so revealed letters survive leaving and re-entering the puzzle. A ring is hidden once its word is found (the found-word highlight takes over).
 
 **Completion.** When every hidden word is found (`ph_wordwave_all_solved`), `ww_check_win` fires: records `save.wordwave_time_<date>` (mm:ss), marks each word as `WW_W<i>` and sets the `WORDWAVE` flag in `save.puzzles_solved[date_key]`, grants the single **+100 XP**, triggers the 4th-puzzle gift if applicable, updates streak, and shows the win overlay with the confetti burst.
 
@@ -313,7 +344,7 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 **Loss / lost-aversion flow.** When the player runs out of guesses (6th wrong guess), a funnel runs before the loss is final:
 1. **"You can still win!" modal** — buy **+3 extra moves for 100 coins** (`PH_WORDLE_EXTRA_COST` / `PH_WORDLE_EXTRA_MOVES`), or watch a **free** placeholder video for the same, or **Give up**. The extra-moves purchase is **one-time**; using it extends the board to 9 rows (cells shrink to fit the same space).
 2. **"Giving up?" confirm** — Give up / Cancel.
-3. **"UNLUCKY!" lose screen** (red backdrop) — guess-grid recap, **"You finished todays WORDLE in mm:ss"** (a finish time is recorded even on a loss), level progress bar, and a **Claim your reward** of **25 XP** (or **DOUBLE** → 50 via placeholder video), then **BACK TO HUB**. The XP claim routes through the same level-up deferral as the win screen (a crossing queues the Level-Up reward screen). A loss sets `WORDLE_MISSED` (skipped by `ph_solved_count_on`, so no gift/streak credit) and locks the day.
+3. **"UNLUCKY!" lose screen** (red backdrop; large `fnt_disp_xxl` title to match the win screen) — guess-grid recap, **"You finished todays WORDLE in mm:ss"** (a finish time is recorded even on a loss), the **full win-style level progress bar** (grey track + purple fill, the `xp / 500` count, and the oversized star level badge), and a **Claim your reward** of **25** + star (or **50** + star + TV → double via placeholder video) using the shared blue reward buttons, then **BACK TO HUB**. The XP claim routes through the same level-up deferral as the win screen (a crossing queues the Level-Up reward screen). A loss sets `WORDLE_MISSED` (skipped by `ph_solved_count_on`, so no gift/streak credit) and locks the day.
 
 **Hub state.** A solved Wordle shows the finish time (normal). A **missed** Wordle shows the finish time in **red** (the Penpot Pill "Missed" variant), distinct from PLAY/SOLVED, and re-opening it returns to the UNLUCKY screen. A missed day is not replayable.
 
@@ -327,17 +358,19 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 **Reward.** Solving grants the single **+100 XP** (`PH_XP_PER_PUZZLE`), claimed on the shared win screen like the other puzzles; it counts toward the 4th-puzzle gift box and the streak. There is **no loss state** — the puzzle can always be solved.
 
-**Board & gradient.** The four **corner tiles are locked anchors** (drawn with a small white pin dot) and define the whole board: every cell's target colour is the **bilinear interpolation** of the four corner colours (`tl`, `tr`, `bl`, `br`). With a 5×5 board that leaves **21 movable interior tiles**. Geometry mirrors Shikaku — a 960 px board centred horizontally, sat below the HUD.
+**Board & gradient.** The four **corner tiles are locked anchors** (marked with a small solid dark dot, `PH_COL_HUE_LOCK` #484644) and define the whole board: every cell's target colour is the **bilinear interpolation** of the four corner colours (`tl`, `tr`, `bl`, `br`). With a 5×5 board that leaves **21 movable interior tiles**. Geometry mirrors Shikaku — a 960 px board centred horizontally, sat below the HUD.
 
 **Layout** (1080×1920 portrait).
 - **Top HUD strip:** back arrow on the left, **"HUE SORT"** title centred in violet, coin-balance pill top-right.
 - **Instruction line** above the board: "Swap tiles so the colours blend smoothly".
-- **Board:** the 5×5 grid of rounded colour swatches on a white backing card; locked corners carry a pin dot.
+- **Board (Penpot redesign):** the 5×5 grid of colour swatches sits on a flat **#f1eae1** base (`PH_COL_HUE_TILE_BG`) with **no drop shadow** behind the tiles and **flatter corners** (radius 10). Locked corners carry a solid dark **#484644** dot (no white pin ring).
 - **Bottom toolbar:** **timer pill** (centre) and **HINT pill** (right) — same structure as Shikaku (no chest, no number pad).
+
+**Hub card (Penpot redesign).** Hue Sort's hub tile is a **soft-blue card** (`spr_card_skyblue`, #6ea5e6 — distinct from Shikaku's deeper #136bd2) with the subtitle **"Sort color tiles"** and a new icon (`game_huesort.png`): a white badge holding a **3×3 grid of scrambled blue/teal swatches** that reads as a mini Hue Sort board.
 
 **Input — drag-and-drop swap.** Press a movable tile to pick it up (it lifts onto the finger, slightly enlarged with a halo; its home cell shows an empty slot). Release over another movable tile to **swap** the two. Releasing over a locked tile, an already-anchored tile, the source cell, or off the board cancels the move. Each committed swap saves the board and checks for a win (`hs_swap` → `hs_check_win`).
 
-**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`hs_apply_hint`) takes the **first still-wrong interior tile**, brings its correct colour into place, and **anchors** that position (it gains a pin dot and can no longer be moved), so a hint is permanent progress. When no wrong interior tile remains, the pill shows "NO HINTS LEFT".
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`hs_apply_hint`) takes the **first still-wrong interior tile**, brings its correct colour into place, and **anchors** that position (it gains the dark locked dot and can no longer be moved), so a hint is permanent progress. When no wrong interior tile remains, the pill shows "NO HINTS LEFT".
 
 **Completion.** When every position matches its target colour (`ph_huesort_is_solved_arr`), `hs_check_win` fires: records `huesort_time_<date>` (mm:ss), sets the `HUESORT` solved flag, triggers the 4th-puzzle gift if applicable, updates the streak, and shows the shared win screen (violet accent, recap = the mini solved gradient) where the +100 XP is claimed.
 
@@ -355,9 +388,135 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 **Save shape.** Completion is tracked through the generic `puzzles_solved` map under the `HUESORT` key (a single flag, no per-tile bookkeeping keys, so `ph_solved_count_on` counts it automatically). Finish time is `huesort_time_<date>`. The in-progress board + anchored hint positions are persisted under `save.huesort_state[date] = { tiles, hints }` (`tiles` = comma-joined `RRGGBB`, `hints` = comma-joined indices) for resume. XP claim guarded by `save.xp_claimed["huesort_<date>"]`.
 
-### 4.7 Mix-Up
+### 4.7 Color Link (Flow Free)
 
-Not implemented. The card renders on the hub with `locked: true` and a "COMING SOON" badge. Tapping it does nothing.
+**Genre.** Classic "Flow Free" pipe-connection puzzle on a **6×6 grid**. Connect each pair of matching coloured dots with a continuous line so that (a) lines never cross, overlap, or touch, and (b) **every** cell is filled. There is **no loss state**. The accent colour is **lime** (`PH_COL_LIME`, #c7e70f); the flow lines use the vibrant hub palette (`ph_colorlink_color`: pink, teal, purple, orange, blue, green, violet, deep-yellow, cycled by colour index).
+
+**Reward.** Solving grants the single **+100 XP** on the shared win screen; it counts toward the 4th-puzzle gift box and the streak, exactly like the other puzzles.
+
+**Board.** A centred square board (`BOARD = 1020`, `CELL = 170`) on a flat **#f1eae1** base (no shadow), bottom-anchored above the toolbar, with a thin **per-cell border** (1px grid lines, black @ 30%) so empty cells read as a grid. Each flow draws as a thick rounded line (`LINE_W ≈ 0.40·CELL`) through cell centres with round joins, plus solid endpoint dots (`DOT_R ≈ 0.27·CELL`). The active drawing tip shows a small white ring.
+
+**Layout.** Top HUD (back · "COLOR LINK" in lime · coin pill) → message/toast → game tip ("Connect colors without leaving empty spaces") → board → bottom toolbar (**timer** centre, **HINT** right). **No bonus.**
+
+**Input (`obj_colorlink`).** Press an endpoint dot to (re)draw its flow from scratch, or press a mid-line cell to continue that flow from there (the tail is trimmed). Drag to extend the line one orthogonal cell at a time — the head walks toward the finger. Drawing back over the line retracts it; drawing over **another** flow truncates that flow at the crossing (you can't cross or pass through another colour's endpoint); a hint-locked flow can't be overwritten. Release commits and checks the win.
+
+**Win (`ph_colorlink_is_solved`).** Every flow connects its two endpoints with a contiguous line, no two lines overlap, and all 36 cells are covered.
+
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`cl_apply_hint`) **unravels the longest still-unsolved line in the solution**: it lays that flow's full authored solution path (trimming any conflicting non-locked flows) and **locks** it so it can't be moved. When no unsolved flow remains, the pill shows "NO HINTS LEFT".
+
+**Review mode.** Tapping a completed Color Link re-enters with `global.colorlink_review_mode = true`, going straight to the win overlay (the recap redraws the solved flows). The hub queries `ph_colorlink_is_done` for the solved badge + finish time.
+
+**Data source.** `datafiles/puzzles_colorlink.json` — a plain array (cached in `global.ph_colorlink_cache`), generated to guarantee solvability (a random Hamiltonian path over the grid, cut into 4–6 contiguous segments → each segment is one flow, so the flows always tile the board). Each entry:
+
+```json
+{ "date": "YYYY-MM-DD",
+  "size": 6,
+  "flows": [ { "color": 0, "a": [r,c], "b": [r,c],
+               "path": [[r,c],[r,c], ...] }, ... ] }
+```
+
+`date`/`size` optional. `a`/`b` are the endpoint dots; `path` is the full solution route from `a` to `b` (used by the hint and the win recap). Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 6-flow board is the fallback if the file is missing.
+
+**Save shape.** Completion is the generic `puzzles_solved` `COLORLINK` flag (single key, counted automatically). Finish time is `colorlink_time_<date>`. In-progress routes + hint-locked flow indices persist under `save.colorlink_state[date] = { routes, hints }` (`routes` = per-flow cell-index lists joined by `|`, `hints` = comma-joined flow indices). XP claim guarded by `save.xp_claimed["colorlink_<date>"]`.
+
+---
+
+### 4.8 Word Bend
+
+**Genre.** Word-fill / path-trace puzzle (modelled on Elevate's *Daily Wordbend*) on a **4×4 … 6×6 grid that is completely filled with letters**. Every letter belongs to exactly one hidden word, and the words' cell-paths **tile the whole board** — no empty cells, no overlaps. To find a word the player **taps its first letter and drags across the rest**; the path may **bend at right angles** but only steps **orthogonally** (no diagonals). Found words lock and the puzzle is solved once all of them are found. There is **no loss state** and **no bonus word**. The accent colour is **tangerine** (`PH_COL_TANGERINE`, #ff5b38); each found word locks in **its own distinct hue** from the vibrant hub palette (`word_colors`: pink, teal, purple, orange, blue, green, violet, deep-yellow, cycled by word index) with white letters, so the bending words read as separate ribbons.
+
+**Reward.** Solving grants the single **+100 XP** on the shared win screen; it counts toward the 4th-puzzle gift box and the streak, exactly like the other puzzles.
+
+**Board.** A centred square board (`BOARD_W = 920`, `GAP = 16`, per-cell `CELL` derived from `N`), bottom-anchored above the toolbar. Each cell is a rounded card tile: plain tiles are off-white (`PH_COL_TILE`) with a faint border and grey letters; a word being traced highlights tangerine with white letters; each found word fills in its own palette colour with white letters. Consecutive cells of a found word (and of the live trace) are joined by a thick rounded "ribbon" in that colour, drawn under the tiles so a bending word reads as one continuous shape.
+
+**Layout.** Top HUD (back · "WORD BEND" in tangerine · coin pill) → toast → game tip ("Find words using every letter on the board") → board → bottom toolbar (**timer** centre, **HINT** right). **No bonus pill.**
+
+**Input (`obj_wordbend`).** Press a non-found cell to start a trace. Dragging extends the trace one orthogonally-adjacent, unused cell at a time (cells in a found word are blocked); re-touching an earlier cell in the current trace trims the tail back to it (backtrack). On release, the traced cell-sequence is matched (forward **or** reversed) against each unfound word's authored cell-path via `ph_wordbend_match`; an exact match locks the word green, anything else shows "NOT A WORD" with a shake.
+
+**Win (`ph_wordbend_is_solved`).** Every word has been found (which, because the words tile the board, means every letter is used).
+
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`wb_apply_hint`) **highlights the first letter of the longest word that is not yet found or already hinted** (a tangerine ring on its starting cell). Once every remaining word's first letter has been shown the pill reports "NO MORE HINTS".
+
+**Review mode.** Tapping a completed Word Bend re-enters with `global.wordbend_review_mode = true`, going straight to the win overlay (the recap redraws the solved board in green). The hub queries `ph_wordbend_is_done` for the solved badge + finish time (`wordbend_time_<date>`).
+
+**Data source.** `datafiles/puzzles_wordbend.json` — a plain array (cached in `global.ph_wordbend_cache`). Each word's `path` lists its cells **in spelling order** (`path[k]` holds `text[k]`); the union of all paths must cover every `size×size` cell exactly once so the board is always solvable. The letter grid is rebuilt from words+paths in `ph_wordbend_make`. Each entry:
+
+```json
+{ "date": "YYYY-MM-DD",
+  "size": 6,
+  "words": [ { "text": "PUZZLE", "path": [[r,c],[r,c], ...] }, ... ] }
+```
+
+`date`/`size` optional. Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 4×4 board is the fallback if the file is missing.
+
+**Save shape.** Completion is the generic `puzzles_solved` `WORDBEND` flag (single key, counted automatically). Finish time is `wordbend_time_<date>`. In-progress found-word + hinted-word indices persist under `save.wordbend_state[date] = { found, hints }` (each a comma-joined index list). XP claim guarded by `save.xp_claimed["wordbend_<date>"]`.
+
+---
+
+### 4.9 Arrows
+
+**Genre.** Tap-to-clear logic puzzle (modelled on *Arrows – Puzzle Escape*) on an **8×8 grid** packed with bent, multi-cell **"snake" arrows**. Each arrow is a connected orthogonal path of cells with an **arrowhead at one end** pointing one of 4 directions (Up/Down/Left/Right). Tapping an arrow launches it **snake-style** — the tip leads straight out in its heading and the body follows its own trail head-first off the board. An arrow can escape **only if the straight lane in front of its tip is completely clear of other arrows**; clear all arrows to solve. Boards are generated so a full clear order always exists and removing an arrow only frees space, so the player **can never get stuck**. There is **no loss state** and **no bonus** — see the time mechanic below. The accent colour is **silver** (`PH_COL_SILVER`, #b8b9bd); each arrow draws in its **own distinct hue** from the vibrant palette (`ph_colorlink_color` by index) as a slim ribbon with softly-rounded corners.
+
+**The "only time can be lost" mechanic.** Unlike the source game there are no lives/hearts. Tapping a **blocked** arrow (tip lane obstructed) does not fail the run — it shakes, floats a **"+5 s"** label, and adds a **5-second penalty** (`PH_ARROWS_PENALTY_SECS`) folded straight into the play timer. Careless taps cost time; nothing else. The finish time is the player's score.
+
+**Reward.** Solving grants the single **+100 XP** on the shared win screen; it counts toward the 4th-puzzle gift box and the streak, exactly like the other puzzles.
+
+**Board.** A centred square white card (`BOARD = 1020`, per-cell `CELL = BOARD/8`) over a faint dot grid, bottom-anchored above the toolbar. Arrows are drawn as slim ribbons (`RIBBON_W ≈ 0.30·CELL`): straight runs stay straight and bends are softened by a quadratic corner fillet (`AR_CORNER ≈ 0.42·CELL`), capped with a triangular arrowhead at the tip. Drawing is clipped to the board so a launched arrow slides cleanly off the edge.
+
+**Layout.** Top HUD (back · "ARROWS" in silver · coin pill) → toast → game tip ("Guide arrows out without causing any collisions") → board → bottom toolbar (**timer** centre, **HINT** right). **No bonus pill.**
+
+**Input (`obj_arrows`).** Tap any cell of an arrow. If its tip lane is clear (`ph_arrows_sweep_clear`), it launches: the body glides head-first along a smoothed, corner-rounded track (its own centreline plus the straight exit lane), advancing by arc-length so the motion is continuous; the arrow is then removed. If the tip lane is blocked, it shakes and applies the +5 s penalty. One launch animates at a time (input locked during it).
+
+**Win (`ph_arrows_is_solved`).** No arrows remain on the board.
+
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`ar_apply_hint`) **pulses a white glow on a guaranteed-safe arrow** — the longest one whose tip lane is currently clear (`ph_arrows_first_clear`). It reports "NO MOVES TO SHOW" only when the board is solved.
+
+**Review mode.** Tapping a completed Arrows re-enters with `global.arrows_review_mode = true`, going straight to the win overlay (the recap redraws the **initial full board** — all arrows as first presented). The hub queries `ph_arrows_is_done` for the solved badge + finish time (`arrows_time_<date>`).
+
+**Data source.** `datafiles/puzzles_arrows.json` — a plain array (cached in `global.ph_arrows_cache`), generated offline by `tools/gen_arrows.py` via reverse construction (place each arrow only when its tip lane is clear of placed cells → forward solution = reverse of placement order; a greedy solver double-checks every board). Each entry:
+
+```json
+{ "date": "YYYY-MM-DD",
+  "size": 8,
+  "arrows": [ { "head": "R", "cells": [[r,c],[r,c], ...] }, ... ] }
+```
+
+`cells[0]` is the tip (arrowhead) cell; `cells[1]` is directly behind it (opposite the head direction) so the tip is always frontmost. `date`/`size` optional. Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 8×8 board is the fallback if the file is missing.
+
+**Save shape.** Completion is the generic `puzzles_solved` `ARROWS` flag (single key, counted automatically). Finish time is `arrows_time_<date>` (includes accrued +5 s penalties, since they fold into the timer). In-progress state persists under `save.arrows_state[date] = { cleared, penalty }` (`cleared` = comma-joined indices of arrows already launched, so `alive = !cleared`; `penalty` = accumulated penalty seconds) for resume. XP claim guarded by `save.xp_claimed["arrows_<date>"]`.
+
+---
+
+### 4.10 Ladder (Word Ladder)
+
+**Genre.** A classic **word ladder**. The player is shown a **seed word** (pre-filled) and must reach **10 consecutive words**, changing **exactly one letter per step**. Progress shows the current rung as `N / 10`. Every word in a given day's ladder shares one **length** (declared in the data; the length can differ from day to day — 4-letter one day, 6-letter another). There is **no loss state** and **no bonus**. The accent colour is **amber** (`PH_COL_AMBER`, #ffc04c).
+
+**Interaction (`obj_ladder`).** The current word is a single row of letter tiles (base `#f1eae1`). **Tap a tile** to select it (its background turns solid amber `#ffc04c`). **Type a key** on the custom keyboard to replace that letter, and the whole word is checked against the rung's target: a match **flashes every tile green** (`#aaca31`), locks the word in, advances to the next rung, loads the next clue, and resets the tiles to base; a mismatch **flashes the tiles red** (`#eb5a5a`) and reverts the letter (the word is unchanged, selection clears). The on-screen keyboard is **letters only — no DEL, no SEND**.
+
+**Clue + progress.** Right above the keyboard a rounded clue box (`#f1eae1`) shows the JSON-fed **description of the word to find** for the current rung. Directly above it sits the **`N / 10` progress** line.
+
+**Reward.** Solving all 10 words grants the single **+100 XP** on the shared win screen (granted by the win screen's CLAIM via `claim_key="ladder_<date>"`, not the controller); it counts toward the 4th-puzzle gift box and the streak, exactly like the other puzzles. The win recap redraws the full solved ladder as a stack of green tiles.
+
+**Layout.** Top HUD (back · "LADDER" in amber · coin pill) → toast / game tip ("Change one letter at a time") → **word row** → **`N / 10`** → **clue box** → letters-only keyboard → bottom toolbar (**timer** left, **HINT** right).
+
+**Hint.** The HINT pill opens the shared hint modal (§2.5 — pay 100 coins or watch a placeholder rewarded video). The reveal (`ld_apply_hint`) **highlights only the background of the tile that must change** (the differing position, soft amber `#ffe5a8`); it does not reveal the letter. One highlight per rung; it persists (saved) until that rung is solved.
+
+**Win.** `step` reaches `count` (all 10 words found).
+
+**Review mode.** Tapping a completed Ladder re-enters with `global.ladder_review_mode = true`, going straight to the win overlay. The hub queries `ph_ladder_is_done` for the solved badge + finish time (`ladder_time_<date>`).
+
+**Data source.** `datafiles/puzzles_ladder.json` — a plain array (cached in `global.ph_ladder_cache`). Each entry:
+
+```json
+{ "date": "YYYY-MM-DD",
+  "length": 5,
+  "start": "PLANT",
+  "steps": [ { "word": "PLANE", "clue": "It flies passengers" }, ... ×10 ] }
+```
+
+`start` is the seed (shown pre-filled, not counted in `N/10`); `steps` is exactly 10 `{word, clue}`. Every word is `length` letters and each consecutive pair (incl. `start`→`steps[0]`) differs by exactly one position — validated at authoring so the ladder is always solvable. `date` optional. Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 4-letter `COLD→…→CORK` ladder is the fallback if the file is missing.
+
+**Save shape.** Completion is the generic `puzzles_solved` `LADDER` flag (single key, counted automatically). Finish time is `ladder_time_<date>`. In-progress state persists under `save.ladder_state[date] = { step, hinted }` (`step` = words found so far; the current word derives from it, so it isn't stored; `hinted` = the rung's hinted tile index, or `-1`) for resume. XP claim guarded by `save.xp_claimed["ladder_<date>"]`.
 
 ---
 
@@ -383,11 +542,31 @@ File: `working_directory + "puzzlehub_save.json"`. JSON struct, currently `versi
 | `wordle_state` | Struct keyed by date → `{guesses, extra, hints, status}`: ";"-joined submitted guesses, the one-time extra-moves flag, ";"-joined revealed hint positions, and `status` (`in_progress`/`won`/`lost`) for resume |
 | `huesort_time_<date>` | mm:ss string — recorded Hue Sort finish time per date |
 | `huesort_state` | Struct keyed by date → `{tiles, hints}`: the player's in-progress board (comma-joined `RRGGBB`) and anchored hint positions (comma-joined indices) for resume |
+| `colorlink_time_<date>` / `colorlink_state` | Color Link finish time, and `{routes, hints}` in-progress flows for resume |
+| `wordbend_time_<date>` | mm:ss string — recorded Word Bend finish time per date |
+| `wordbend_state` | Struct keyed by date → `{found, hints}`: comma-joined found-word and hinted-word indices for resume |
+| `arrows_time_<date>` | mm:ss string — recorded Arrows finish time per date (includes accrued blocked-tap penalties) |
+| `arrows_state` | Struct keyed by date → `{cleared, penalty}`: comma-joined indices of launched arrows (`alive = !cleared`) and accumulated penalty seconds, for resume |
+| `ladder_time_<date>` | mm:ss string — recorded Ladder finish time per date |
+| `ladder_state` | Struct keyed by date → `{step, hinted}`: words found so far (current word derives from it) and the rung's hinted tile index (`-1` = none), for resume |
 | `xp_claimed` | Struct of `{claim_key: true}` guarding against a second XP grant on re-entry (e.g. `"wordle_<date>"`, `"huesort_<date>"`) |
+| `timers` | Struct of `{"<puzzle>_<date>": seconds}` — accumulated active **play time** per puzzle per date (whole seconds). Drives the pause/resume timer; see §5.2 |
 
 In `puzzles_solved`, a Wordle **win** sets the `WORDLE` key (counts as a solve); a **loss** sets `WORDLE_MISSED`, which `ph_solved_count_on` skips so it does not count toward the daily total / gift / streak.
 
-The save is rewritten on every solve event, hint purchase, and bonus-word discovery. Forward-compat: missing fields are backfilled to safe defaults on load.
+The save is rewritten on every solve event, hint purchase, bonus-word discovery, and roughly once per second while a puzzle's timer is running (see §5.2). Forward-compat: missing fields are backfilled to safe defaults on load.
+
+### 5.2 Puzzle timer (pause / resume, kill-safe)
+
+Each puzzle's on-screen timer measures **active play time**, not wall-clock time. It only advances while the player is actually in that puzzle's screen.
+
+- **Pause on exit.** Leaving via the back button commits the accumulated seconds to `save.timers["<puzzle>_<date>"]`. Time spent on the hub, in other puzzles, or with the app closed is not counted.
+- **Resume on re-entry.** Re-opening the same day's puzzle resumes the clock from the committed total rather than restarting at 0:00.
+- **Survives an app kill.** While a puzzle is open the accumulated total is persisted to disk at most once per second, so force-quitting and relaunching resumes within ~1 second of where the player left off.
+- **Per puzzle, per date.** Every calendar day's instance of every puzzle keeps its own independent clock (key = `"<puzzle>_<date>"`).
+- **Stops on completion.** The clock freezes the moment the puzzle is won (or, for Wordle, lost); the frozen value feeds the recorded `*_time_<date>` finish string.
+
+Implemented by the shared helpers in `scr_save`: `ph_timer_get/set/now/commit/step`. Each puzzle controller resumes `timer_base_secs` in its Create, displays `ph_timer_now(...)`, calls `ph_timer_step(...)` each frame while playing, and commits on the back button.
 
 ### 5.1 Reset gesture (hidden)
 
@@ -412,7 +591,33 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ---
 
-## 7. Recent code changes (2026-06-06)
+## 7. Recent code changes (2026-06-10)
+
+**New puzzle: Ladder.** Added the **tenth** playable puzzle (see §4.10) — a classic **word ladder**. A pre-filled seed word plus **10 rungs to find**, changing **exactly one letter per step**; tap a tile (selected = amber `#ffc04c`), type to replace, correct → green flash + advance, wrong → red flash + revert. Letters-only keyboard (no DEL/SEND). JSON-fed clue + `N/10` progress above the keyboard. **No loss state.** Amber accent (#ffc04c).
+
+- New logic script `scripts/scr_ladder/scr_ladder.gml`: JSON loader/cache, two-pass date selection, `ph_ladder_make`, `ph_ladder_diff_pos`, `ph_ladder_current_word`, and a hardcoded 4-letter `COLD→…→CORK` fallback ladder.
+- New controller `obj_ladder` (Create/Step/Draw_64) + room `rm_ladder`: per-day word-length tiles sized to fit, tap-to-select + type-to-replace with green/red feedback flash, clue box, `N/10` progress, letters-only keyboard, shared hint (highlights the differing tile's background), win via shared `ph_win_*` (recap = full solved ladder). 100 XP granted by the win screen's CLAIM (`claim_key`), not the controller.
+- New data `datafiles/puzzles_ladder.json` (3 ladders: 1 dated 2026-06-10 + 2 seed-fallback), validated so consecutive words differ by exactly one letter. Registered as an IncludedFile.
+- `scr_save`: `ph_ladder_is_done`/`mark_done`, `ph_ladder_save_state`/`load_state` (`save.ladder_state[date] = {step, hinted}`).
+- `scr_constants`: `PH_COL_AMBER`/`_DEEP`/`_SOFT` (#ffc04c / #ffe5a8), `PH_COL_LADDER_BAD` (#eb5a5a), `PH_LADDER_INDEX` (9); LADDER entry added to `ph_game_cards()` (card_orange + amber text) + game tip.
+- `obj_persistent`: loads `spr_game_ladder` (falls back to the Wordle icon). The hub card reuses the already-loaded `spr_card_orange`.
+- `obj_hub`: `global.ladder_review_mode` wired in Step.
+- Project manifest (`.yyp`): registered `obj_ladder`, `rm_ladder`, `scr_ladder`, the room order, `puzzles_ladder.json`, and the `game_ladder.png` icon.
+
+**New puzzle: Arrows.** Added the **ninth** playable puzzle (see §4.9) — an *Arrows – Puzzle Escape*-style tap-to-clear logic game on an 8×8 board of bent "snake" arrows. Tip-lane escape rule, snake-style slide-out, **no loss state — only a +5 s time penalty on a blocked tap**. Silver accent (#b8b9bd).
+
+- New logic script `scripts/scr_arrows/scr_arrows.gml`: JSON loader/cache, two-pass date selection, `ph_arrows_make`, `ph_arrows_delta`, `ph_arrows_sweep_clear` (tip-lane clear test), `ph_arrows_is_solved`, `ph_arrows_first_clear` (hint target), `ph_arrows_at` (cell→arrow hit-test), state serialise/restore (`{cleared, penalty}`), `ph_arrows_is_done`/`mark_done` (`ARROWS` flag), and a hardcoded 8×8 fallback board.
+- New controller `obj_arrows` (Create/Step/Draw_64) + room `rm_arrows`: white dot-grid board, slim per-arrow ribbons with corner-rounded bends (`ar_round`) + arrowhead, tap-to-launch with arc-length snake-glide animation (clipped to the board), blocked-tap shake + floating "+5 s", shared hint glow, win via shared `ph_win_*`, recap = initial full board. No loss state.
+- New data `datafiles/puzzles_arrows.json` (60 boards: 30 dated from 2026-06-10 + 30 seed-fallback), generated offline by `tools/gen_arrows.py` (reverse construction + greedy-solver verification). Registered as an IncludedFile.
+- `scr_constants`: `PH_COL_SILVER`/`_SOFT`/`_DEEP` (#b8b9bd), `PH_ARROWS_SIZE` (8), `PH_ARROWS_PENALTY_SECS` (5), `PH_ARROWS_INDEX` (8); ARROWS entry added to `ph_game_cards()` + game tip.
+- `obj_persistent`: loads `spr_card_silver`, `spr_game_arrows`, `spr_arrow` (freed in CleanUp).
+- `obj_hub`: ARROWS added to the solved-check, solved-time-pill, and time-prefix (`arrows_time_`) in Draw; `global.arrows_review_mode` wired in Step.
+- Project manifest (`.yyp`): registered `obj_arrows`, `rm_arrows`, `scr_arrows`, the room order, the data file, and the `card_silver.png` / `game_arrows.png` / `arrow.png` icons.
+- All art final (silver card + arrows icon + arrow glyph supplied by the user).
+
+---
+
+## 7a. Recent code changes (2026-06-06)
 
 **New puzzle: Hue Sort.** Added the sixth playable puzzle (see §4.6) — an "I Love Hue"-style colour-gradient sort — inserted on the hub before the locked Mix-Up card.
 
@@ -425,7 +630,7 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 - Project manifest (`.yyp`): registered `obj_huesort`, `rm_huesort`, `scr_huesort`, the room order, and the data file.
 - **Icon art pending:** `datafiles/icons/game_huesort.png` (drop in + register as an Included File to replace the mix-up-icon fallback). The card tile is final (orange).
 
-## 7a. Recent code changes (2026-06-05)
+## 7b. Recent code changes (2026-06-05)
 
 **New puzzle: Wordle.** Added the fifth playable puzzle (see §4.5), promoting the former coming-soon green card. Built in phases (see `WORDLE_PLAN.md`):
 
@@ -439,7 +644,7 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 ---
 
-## 7b. Recent code changes (2026-06-02)
+## 7c. Recent code changes (2026-06-02)
 
 **Hub-screen art pass — date badges, segmented progress bar, title.**
 
@@ -449,7 +654,8 @@ Four custom assets in `datafiles/icons/` replace primitive-drawn hub elements:
 - `icon_check.png` (38×38, pink disc + white tick baked in) — the solved-day badge in the 7-day strip. Replaces the old "pink `draw_circle` + white `spr_icon_check`" pair, so it is drawn full-colour (no tint). `global.spr_check_badge`, origin centred. *(The card-list "SOLVED" pill still uses the white `spr_icon_check`; only the strip badge changed.)*
 - `progress_bar_*` segment set (195×90 each): `purple_left`, `purple_center`, `purple_right`, `grey_center`, `grey_right`. Loaded with origin x=0/y=45 for left-to-right tiling. There is **no** `grey_left.png`; the unfilled left cap is produced by mirroring `grey_right` (negative x-scale).
 - The hub progress tube (track + purple fill + tick dividers) is now `ph_draw_progress_segments(x1,x2,cy,h,total,filled)` in `scr_draw` — one cell per daily puzzle, first `solved_today` cells purple, rest grey, rounded end caps. Gift (at 4/10) and trophy markers are unchanged.
-- **Game title:** "PUZZLE HUB" is drawn centred (pink, `fnt_disp_md`) between the LVL and coin pills at the top of the hub (`obj_hub/Draw_64`).
+- **Game title:** "PUZZLE HUB" is drawn centred (pink, `fnt_disp_md`) between the Level and coin pills at the top of the hub (`obj_hub/Draw_64`).
+- **Level pill (top-left):** a plain 3-D star badge on the pill's left curve plus the **level number** centred to its right (Nunito Black, `fnt_num_md`, dark — matching the coin balance). Per the updated design the star no longer carries the level number and the old "LVL" label is gone.
 - **Progress bar hidden when calendar is open:** the whole progress-tube band (segments, gift, trophy, X/10 counter) now draws only while `_strip_alpha > 0.02` and fades out with the 7-day strip as the month grid expands. The expanded calendar is allowed to cover that band. `ph_draw_progress_segments` gained an optional `_alpha` argument for the fade.
 - **Expanded month-grid day boxes:** the selected and today highlights in the open calendar now use box sprites — `calendar_day_bg_box_purple.png` (renders pink) for the selected day and `calendar_day_bg_box_yellow.png` for today (both 106×107, origin centred, `global.spr_cal_day_sel` / `spr_cal_day_today`). Solved days keep the teal rounded pill.
 - **Open-calendar layout reflow:** since the progress tube no longer shows when the calendar is open, the post-calendar content is now anchored to the actual month-grid bottom (`_grid_rows = ceil(len(month_days)/7)`), blended by `cal_anim_t`. The teal background ends at `_grid_bottom + 16` (just under the last date row), and `_post_cal` drives the "TODAY'S GAMES" header (which rides higher — 40% of the section band when open vs 70% closed) and the card-list `_body_top`. Closed-state values are mathematically unchanged. `_body_top` is computed identically in `Draw_64` and `Step_0` so card tap targets stay aligned.
@@ -480,7 +686,7 @@ Changes:
 
 ---
 
-## 7c. Recent code changes (2026-06-01)
+## 7d. Recent code changes (2026-06-01)
 
 **New puzzle: Shikaku.** Added a fourth playable puzzle (see §4.4).
 

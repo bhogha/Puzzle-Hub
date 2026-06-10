@@ -1,57 +1,42 @@
 // ── Level-Up reward screen — Draw GUI ─────────────────────────────────────────
 if (!valid) exit;
 
-// Purple celebratory backdrop (matches the level/star/XP accent).
-draw_set_color(PH_COL_PURPLE);
+// ── Backdrop — lighter violet per the design (deep-purple text reads on it). ──
+// No white card any more: the elements sit directly on the backdrop.
+var _bg     = make_color_rgb(173, 81, 246);   // #ad51f6
+var _purple = make_color_rgb( 98, 39, 197);   // #6227c5
+draw_set_color(_bg);
 draw_rectangle(0, 0, PH_W, PH_H, false);
 
-// White card slides up from the bottom.
-var _card_top = 360;
-var _card_h   = 1040;
-var _card_y   = lerp(PH_H, _card_top, ph_ease_back(min(anim_t * 1.2, 1)));
-var _slide    = _card_y - _card_top;        // 0 once settled
-ph_draw_chip(60, _card_y, PH_W - 60, _card_y + _card_h, 40, PH_COL_WHITE, make_color_rgb(80, 40, 160), 12);
-
 var _cx = PH_W / 2;
-var _y  = _card_top + 110 + _slide;
+var _st = ph_safe_top();
+var _sb = ph_safe_bottom();
+// Gentle slide-up settle (replaces the old card slide).
+var _slide = (1 - ph_ease_out(min(anim_t * 1.3, 1))) * 120;
 
-// Star icon.
-draw_sprite_ext(global.spr_star3d, 0, _cx, _y, 0.55, 0.55, 0, c_white, 1);
-_y += 200;
+// ── Top stack: Congratulations → level number → LEVEL UP! ─────────────────────
+ph_draw_text(_cx, _st + 220 + _slide, "Congratulations", global.fnt_disp_xl,  _purple,      fa_center, fa_middle);
+ph_draw_text(_cx, _st + 430 + _slide, string(level),     global.fnt_disp_xxl, PH_COL_WHITE, fa_center, fa_middle);
+ph_draw_text(_cx, _st + 650 + _slide, "LEVEL UP!",       global.fnt_disp_xxl, _purple,      fa_center, fa_middle);
 
-// "LEVEL UP!"
-ph_draw_text(_cx, _y, "LEVEL UP!", global.fnt_disp_xl, PH_COL_PINK, fa_center, fa_middle);
-_y += 110;
+// Star (plain 3D purple star — no number overlay).
+draw_sprite_ext(global.spr_star3d, 0, _cx, _st + 930 + _slide, 0.66, 0.66, 0, c_white, 1);
 
-// Level badge.
-ph_draw_chip(_cx - 190, _y - 46, _cx + 190, _y + 46, 46, PH_COL_PURPLE, make_color_rgb(80, 30, 180), 6);
-ph_draw_text(_cx, _y, "LEVEL " + string(level), global.fnt_disp_sm, PH_COL_WHITE, fa_center, fa_middle);
-_y += 130;
-
-// Reward prompt.
-ph_draw_text(_cx, _y, "Claim your reward!", global.fnt_body_md, PH_COL_INK_SOFT, fa_center, fa_middle);
-
-// ── Reward buttons ────────────────────────────────────────────────────────────
+// ── Reward prompt + buttons (bottom-anchored) ─────────────────────────────────
 // Settled bounds are written to PAY_*/DBL_* (read by Step); the slide offset is
 // applied to drawing only so taps match the resting layout even mid-animation.
-var _btn_cy = _card_top + _card_h - 160;
 var _bh     = 70;
-var _gap    = 30;
-PAY_L = 70;              PAY_R = PH_W/2 - _gap/2;
-DBL_L = PH_W/2 + _gap/2; DBL_R = PH_W - 70;
-PAY_T = _btn_cy - _bh;   PAY_B = _btn_cy + _bh;
-DBL_T = _btn_cy - _bh;   DBL_B = _btn_cy + _bh;
+var _btn_cy = PH_H - _sb - 140;
+PAY_L = 70;            PAY_R = PH_W/2 - 15;
+DBL_L = PH_W/2 + 15;   DBL_R = PH_W - 70;
+PAY_T = _btn_cy - _bh; PAY_B = _btn_cy + _bh;
+DBL_T = _btn_cy - _bh; DBL_B = _btn_cy + _bh;
 var _dcy = _btn_cy + _slide;
 
-// Take base coins: "100" + gold coin.
-ph_draw_chip(PAY_L, _dcy - _bh, PAY_R, _dcy + _bh, _bh, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-ph_draw_text(PAY_L + 110, _dcy, string(base_reward), global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
-draw_sprite_ext(global.spr_gold_coin, 0, PAY_R - 70, _dcy, 150/512, 150/512, 0, c_white, 1);
-
-// Double via video: "DOUBLE" + retro TV.
-ph_draw_chip(DBL_L, _dcy - _bh, DBL_R, _dcy + _bh, _bh, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-ph_draw_text(DBL_L + 130, _dcy, "DOUBLE", global.fnt_disp_sm, PH_COL_DARK, fa_center, fa_middle);
-draw_sprite_ext(global.spr_tv, 0, DBL_R - 72, _dcy, 150/512, 150/512, 0, c_white, 1);
+ph_draw_text(_cx, _btn_cy - 175 + _slide, "Claim your reward!", global.fnt_body_semi, c_black, fa_center, fa_middle);
+// 100 + gold coin  |  200 + gold coin + TV badge (rewarded video).
+ph_draw_reward_btn(PAY_L, _dcy, PAY_R, _bh, string(base_reward),     global.spr_gold_coin, false);
+ph_draw_reward_btn(DBL_L, _dcy, DBL_R, _bh, string(base_reward * 2), global.spr_gold_coin, true);
 
 // ── Confetti (drawn on top of the card) ───────────────────────────────────────
 for (var _pi = 0; _pi < array_length(confetti_pieces); _pi++) {

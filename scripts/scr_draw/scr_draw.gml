@@ -84,6 +84,114 @@ function ph_draw_text_shadow(_x,_y,_str,_fnt,_col,_shadow_col,_halign,_valign,_o
     ph_draw_text(_x,     _y,     _str, _fnt, _col,        _halign, _valign);
 }
 
+/// One-line "game tip" objective hint, centred horizontally above a puzzle grid.
+/// Matches the Penpot design: Nunito-regular (fnt_body_reg) in faint ink (black @
+/// 60%), sitting in the empty band between the top HUD and the grid. Pass the
+/// grid's top y (grid_y) and the tip string (see ph_game_tip in scr_constants).
+function ph_draw_game_tip(_grid_top, _str) {
+    if (_str == "") return;
+    // Auto-wraps to a 2nd line if the tip is wider than the play area, and is
+    // bottom-anchored just above the grid so it never grows down into the board.
+    draw_set_font(global.fnt_tip);
+    draw_set_color(c_black);
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_bottom);
+    draw_set_alpha(0.6);
+    draw_text_ext(PH_W/2, _grid_top - 26, _str, 50, PH_W - 140);
+    draw_set_alpha(1);
+}
+
+/// Shared "Message Prompt" toast — ONE canonical style across every puzzle:
+/// capsule chip, ALL-CAPS label in a single consistent font/size/weight
+/// (`fnt_body_md`), white text; only the capsule COLOUR varies by semantic state.
+/// Auto-fits width to the text. Positioned just ABOVE the game tip (pass the same
+/// anchor you give ph_draw_game_tip — the grid/list top). `_alpha` fades it. Pass
+/// an explicit `_cy` to override the vertical position (e.g. Wordle draws the
+/// prompt over its tip line where vertical room is tight).
+function ph_draw_toast(_text, _col, _alpha, _grid_top, _cy = undefined) {
+    if (_text == "" || _alpha <= 0) return;
+    var _txt = string_upper(string(_text));
+    var _y   = is_undefined(_cy) ? (_grid_top - 175) : _cy;
+    draw_set_font(global.fnt_body_md);
+    var _hw = max(330, string_width(_txt)/2 + 56);
+    draw_set_alpha(_alpha);
+    ph_draw_chip(PH_W/2 - _hw, _y - 36, PH_W/2 + _hw, _y + 36, 36, _col, make_color_rgb(20,20,20), 5);
+    ph_draw_text(PH_W/2, _y, _txt, global.fnt_body_md, PH_COL_WHITE, fa_center, fa_middle);
+    draw_set_alpha(1);
+}
+
+/// Draws `highlight.png` (a white capsule, 1305×100 with 50-px round end caps) as
+/// a clean marker from point A to point B with thickness `_thick`, tinted `_col`,
+/// at `_alpha`. Rendered as a rotated 3-slice (round caps + stretched middle) via
+/// draw_sprite_general, so — unlike stacked circle+line primitives — there is no
+/// self-overlap / alpha doubling at the tips. `_a`/`_b` are the cell CENTRES.
+function ph_draw_highlight(_ax, _ay, _bx, _by, _thick, _col, _alpha) {
+    var _ang  = point_direction(_ax, _ay, _bx, _by);
+    var _len  = point_distance(_ax, _ay, _bx, _by);
+    var _ys   = _thick / 100;            // sprite height 100 → thickness
+    var _half = _thick / 2;              // = on-screen cap radius (round caps)
+    var _ux   = lengthdir_x(1, _ang), _uy = lengthdir_y(1, _ang);
+    // Anchor for a slice whose center-left sits at axis point C: shift C "up" in
+    // the rotated local frame (local +y maps to direction _ang-90).
+    var _anchor = function(_cx, _cy2, _ang2, _half2) {
+        return { x: _cx - lengthdir_x(_half2, _ang2 - 90),
+                 y: _cy2 - lengthdir_y(_half2, _ang2 - 90) };
+    };
+    var _spr = global.spr_highlight;
+    // Left cap (source x[0..50]) — center-left at the tip (A shifted back by _half).
+    var _c1 = _anchor(_ax - _ux*_half, _ay - _uy*_half, _ang, _half);
+    draw_sprite_general(_spr, 0, 0, 0, 50, 100, _c1.x, _c1.y, _ys, _ys, _ang, _col,_col,_col,_col, _alpha);
+    // Middle (source x[50..1255], width 1205) — stretched from A to B.
+    var _c2 = _anchor(_ax, _ay, _ang, _half);
+    draw_sprite_general(_spr, 0, 50, 0, 1205, 100, _c2.x, _c2.y, _len/1205, _ys, _ang, _col,_col,_col,_col, _alpha);
+    // Right cap (source x[1255..1305]) — center-left at B.
+    var _c3 = _anchor(_bx, _by, _ang, _half);
+    draw_sprite_general(_spr, 0, 1255, 0, 50, 100, _c3.x, _c3.y, _ys, _ys, _ang, _col,_col,_col,_col, _alpha);
+}
+
+/// Bonus pill — white capsule with the 3D chest spilling off the left cap and a
+/// "BONUS" label, plus a small pink count badge on the chest when _count>0.
+/// Mirrors the coin / HINT HUD pills (Penpot design, shared by every screen that
+/// has bonus words). _l = left edge, _cy = vertical centre. Returns the pill's
+/// {l,r,t,b} bounds and the chest centre {icon_x,icon_y} (fly-tile target).
+function ph_draw_bonus_pill(_l, _cy, _count) {
+    var _r = _l + 290;
+    var _t = _cy - 33;
+    var _b = _cy + 33;
+    ph_draw_chip(_l, _t, _r, _b, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+    var _chest_s = 118 / 512;   // matches the coin icon's visible height
+    draw_sprite_ext(global.spr_chest, 0, _l + 27, _cy, _chest_s, _chest_s, 0, c_white, 1);
+    ph_draw_text(_l + 82, _cy, "BONUS", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+    if (_count > 0) {
+        draw_set_color(PH_COL_PINK);
+        draw_circle(_l + 60, _cy - 30, 20, false);
+        ph_draw_text(_l + 60, _cy - 30, string(_count), global.fnt_body_xs, PH_COL_WHITE, fa_center, fa_middle);
+    }
+    return { l:_l, r:_r, t:_t, b:_b, icon_x:_l + 27, icon_y:_cy };
+}
+
+/// "Words to find" tile (Word Wave). Centred on (_cx,_cy), _w×_h, corner _r.
+/// Found → solid fill in the word's own grid-highlight colour (_found_col), white
+/// text + white strike-through; to-find → tan fill with faint-ink text. Pass
+/// _found_col so the list chip matches that word's colour in the grid; omit it to
+/// fall back to the shared pink. See PH_COL_WORD_* in scr_constants.
+function ph_draw_word_tile(_cx, _cy, _w, _h, _r, _text, _found, _found_col = PH_COL_WORD_FOUND) {
+    var _l = _cx - _w/2, _rt = _cx + _w/2, _t = _cy - _h/2, _b = _cy + _h/2;
+    if (_found) {
+        var _deep = merge_color(_found_col, c_black, 0.28);
+        ph_draw_chip(_l, _t, _rt, _b, _r, _found_col, _deep, 6);
+        ph_draw_text(_cx, _cy, _text, global.fnt_tip, PH_COL_WHITE, fa_center, fa_middle);
+        var _tw = string_width(_text);   // font is fnt_tip (set by ph_draw_text above)
+        draw_set_color(PH_COL_WHITE);
+        draw_line_width(_cx - _tw/2 - 8, _cy, _cx + _tw/2 + 8, _cy, 5);
+    } else {
+        ph_draw_chip(_l, _t, _rt, _b, _r, PH_COL_WORD_TODO, PH_COL_WORD_TODO_DEEP, 6);
+        draw_set_alpha(0.6);
+        ph_draw_text(_cx, _cy, _text, global.fnt_tip, c_black, fa_center, fa_middle);
+        draw_set_alpha(1);
+    }
+}
+
 /// Draw a sprite icon tinted to a colour (sprites are white-on-transparent)
 function ph_draw_icon(_spr, _x, _y, _scale, _col) {
     draw_sprite_ext(_spr, 0, _x, _y, _scale, _scale, 0, _col, 1);
@@ -126,6 +234,14 @@ function ph_draw_progress_segments(_x1, _x2, _cy, _h, _total, _filled, _alpha) {
         }
     }
 }
+
+// ── Safe-area helpers ─────────────────────────────────────────────────────────
+/// Top inset PLUS comfort padding (PH_PAD_TOP). Use as the first usable y for
+/// full-screen content so nothing crowds the Dynamic Island / status bar.
+function ph_safe_top()    { return global.safe_top_gui    + PH_PAD_TOP; }
+/// Bottom inset PLUS comfort padding (PH_PAD_BOTTOM). Reserve this much above
+/// PH_H so content clears the home indicator with breathing room.
+function ph_safe_bottom() { return global.safe_bottom_gui + PH_PAD_BOTTOM; }
 
 // ── Easing ────────────────────────────────────────────────────────────────────
 function ph_ease_out(_t)  { return 1 - (1-_t)*(1-_t); }
@@ -258,4 +374,52 @@ function ph_draw_dot_bg(_col) {
         surface_reset_target();
     }
     draw_surface(global.ph_dot_surface, 0, 0);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Reward / nav buttons (Penpot "Win Screen" blue 3D button design)
+// ──────────────────────────────────────────────────────────────────────────────
+// Shared by the win screen, the Level-Up screen, and the Wordle lose screen so the
+// "claim" buttons look identical everywhere. Blue body (#1776d5-ish) with a darker
+// 3D drop edge, a white centred label, an optional value icon (star / coin) to the
+// right of the label, and an optional rewarded-video TV badge in the top-right
+// corner (the DOUBLE variant). _cy is the vertical CENTRE; _bh is the half-height.
+
+/// Reward button: label + value icon (+ optional TV badge). _icon_spr may be
+/// noone for a label-only button. _body/_edge override the colour (default blue);
+/// pass PH_COL_GREEN / PH_COL_GREEN_DEEP for the green hint / lost-aversion buttons.
+function ph_draw_reward_btn(_l, _cy, _r, _bh, _label, _icon_spr, _tv, _body, _edge) {
+    if (is_undefined(_body)) _body = PH_COL_BLUE;
+    if (is_undefined(_edge)) _edge = PH_COL_BLUE_DEEP;
+    ph_draw_chip(_l, _cy - _bh, _r, _cy + _bh, 30, _body, _edge, 8);
+    var _has = (_icon_spr != noone && _icon_spr >= 0);
+    var _cx  = (_l + _r) / 2;
+    draw_set_font(global.fnt_btn);
+    var _lw  = string_width(_label);
+    var _isz = _bh * 1.55;                       // icon target px (source sprites are 512)
+    var _gap = _has ? 18 : 0;
+    var _iw  = _has ? _isz : 0;
+    var _x0  = _cx - (_lw + _gap + _iw) / 2;      // left edge of the label+icon group
+    ph_draw_text(_x0 + _lw/2, _cy, _label, global.fnt_btn, PH_COL_WHITE, fa_center, fa_middle);
+    if (_has) draw_sprite_ext(_icon_spr, 0, _x0 + _lw + _gap + _iw/2, _cy, _isz/512, _isz/512, 0, c_white, 1);
+    if (_tv)  draw_sprite_ext(global.spr_tv, 0, _r - _bh*0.40, _cy - _bh + _bh*0.10, (_bh*1.5)/512, (_bh*1.5)/512, 0, c_white, 1);
+}
+
+/// Navigation button: icon on the left, label centred next to it. _accent lets the
+/// caller override the body colour (e.g. PH_COL_PINK for SHARE); pass noone for the
+/// default blue. _icon_spr may be noone to draw a label-only button.
+function ph_draw_nav_btn(_l, _cy, _r, _bh, _label, _icon_spr, _accent, _accent_deep) {
+    var _body = (_accent == noone)      ? PH_COL_BLUE      : _accent;
+    var _edge = (_accent_deep == noone) ? PH_COL_BLUE_DEEP : _accent_deep;
+    ph_draw_chip(_l, _cy - _bh, _r, _cy + _bh, 30, _body, _edge, 8);
+    var _has = (_icon_spr != noone && _icon_spr >= 0);
+    draw_set_font(global.fnt_btn);
+    var _lw  = string_width(_label);
+    var _isz = _bh * 1.5;
+    var _gap = _has ? 22 : 0;
+    var _iw  = _has ? _isz : 0;
+    var _cx  = (_l + _r) / 2;
+    var _x0  = _cx - (_iw + _gap + _lw) / 2;
+    if (_has) draw_sprite_ext(_icon_spr, 0, _x0 + _iw/2, _cy, _isz/512, _isz/512, 0, c_white, 1);
+    ph_draw_text(_x0 + _iw + _gap + _lw/2, _cy, _label, global.fnt_btn, PH_COL_WHITE, fa_center, fa_middle);
 }

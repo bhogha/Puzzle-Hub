@@ -5,8 +5,10 @@
 draw_set_color(PH_COL_BG);
 draw_rectangle(0,0,PH_W,PH_H,false);
 
-ph_draw_icon(global.spr_icon_back, 65, 165, 0.6, PH_COL_DARK);
-ph_draw_text(PH_W/2, 165, "SHOP", global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
+// Header row pushed below the Dynamic Island / status bar via the safe-area inset.
+var _hdr_y = 165 + global.safe_top_gui;
+ph_draw_icon(global.spr_icon_back, 65, _hdr_y, 0.6, PH_COL_DARK);
+ph_draw_text(PH_W/2, _hdr_y, "SHOP", global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
 
 // Coming Soon card
 ph_draw_chip(80,600, PH_W-80,1200, 40, PH_COL_WHITE, make_color_rgb(190,170,155), 12);

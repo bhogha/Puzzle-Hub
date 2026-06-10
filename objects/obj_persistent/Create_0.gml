@@ -18,16 +18,60 @@ if (os_type == os_ios || os_type == os_android) {
 
 // ── iOS safe area insets (notch / Dynamic Island / home indicator) ─────────────
 // Stored in GUI units so every screen can offset its top/bottom elements.
+//
+// IMPORTANT: GameMaker has no reliably-documented GML call that returns the iOS
+// safe-area insets — os_get_info() does NOT expose them (the earlier
+// "ios_safe_area_*" keys were never populated, so these globals stayed 0 and the
+// UI sat under the Dynamic Island). We therefore:
+//   1) still probe os_get_info() defensively, in case a runtime ever provides it;
+//   2) otherwise estimate from the screen aspect for full-screen notch / Dynamic
+//      Island iPhones — calibrated to Apple's portrait insets (matches an
+//      iPhone 16 Pro within a few px).
+// For pixel-perfect values on every device, install the "iOS Safe Area" native
+// extension and assign its top/bottom (in px) into these two globals instead
+// (convert with  round(px * global.PH_H_dyn / display_get_height())  as below).
 global.safe_top_gui    = 0;
 global.safe_bottom_gui = 0;
+global.safe_src        = "desktop";   // which path set the insets: "extension" / "estimate" / "none" / "desktop" (debug readout)
+global.safe_raw_top    = -1;          // raw px from the extension (-1 = extension gave nothing)
+global.safe_raw_bottom = -1;
 if (os_type == os_ios) {
-    var _info = os_get_info();
-    var _raw_top    = ds_map_find_value(_info, "ios_safe_area_top");
-    var _raw_bottom = ds_map_find_value(_info, "ios_safe_area_bottom");
-    if (!is_undefined(_raw_top))    global.safe_top_gui    = round(_raw_top    * global.PH_H_dyn / display_get_height());
-    if (!is_undefined(_raw_bottom)) global.safe_bottom_gui = round(_raw_bottom * global.PH_H_dyn / display_get_height());
-    ds_map_destroy(_info);
+    var _dh = max(display_get_height(), 1);
+    global.safe_src = "none";
+
+    // 1) "iOS Safe Area" native extension (Liquid Games) — true per-device insets.
+    //    iOS_get_safe_area() returns a JSON string → json_decode → ds_map with
+    //    detected/top/bottom/left/right (px). Convert px → GUI units. NOTE: this
+    //    requires the extension to be imported into the project, otherwise the
+    //    project will not compile (remove this block to fall back to the estimate).
+    var _json = iOS_get_safe_area();
+    if (is_string(_json) && _json != "") {
+        var _m = json_decode(_json);
+        if (ds_exists(_m, ds_type_map)) {
+            if (ds_map_find_value(_m, "detected")) {
+                var _t = ds_map_find_value(_m, "top");
+                var _b = ds_map_find_value(_m, "bottom");
+                if (is_real(_t)) global.safe_raw_top    = _t;
+                if (is_real(_b)) global.safe_raw_bottom = _b;
+                if (is_real(_t) && _t > 0) { global.safe_top_gui    = round(_t * global.PH_H_dyn / _dh); global.safe_src = "extension"; }
+                if (is_real(_b) && _b > 0) { global.safe_bottom_gui = round(_b * global.PH_H_dyn / _dh); global.safe_src = "extension"; }
+            }
+            ds_map_destroy(_m);
+        }
+    }
+
+    // 2) Aspect-ratio fallback if the extension reported nothing (e.g. not yet
+    //    imported, or pre-iOS 11). Tall screens (height/width >= 2.0) are the
+    //    only iOS devices with a top cutout + home indicator; SE/8/iPad get none.
+    var _ratio = _dh / max(display_get_width(), 1);
+    if (_ratio >= 2.0) {
+        if (global.safe_top_gui    <= 0) { global.safe_top_gui    = round(global.PH_H_dyn * 0.075); if (global.safe_src != "extension") global.safe_src = "estimate"; } // ~Dynamic Island / notch
+        if (global.safe_bottom_gui <= 0) { global.safe_bottom_gui = round(global.PH_H_dyn * 0.042); if (global.safe_src != "extension") global.safe_src = "estimate"; } // ~home indicator
+    }
 }
+show_debug_message("[safe-area] src=" + global.safe_src
+    + " top_gui=" + string(global.safe_top_gui) + " bottom_gui=" + string(global.safe_bottom_gui)
+    + " raw_top_px=" + string(global.safe_raw_top) + " raw_bottom_px=" + string(global.safe_raw_bottom));
 
 ph_load_fonts();
 global.save              = ph_save_load();
@@ -36,6 +80,14 @@ global.input_locked_until = 0;
 // Queued level-up reward (set at puzzle completion, consumed by the Level-Up
 // screen in rm_win). { level, base_reward } when pending; undefined otherwise.
 global.pending_levelup   = undefined;
+// Coins awarded on the last Level-Up claim, waiting to be celebrated by the hub
+// coin-flow animation. 0 = nothing to play. Set by obj_win.lu_claim, consumed
+// (reset to 0) by obj_hub.Create_0.
+global.coin_flow_amount  = 0;
+// Destination queued when the player triggers a win-screen shortcut (NEXT GAME /
+// YESTERDAY) while a level-up is pending: { kind:"room", room, date }. The Level-Up
+// screen (obj_win.lu_claim) consumes it and continues there instead of the hub.
+global.post_levelup      = undefined;
 
 application_surface_draw_enable(true);
 surface_resize(application_surface, PH_W, global.PH_H_dyn);
@@ -95,7 +147,10 @@ global.spr_card_teal   = sprite_add(_d + "card_teal.png",   1, false, false, 700
 global.spr_card_orange = sprite_add(_d + "card_orange.png", 1, false, false, 700, 200);
 global.spr_card_blue   = sprite_add(_d + "card_blue.png",   1, false, false, 700, 200);
 global.spr_card_green  = sprite_add(_d + "card_green.png",  1, false, false, 700, 200);
-// Hue Sort reuses the orange card tile (shared with the locked Mix-Up card).
+global.spr_card_skyblue = sprite_add(_d + "card_skyblue.png", 1, false, false, 700, 200);   // Hue Sort (#6ea5e6)
+global.spr_card_lime    = sprite_add(_d + "card_lime.png",    1, false, false, 700, 200);   // Color Link (#c7e70f)
+global.spr_card_tangerine = sprite_add(_d + "card_tangerine.png", 1, false, false, 700, 200); // Word Bend (#ff5b38)
+global.spr_card_silver    = sprite_add(_d + "card_silver.png",    1, false, false, 715, 225);   // Arrows (#b8b9bd, 1430×450)
 
 // ── Game icons (512×512, origin centred) ──────────────────────────────────────
 global.spr_game_anygram  = sprite_add(_d + "game_anygram.png",  1, false, false, 256, 256);
@@ -107,6 +162,14 @@ global.spr_game_wordle   = sprite_add(_d + "game_wordle.png",   1, false, false,
 // Hue Sort icon is pending; fall back to the mix-up icon until art lands.
 global.spr_game_huesort  = sprite_add(_d + "game_huesort.png",  1, false, false, 256, 256);
 if (global.spr_game_huesort < 0) global.spr_game_huesort = global.spr_game_mixup;
+global.spr_game_colorlink = sprite_add(_d + "game_colorlink.png", 1, false, false, 256, 256);
+if (global.spr_game_colorlink < 0) global.spr_game_colorlink = global.spr_game_mixup;
+global.spr_game_wordbend = sprite_add(_d + "game_wordbend.png", 1, false, false, 256, 256);   // Word Bend
+if (global.spr_game_wordbend < 0) global.spr_game_wordbend = global.spr_game_wordwave;
+global.spr_game_arrows = sprite_add(_d + "game_arrows.png", 1, false, false, 317, 256);   // Arrows (635×512)
+if (global.spr_game_arrows < 0) global.spr_game_arrows = global.spr_game_mixup;
+global.spr_game_ladder = sprite_add(_d + "game_ladder.png", 1, false, false, 256, 256);   // Ladder (Word Ladder)
+if (global.spr_game_ladder < 0) global.spr_game_ladder = global.spr_game_wordle;
 
 // ── Anygram tile (256×256, origin centred) ────────────────────────────────────
 global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);
@@ -118,6 +181,12 @@ global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);
 //                  (750×750, origin centred). Replaces the hand-drawn disc/ring.
 global.spr_back2    = sprite_add(_d + "back_buton.png", 1, false, true, 51, 89);
 global.spr_wheel_bg = sprite_add(_d + "Wheel_bg.png",   1, false, false, 375, 375);
+// arrow.png — straight arrow (1405×250), origin at the centre so it rotates about
+// its midpoint. Used by Arrows for the arrowhead / straight-arrow art (Phase 2).
+global.spr_arrow    = sprite_add(_d + "arrow.png", 1, false, false, 702, 125);
+// highlight.png — white capsule (1305×100, 50px round caps) for the Word Wave
+// selection/found markers, drawn via ph_draw_highlight (3-slice, no overlap).
+global.spr_highlight = sprite_add(_d + "highlight.png", 1, false, false, 0, 0);
 
 // ── UI background art (origin top-left so 9-slice / tiling math is direct) ─────
 // Pill.png  — white capsule (with a baked soft drop shadow) used as the shared

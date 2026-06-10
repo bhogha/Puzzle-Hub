@@ -13,6 +13,7 @@ function ph_save_load() {
             if (!variable_struct_exists(_data, "gift_claimed_dates")) _data.gift_claimed_dates = [];
             if (!variable_struct_exists(_data, "anygram_bonus")) _data.anygram_bonus = {};
             if (!variable_struct_exists(_data, "streak")) _data.streak = 0;
+            if (!variable_struct_exists(_data, "timers")) _data.timers = {};
             if (!variable_struct_exists(_data, "version")) _data.version = 1;
             ph_update_streak(_data);
             return _data;
@@ -27,6 +28,7 @@ function ph_save_load() {
         gift_claimed_dates: [],
         anygram_bonus:      {},
         streak:             0,
+        timers:             {},
     };
 }
 
@@ -52,6 +54,7 @@ function ph_save_reset() {
         gift_claimed_dates: [],
         anygram_bonus:      {},
         streak:             0,
+        timers:             {},
     };
 }
 
@@ -303,4 +306,81 @@ function ph_wordle_is_missed(_save, _date_key) {
 /// Mark Wordle missed for the given date.
 function ph_wordle_mark_missed(_save, _date_key) {
     ph_mark_solved(_save, _date_key, "WORDLE_MISSED");
+}
+
+// ── Ladder (Word Ladder) tracking ─────────────────────────────────────────────
+// Completion is tracked through the generic puzzles_solved map under the "LADDER"
+// key, so ph_solved_count_on() counts it toward the daily gift/streak (it is a
+// single flag, so no skip rule is needed). Finish time lives in
+// "ladder_time_<date>". In-progress state (solved-step count + the step index
+// with an active hint highlight) lives in save.ladder_state[date] so leaving
+// mid-puzzle resumes. The current word is derived from `step`, so it isn't stored.
+
+/// True if Ladder for the given date has been completed.
+function ph_ladder_is_done(_save, _date_key) {
+    return ph_is_solved(_save, _date_key, "LADDER");
+}
+
+/// Mark Ladder complete for the given date. Hub reads this single flag.
+function ph_ladder_mark_done(_save, _date_key) {
+    ph_mark_solved(_save, _date_key, "LADDER");
+}
+
+/// Persist in-progress play state for resume.
+///   _step  : number of words already found (0..count). current word derives from it.
+///   _hinted: step index with an active hint highlight, or -1 if none.
+function ph_ladder_save_state(_save, _date_key, _step, _hinted) {
+    if (!variable_struct_exists(_save, "ladder_state")) _save.ladder_state = {};
+    _save.ladder_state[$ _date_key] = { step: _step, hinted: _hinted };
+}
+
+/// Read a previously-saved Ladder state struct, or undefined if none stored.
+function ph_ladder_load_state(_save, _date_key) {
+    if (!variable_struct_exists(_save, "ladder_state")) return undefined;
+    if (!variable_struct_exists(_save.ladder_state, _date_key)) return undefined;
+    return _save.ladder_state[$ _date_key];
+}
+
+// ── Per-puzzle play timer (pause / resume + kill-safe) ────────────────────────
+// Each puzzle accumulates active play time in save.timers["<puzzle>_<date>"]
+// (whole seconds). On entry a puzzle resumes from this committed base; the live
+// display is base + (seconds since this resume). Leaving the puzzle (back button,
+// win, loss) commits the accumulated total, and ph_timer_step persists it to disk
+// at most once per second so an app kill loses < 1 s. Time is per calendar date,
+// so each day's puzzle keeps its own independent clock.
+//   key convention: "<puzzle>_" + date_key  (e.g. "sudoku_2026-06-06")
+
+/// Committed seconds for a timer key (0 if none recorded yet).
+function ph_timer_get(_save, _key) {
+    if (!variable_struct_exists(_save, "timers")) return 0;
+    if (!variable_struct_exists(_save.timers, _key)) return 0;
+    return _save.timers[$ _key];
+}
+
+/// Store committed seconds for a timer key (in-memory only — no disk write).
+function ph_timer_set(_save, _key, _secs) {
+    if (!variable_struct_exists(_save, "timers")) _save.timers = {};
+    _save.timers[$ _key] = _secs;
+}
+
+/// Live elapsed seconds while running = committed base + whole seconds since the
+/// resume timestamp (`_start_ms`, captured as current_time when the puzzle opened).
+function ph_timer_now(_base_secs, _start_ms) {
+    return _base_secs + floor((current_time - _start_ms) / 1000);
+}
+
+/// Commit the current live elapsed back into save.timers (in-memory; no disk write).
+function ph_timer_commit(_save, _key, _base_secs, _start_ms) {
+    ph_timer_set(_save, _key, ph_timer_now(_base_secs, _start_ms));
+}
+
+/// Call every Step while a puzzle is actively being played. Persists accumulated
+/// seconds to disk at most once per second (only when the whole-second value
+/// advances), so an app kill loses < 1 s. Cheap no-op within the same second.
+function ph_timer_step(_save, _key, _base_secs, _start_ms) {
+    var _now = ph_timer_now(_base_secs, _start_ms);
+    if (_now > ph_timer_get(_save, _key)) {
+        ph_timer_set(_save, _key, _now);
+        ph_save_write(_save);
+    }
 }

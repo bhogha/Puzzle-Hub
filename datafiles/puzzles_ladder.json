@@ -1,0 +1,51 @@
+[
+  {
+    "date": "2026-06-10",
+    "length": 4,
+    "start": "COLD",
+    "steps": [
+      { "word": "CORD", "clue": "A thin rope or string" },
+      { "word": "WORD", "clue": "A single unit of language" },
+      { "word": "WARD", "clue": "A section of a hospital" },
+      { "word": "WARM", "clue": "Pleasantly hot" },
+      { "word": "WARE", "clue": "Goods for sale (as in 'soft-___')" },
+      { "word": "BARE", "clue": "Naked or uncovered" },
+      { "word": "BARN", "clue": "A farm building for animals" },
+      { "word": "BORN", "clue": "Brought into life" },
+      { "word": "CORN", "clue": "A yellow grain on a cob" },
+      { "word": "CORK", "clue": "A stopper for a wine bottle" }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "HEAD",
+    "steps": [
+      { "word": "HEAL", "clue": "Make healthy again" },
+      { "word": "TEAL", "clue": "A blue-green color" },
+      { "word": "TELL", "clue": "Share information aloud" },
+      { "word": "BELL", "clue": "It rings to signal the time" },
+      { "word": "BALL", "clue": "A round object used in sport" },
+      { "word": "BALD", "clue": "Having no hair" },
+      { "word": "BOLD", "clue": "Brave and confident" },
+      { "word": "BOLT", "clue": "A metal fastener, or to dash off" },
+      { "word": "BOOT", "clue": "Footwear covering the whole foot" },
+      { "word": "BOAT", "clue": "It floats on water" }
+    ]
+  },
+  {
+    "length": 5,
+    "start": "PLANT",
+    "steps": [
+      { "word": "PLANE", "clue": "It flies passengers" },
+      { "word": "PLATE", "clue": "You eat dinner off it" },
+      { "word": "SLATE", "clue": "A grey roofing rock" },
+      { "word": "STATE", "clue": "A region within a country" },
+      { "word": "STARE", "clue": "Look fixedly" },
+      { "word": "SPARE", "clue": "Extra, or kept in reserve" },
+      { "word": "SPADE", "clue": "A tool for digging" },
+      { "word": "SHADE", "clue": "Shelter from the sun" },
+      { "word": "SHAKE", "clue": "Move quickly back and forth" },
+      { "word": "SNAKE", "clue": "A long, legless reptile" }
+    ]
+  }
+]

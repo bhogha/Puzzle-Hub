@@ -19,7 +19,7 @@ var _chip_sh = make_color_rgb(190,170,155);
 // ── Top HUD strip: back · HUE SORT · coin balance ─────────────────────────────
 var _hud_y = 95 + global.safe_top_gui;
 draw_sprite_ext(global.spr_back2, 0, 60, _hud_y, 0.36, 0.36, 0, c_white, 1);
-ph_draw_text(PH_W/2, _hud_y, "HUE SORT", global.fnt_disp_md, ACCENT, fa_center, fa_middle);
+ph_draw_text(PH_W/2, _hud_y, "HUE SORT", global.fnt_disp_md, PH_COL_SKYBLUE, fa_center, fa_middle);
 
 // Coin balance pill — top-right (no tap action).
 var _cp_hud = 1.0;
@@ -42,13 +42,12 @@ hint.coin_x = COIN_BAL_X;
 hint.coin_y = COIN_BAL_Y;
 ph_hint_draw_feedback(hint);
 
-// Instruction line above the board.
-ph_draw_text(PH_W/2, grid_y - 70, "Swap tiles so the colours blend smoothly",
-             global.fnt_body_sm, PH_COL_INK_SOFT, fa_center, fa_middle);
+// Game tip — objective hint above the board (shared style).
+ph_draw_game_tip(grid_y, ph_game_tip("huesort"));
 
-// ── Board background ──────────────────────────────────────────────────────────
-ph_draw_chip(grid_x-12, grid_y-12, grid_x+BOARD+12, grid_y+BOARD+12, 24,
-             PH_COL_WHITE, _chip_sh, 8);
+// ── Board background ── flat #f1eae1 base, no drop shadow (Penpot redesign) ────
+ph_draw_rounded(grid_x-12, grid_y-12, grid_x+BOARD+12, grid_y+BOARD+12, 10,
+                PH_COL_HUE_TILE_BG);
 
 // ── Tiles ─────────────────────────────────────────────────────────────────────
 for (var _r = 0; _r < N; _r++) {
@@ -60,7 +59,7 @@ for (var _r = 0; _r < N; _r++) {
             var _ey0 = grid_y + _r * CELL + TILE_GAP;
             var _ex1 = grid_x + (_c + 1) * CELL - TILE_GAP;
             var _ey1 = grid_y + (_r + 1) * CELL - TILE_GAP;
-            ph_draw_rounded(_ex0, _ey0, _ex1, _ey1, 16, make_color_rgb(236,226,219));
+            ph_draw_rounded(_ex0, _ey0, _ex1, _ey1, 10, make_color_rgb(225,216,206));
             continue;
         }
         hs_draw_tile(_r, _c, tiles[_i], (puzzle.locked[_i] || hint_locked[_i]));
@@ -72,16 +71,16 @@ if (dragging && drag_from >= 0) {
     var _sz  = CELL/2 - TILE_GAP + 10;
     var _col = ph_huesort_col(tiles[drag_from]);
     draw_set_alpha(0.25);
-    ph_draw_rounded(drag_mx-_sz-6, drag_my-_sz-2, drag_mx+_sz+6, drag_my+_sz+10, 20, make_color_rgb(20,10,30));
+    ph_draw_rounded(drag_mx-_sz-6, drag_my-_sz-2, drag_mx+_sz+6, drag_my+_sz+10, 14, make_color_rgb(20,10,30));
     draw_set_alpha(1);
-    ph_draw_rounded(drag_mx-_sz-4, drag_my-_sz-4, drag_mx+_sz+4, drag_my+_sz+4, 20, PH_COL_WHITE);
-    ph_draw_rounded(drag_mx-_sz,   drag_my-_sz,   drag_mx+_sz,   drag_my+_sz,   16, _col);
+    ph_draw_rounded(drag_mx-_sz-4, drag_my-_sz-4, drag_mx+_sz+4, drag_my+_sz+4, 14, PH_COL_WHITE);
+    ph_draw_rounded(drag_mx-_sz,   drag_my-_sz,   drag_mx+_sz,   drag_my+_sz,   10, _col);
 }
 
 // ── Bottom toolbar: timer pill (centre) · HINT pill (right) ───────────────────
 var _tool_y = PH_H - 110 - global.safe_bottom_gui;
 
-var _b_e_s  = floor((current_time - session_start_ms) / 1000);
+var _b_e_s  = ph_timer_now(timer_base_secs, session_start_ms);
 var _b_time = string(_b_e_s div 60) + ":" + (((_b_e_s mod 60) < 10) ? "0" : "") + string(_b_e_s mod 60);
 var _tp_l = PH_W/2 - 105;
 var _tp_r = PH_W/2 + 105;
@@ -99,14 +98,7 @@ draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0
 ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
 // ── Toast — centred below the board ───────────────────────────────────────────
-if (toast_timer > 0) {
-    var _toast_y = grid_y + BOARD + 95;
-    var _alpha = min(1, toast_timer/15);
-    draw_set_alpha(_alpha);
-    ph_draw_chip(PH_W/2-360, _toast_y-34, PH_W/2+360, _toast_y+34, 30, toast_col, make_color_rgb(20,20,20), 5);
-    ph_draw_text(PH_W/2, _toast_y, toast_text, global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
-    draw_set_alpha(1);
-}
+if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
 
 // ── Hint modal + placeholder rewarded-video (drawn last, cover everything) ─────
 ph_hint_draw_modal(hint);

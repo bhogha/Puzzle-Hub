@@ -166,15 +166,10 @@ function ph_hint_draw_modal(_h) {
     _h.free_t = _cy - _bh;  _h.free_b = _cy + _bh;
     var _dcy = _cy + _slide;
 
-    // Pay: "100" + gold coin.
-    ph_draw_chip(_h.pay_l, _dcy - _bh, _h.pay_r, _dcy + _bh, _bh, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-    ph_draw_text(_h.pay_l + 110, _dcy, string(PH_HINT_COST), global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
-    draw_sprite_ext(global.spr_gold_coin, 0, _h.pay_r - 70, _dcy, 150/512, 150/512, 0, c_white, 1);
-
-    // Free: "FREE" + retro TV.
-    ph_draw_chip(_h.free_l, _dcy - _bh, _h.free_r, _dcy + _bh, _bh, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-    ph_draw_text(_h.free_l + 130, _dcy, "FREE", global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
-    draw_sprite_ext(global.spr_tv, 0, _h.free_r - 75, _dcy, 150/512, 150/512, 0, c_white, 1);
+    // Pay: "Buy 100" + gold coin.  Free: "FREE" + retro TV.  Green reward buttons,
+    // uniform with the blue claim buttons (per the updated design).
+    ph_draw_reward_btn(_h.pay_l,  _dcy, _h.pay_r,  _bh, "Buy " + string(PH_HINT_COST), global.spr_gold_coin, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+    ph_draw_reward_btn(_h.free_l, _dcy, _h.free_r, _bh, "FREE",                        global.spr_tv,        false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
 }
 
 /// Full-screen dark placeholder for the rewarded video. Call LAST in Draw so it

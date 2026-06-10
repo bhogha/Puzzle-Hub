@@ -37,7 +37,7 @@ var _crow_cy = LAYOUT.chiprow_y + LAYOUT.chiprow_h/2;
 var _pill_h  = 68;
 var _pill_r  = 34;   // matching corner radius
 
-// "LVL" pill — anchored to the top-left corner. The star sprite is positioned
+// Level pill — anchored to the top-left corner. The star sprite is positioned
 // to overlap the pill's left rounded end so it reads as a "badge on a pill",
 // not a separate icon floating to the left.
 var _lvl_x1 = 70;
@@ -45,16 +45,16 @@ var _lvl_x2 = _lvl_x1 + 200;
 ph_draw_chip(_lvl_x1, _crow_cy - _pill_h/2, _lvl_x2, _crow_cy + _pill_h/2,
              _pill_r, PH_COL_WHITE, PH_COL_TILE_DARK, 5);
 
-// — Star level badge (3D star sprite + number overlay) — sits on the pill's
-// left curve, with its centre 12px inside the pill edge.
+// — Star badge (plain 3D star, no number overlay per the updated design) — sits
+// on the pill's left curve, with its centre 12px inside the pill edge.
 var _star_s  = 110 / 512;   // ~110px drawn
 var _star_cx = _lvl_x1 + 12;
 draw_sprite_ext(global.spr_star3d, 0, _star_cx, _crow_cy, _star_s, _star_s, 0, c_white, 1);
-ph_draw_text(_star_cx, _crow_cy + 2, string(_level), global.fnt_disp_sm, PH_COL_WHITE, fa_center, fa_middle);
 
-// LVL label — left-aligned just to the right of the star sprite.
-ph_draw_text(_star_cx + 56, _crow_cy,
-             "LVL", global.fnt_num_md, PH_COL_DARK, fa_left, fa_middle);
+// Level number — replaces the old "LVL" label; centred in the pill to the right
+// of the star, matching the coin balance's font (Nunito Black).
+ph_draw_text((_star_cx + 45 + _lvl_x2) / 2, _crow_cy, string(_level),
+             global.fnt_num_md, PH_COL_DARK, fa_center, fa_middle);
 
 // — Coin pill — anchored to the top-right corner —
 var _pill_x2 = PH_W - 24;          // right margin
@@ -284,6 +284,14 @@ for (var _i = 0; _i < array_length(cards); _i++) {
         _is_solved = ph_anygram_is_done(_save, _sel);
     } else if (_card.name == "WORD WAVE") {
         _is_solved = ph_wordwave_is_done(_save, _sel);
+    } else if (_card.name == "WORD BEND") {
+        _is_solved = ph_wordbend_is_done(_save, _sel);
+    } else if (_card.name == "HUE SORT") {
+        _is_solved = ph_huesort_is_done(_save, _sel);
+    } else if (_card.name == "COLOR LINK") {
+        _is_solved = ph_colorlink_is_done(_save, _sel);
+    } else if (_card.name == "ARROWS") {
+        _is_solved = ph_arrows_is_done(_save, _sel);
     } else {
         _is_solved = ph_is_solved(_save, _sel, _card.name);
     }
@@ -338,16 +346,16 @@ for (var _i = 0; _i < array_length(cards); _i++) {
                         _btn_right-_btn_hw*2+50, _btn_cy, 72/512, 72/512, 0, c_white, 1);
         ph_draw_text(_btn_right-_btn_hw*2+102, _btn_cy,
                      _mt, global.fnt_body_md, make_color_rgb(165,36,36), fa_left, fa_middle);
-    } else if (_is_solved && (_card.name == "ANYGRAM" || _card.name == "SUDOKU" || _card.name == "WORD WAVE" || _card.name == "SHIKAKU" || _card.name == "WORDLE")) {
-        // Stopwatch + finish time — translucent pill matching the "COMING SOON"
-        // style (white @ 30% alpha) so the underlying card colour shows through.
-        // Stopwatch icon is sized slightly larger than the time text per design ref.
-        var _time_prefix = "anygram_time_";
-        if (_card.name == "SUDOKU")    _time_prefix = "sudoku_time_";
-        if (_card.name == "WORD WAVE") _time_prefix = "wordwave_time_";
-        if (_card.name == "SHIKAKU")   _time_prefix = "shikaku_time_";
-        if (_card.name == "WORDLE")    _time_prefix = "wordle_time_";
-        var _time_key = _time_prefix + _sel;
+    } else if (_is_solved) {
+        // Finish-time pill — CENTRALIZED for every solved puzzle (no per-name list).
+        // The save key prefix is derived from the card's room: every puzzle stores
+        // its time under "<key>_time_<date>" where the room is "rm_<key>", so a new
+        // puzzle shows its finish time automatically. Wordle's MISSED case is the
+        // only exception (handled above, time shown in red). Style: translucent
+        // white @ 30% pill so the card colour shows through; stopwatch + mm:ss.
+        var _pkey     = (string_copy(_card.room, 1, 3) == "rm_")
+                        ? string_delete(_card.room, 1, 3) : string_lower(_card.name);
+        var _time_key = _pkey + "_time_" + _sel;
         var _ag_time  = variable_struct_exists(_save, _time_key)
                         ? _save[$ _time_key] : "--:--";
         var _btn_hw = 140;
@@ -358,14 +366,6 @@ for (var _i = 0; _i < array_length(cards); _i++) {
                         72/512, 72/512, 0, c_white, 1);
         ph_draw_text(_btn_right-_btn_hw*2+102, _btn_cy,
                      _ag_time, global.fnt_body_md, PH_COL_WHITE, fa_left, fa_middle);
-    } else if (_is_solved) {
-        // Solved badge for non-Anygram puzzles — translucent pill + check sprite.
-        var _btn_hw = 120;
-        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
-        ph_draw_icon(global.spr_icon_check, _btn_right-_btn_hw*2+44, _btn_cy, 0.12, c_white);
-        ph_draw_text(_btn_right-_btn_hw*2+82, _btn_cy, "SOLVED",
-                     global.fnt_body_sm, PH_COL_WHITE, fa_left, fa_middle);
     } else if (_btype == "time_trophy") {
         var _btn_hw = 120;
         ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
@@ -415,3 +415,68 @@ ph_scissor_reset();
 // 7. BOTTOM NAV  (order: Shop | Games | Profile — Games is middle)
 // ═══════════════════════════════════════════════════════════
 ph_draw_nav(1);
+
+// ── DEBUG: safe-area source readout (PH_DEBUG_SAFEAREA) ────────────────────────
+// Shows which path set the insets ("extension" = real per-device values from the
+// iOS Safe Area extension, "estimate" = aspect-ratio fallback) plus the values.
+// Also draws hairlines at the top/bottom safe boundaries. Turn off before ship.
+if (PH_DEBUG_SAFEAREA) {
+    var _src = variable_global_exists("safe_src") ? global.safe_src : "?";
+    var _dbg = "safe: " + _src
+             + "  top=" + string(global.safe_top_gui) + " bot=" + string(global.safe_bottom_gui)
+             + "  rawpx " + string(global.safe_raw_top) + "/" + string(global.safe_raw_bottom);
+    var _dy  = LAYOUT.chiprow_y + LAYOUT.chiprow_h + 6;
+    draw_set_alpha(0.85);
+    ph_draw_rounded(20, _dy, PH_W-20, _dy+44, 8, make_color_rgb(20,20,20));
+    draw_set_alpha(1);
+    ph_draw_text(PH_W/2, _dy+22, _dbg, global.fnt_body_xs, PH_COL_YELLOW, fa_center, fa_middle);
+    // boundary hairlines: green = top inset, cyan = bottom inset
+    draw_set_color(PH_COL_GREEN); draw_line_width(0, global.safe_top_gui, PH_W, global.safe_top_gui, 2);
+    draw_set_color(PH_COL_TEAL);  draw_line_width(0, PH_H-global.safe_bottom_gui, PH_W, PH_H-global.safe_bottom_gui, 2);
+    draw_set_color(c_white);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 8. COIN-FLOW REWARD ANIMATION  (after a Level-Up coin claim)
+// ═══════════════════════════════════════════════════════════
+// Drawn last so the coins and label sit above every other hub element. State is
+// set up in Create_0 and advanced in Step_0 (see those for the model).
+if (coinflow_active || coinflow_label_t >= 0) {
+    // Coin-pill target — must match the coin sprite drawn in §2.
+    var _cf_tcx = PH_W - 322;
+    var _cf_tcy = LAYOUT.chiprow_y + LAYOUT.chiprow_h/2;
+
+    // Flying coins along an eased quadratic arc into the pill.
+    var _cf_base_s = 78 / 512;
+    for (var _i = 0; _i < array_length(coinflow_coins); _i++) {
+        var _c = coinflow_coins[_i];
+        if (coinflow_t < _c.delay) continue;   // not launched yet
+        if (_c.t >= 1) continue;               // already delivered
+        var _e  = ph_ease_out(_c.t);
+        var _om = 1 - _e;
+        var _x  = _om*_om*_c.sx0 + 2*_om*_e*_c.cx + _e*_e*_c.tx;
+        var _y  = _om*_om*_c.sy0 + 2*_om*_e*_c.cy + _e*_e*_c.ty;
+        var _a  = (_c.t < 0.12) ? _c.t/0.12 : 1;          // quick fade-in
+        var _sc = _cf_base_s * (1.0 - 0.30*_e);            // shrink toward the pill
+        draw_sprite_ext(global.spr_gold_coin, 0, _x, _y, _sc, _sc, 0, c_white, _a);
+    }
+
+    // Pill coin "pop" pulse each time a coin lands.
+    if (coinflow_pop > 0) {
+        var _pop_s = (110/512) * (1 + 0.28*coinflow_pop);
+        draw_sprite_ext(global.spr_gold_coin, 0, _cf_tcx, _cf_tcy, _pop_s, _pop_s, 0, c_white, 1);
+    }
+
+    // "+N" label rising and fading just under the coin pill.
+    if (coinflow_label_t >= 0) {
+        var _lt     = coinflow_label_t;
+        var _rise   = 24 * ph_ease_out(min(1, _lt*1.6));
+        var _lalpha = (_lt < 0.65) ? 1 : max(0, 1 - (_lt-0.65)/0.35);
+        var _ly     = _cf_tcy + 54 + _rise;
+        draw_set_alpha(_lalpha);
+        ph_draw_text_shadow(_cf_tcx + 40, _ly, "+" + string(coinflow_amount),
+                            global.fnt_num_md, PH_COL_YELLOW, PH_COL_YELLOW_DEEP,
+                            fa_center, fa_middle, 0, 3);
+        draw_set_alpha(1);
+    }
+}

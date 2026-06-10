@@ -18,7 +18,8 @@ var _sprites = [
     "spr_tile", "spr_blinky",
     "spr_today_circle", "spr_check_badge", "spr_pb_purple_left", "spr_pb_purple_center",
     "spr_pb_purple_right", "spr_pb_grey_center", "spr_pb_grey_right",
-    "spr_cal_day_sel", "spr_cal_day_today"
+    "spr_cal_day_sel", "spr_cal_day_today",
+    "spr_card_silver", "spr_game_arrows", "spr_arrow", "spr_highlight"
 ];
 for (var _i = 0; _i < array_length(_sprites); _i++) {
     var _name = _sprites[_i];

@@ -97,3 +97,44 @@ drag_start_x = 0;
 drag_start_y = 0;
 drag_dist    = 0;
 is_dragging  = false;
+
+// ── Coin-flow reward animation ────────────────────────────────────────────────
+// Played once when the hub is entered straight after a Level-Up coin claim
+// (obj_win.lu_claim stashes the granted amount in global.coin_flow_amount). A
+// stream of coins arcs from the lower-centre of the screen into the top-right
+// coin pill, and a "+N" label rises and fades just under the pill. The flag is
+// consumed here so it only plays the once.
+coinflow_active  = false;
+coinflow_amount  = 0;
+coinflow_coins   = [];     // {sx0,sy0, cx,cy, tx,ty, delay, t, dur, arrived}
+coinflow_t       = 0;      // master frame counter
+coinflow_label_t = -1;     // <0 = label not started; else 0..1 rise/fade
+coinflow_pop     = 0;      // 0..1 pill-coin pulse when a coin lands
+
+if (variable_global_exists("coin_flow_amount") && global.coin_flow_amount > 0) {
+    coinflow_amount  = global.coin_flow_amount;
+    global.coin_flow_amount = 0;          // consume — don't replay on re-entry
+    coinflow_active  = true;
+
+    // Target = the gold-coin sprite inside the top-right coin pill. Mirrors the
+    // geometry in Draw_64 §2 (_coin_cx = (PH_W-24-310)+12 ; _crow_cy).
+    var _tcx = PH_W - 322;
+    var _tcy = LAYOUT.chiprow_y + LAYOUT.chiprow_h/2;
+
+    var _n = 14;                          // number of flying coins
+    for (var _i = 0; _i < _n; _i++) {
+        var _c = {};
+        _c.sx0     = PH_W/2 + random_range(-170, 170);   // launch spread
+        _c.sy0     = PH_H * 0.60 + random_range(-70, 70);
+        _c.tx      = _tcx;
+        _c.ty      = _tcy;
+        _c.delay   = _i * 4;                              // staggered stream
+        _c.t       = 0;                                   // 0..1 progress
+        _c.dur     = 24 + irandom(10);                    // frames to arrive
+        _c.arrived = false;
+        // Control point for a gentle upward arc.
+        _c.cx = (_c.sx0 + _tcx) / 2 + random_range(-90, 90);
+        _c.cy = min(_c.sy0, _tcy) - random_range(60, 160);
+        coinflow_coins[_i] = _c;
+    }
+}

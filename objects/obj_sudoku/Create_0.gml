@@ -10,6 +10,14 @@ grid_x = floor((PH_W - BOARD) / 2);           // 45
 grid_y = 215 + global.safe_top_gui;
 grid_h = BOARD;
 
+// Bottom-anchor the whole play cluster (board → number pad → delete) just above
+// the bottom HUD toolbar instead of top-anchoring it under the HUD. NUM_Y/DEL_Y
+// derive from grid_y below, so shifting grid_y moves them too. (Heights: pad gap
+// 95 + NUM_H 110 + del gap 40 + DEL_H 96.)
+var _cluster_h  = grid_h + 95 + 110 + 40 + 96;
+var _target_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP;
+grid_y += max(0, _target_bot - (grid_y + _cluster_h));
+
 // ── Number pad (1..9) geometry ────────────────────────────────────────────────
 NUM_Y  = grid_y + grid_h + 95;
 NUM_H  = 110;
@@ -93,6 +101,8 @@ coins_bonus      = 0;
 win_anim_t       = 0;
 win_btn_back_y   = 0;
 win_time_str     = "0:00";
+timer_key        = "sudoku_" + global.selected_date_key;
+timer_base_secs  = ph_timer_get(global.save, timer_key);
 session_start_ms = current_time;
 
 // ── Confetti state (mirrors Anygram celebration) ──────────────────────────────
@@ -152,7 +162,7 @@ sd_check_units = function() {
 /// Win bookkeeping — fires exactly once when the grid is fully correct.
 sd_check_win = function() {
     if (!ph_sudoku_all_solved(puzzle)) return;
-    var _fin_s  = floor((current_time - session_start_ms) / 1000);
+    var _fin_s  = ph_timer_now(timer_base_secs, session_start_ms);
     var _fin_m  = _fin_s div 60;
     var _fin_ss = _fin_s mod 60;
     win_time_str = string(_fin_m) + ":" + ((_fin_ss < 10) ? "0" : "") + string(_fin_ss);
