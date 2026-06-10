@@ -2,15 +2,21 @@
 
 A "Daily Puzzles" mobile game built with **GameMaker**. Players solve a set of daily puzzles — earning XP, leveling up, and collecting coins.
 
-> **Status:** `v0.2` in development (baseline `v0.1` tagged). Private repo, shared for feedback.
+> **Status:** `v0.3` in development. `v0.2` tagged (puzzles 6–10: Hue Sort, Color Link, Word Bend, Arrows, Ladder); `v0.1` is the rollback baseline. Private repo, shared for feedback.
 
 ## Puzzles
-- **Anygram**
-- **Sudoku**
-- **Word Wave**
-- **Shikaku**
-- **Wordle** _(coming soon)_
-- **Mix-Up** _(coming soon)_
+Ten daily puzzle types, each with its own rules:
+
+- **Anygram** — crossword-style word find on a letter wheel
+- **Sudoku** — classic 9×9 number logic
+- **Word Wave** — find hidden words in a letter grid
+- **Shikaku** — divide the grid into rectangles
+- **Wordle** — guess the 6-letter word (the only puzzle you can lose)
+- **Hue Sort** — swap tiles so the colors blend smoothly
+- **Color Link** — connect colored dots, filling every cell (Flow Free)
+- **Word Bend** — trace words to cover every letter on the board
+- **Arrows** — slide the bent arrows out without collisions
+- **Ladder** — word ladder: change one letter at a time
 
 ## Core loop
 - Solve up to 10 daily puzzles; each solve grants **100 XP**.
