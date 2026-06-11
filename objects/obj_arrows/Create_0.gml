@@ -4,26 +4,36 @@
 // +5 s time penalty (no loss state). Silver accent. See ARROWS_PLAN.md.
 
 puzzle  = ph_arrows_for_date(global.selected_date_key);
-N       = puzzle.size;                  // 8
+ROWS    = puzzle.rows;                   // 16
+COLS    = puzzle.cols;                   // 12
 NARROWS = array_length(puzzle.arrows);
 
-// ── Board geometry (centred square white card, bottom-anchored above toolbar) ──
-BOARD  = 1020;
-CELL   = BOARD / N;                     // 127.5 px per cell at N=8
-grid_x = floor((PH_W - BOARD) / 2);     // 30
-grid_y = 300 + global.safe_top_gui;
-var _target_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP;
-grid_y += max(0, _target_bot - (grid_y + BOARD));
+// ── Board geometry (non-square white card that FILLS the portrait play area) ──
+// Square cells; CELL is the largest that fits both the available width and the
+// vertical band between the game-tip and the bottom toolbar. The board is then
+// centred in that band, so a tall rows>cols grid uses the whole screen.
+var _avail_top = 240 + global.safe_top_gui;                               // below HUD + game tip
+var _avail_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP; // above toolbar
+var _avail_w   = PH_W - 40;                                               // 20px side margins
+var _avail_h   = _avail_bot - _avail_top;
+CELL    = floor(min(_avail_w / COLS, _avail_h / ROWS));
+BOARD_W = COLS * CELL;
+BOARD_H = ROWS * CELL;
+grid_x  = floor((PH_W - BOARD_W) / 2);
+grid_y  = floor(_avail_top + (_avail_h - BOARD_H) / 2);
 
 ACCENT      = PH_COL_SILVER;
 ACCENT_DEEP = PH_COL_SILVER_DEEP;
 
-RIBBON_W  = floor(CELL * 0.30);         // arrow body thickness (slim)
+RIBBON_W  = floor(CELL * 0.24);         // arrow body thickness (thinner — board is denser now)
 AR_CORNER = 0.42;                       // corner-rounding radius as a fraction of a cell
 
-// ── Per-arrow vibrant colour (reuse Color Link's palette) ─────────────────────
+// ── Arrow colour: single ink (mono = must trace paths; harder, like the
+// reference game) or per-arrow vibrant palette (reuse Color Link's) ──────────
 arrow_col = array_create(NARROWS);
-for (var _i = 0; _i < NARROWS; _i++) arrow_col[_i] = ph_colorlink_color(puzzle.arrows[_i].color_idx);
+for (var _i = 0; _i < NARROWS; _i++) {
+    arrow_col[_i] = PH_ARROWS_MONO ? PH_ARROWS_INK : ph_colorlink_color(puzzle.arrows[_i].color_idx);
+}
 
 // ── Live state ────────────────────────────────────────────────────────────────
 alive        = array_create(NARROWS, true);  // true = still on the board
@@ -74,10 +84,10 @@ ar_hint_t   = 0;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 /// Cell index under a GUI point, or -1 if off the board.
 ar_cell_at = function(_px, _py) {
-    if (_px < grid_x || _py < grid_y || _px >= grid_x + BOARD || _py >= grid_y + BOARD) return -1;
-    var _c = clamp(floor((_px - grid_x) / CELL), 0, N - 1);
-    var _r = clamp(floor((_py - grid_y) / CELL), 0, N - 1);
-    return _r * N + _c;
+    if (_px < grid_x || _py < grid_y || _px >= grid_x + BOARD_W || _py >= grid_y + BOARD_H) return -1;
+    var _c = clamp(floor((_px - grid_x) / CELL), 0, COLS - 1);
+    var _r = clamp(floor((_py - grid_y) / CELL), 0, ROWS - 1);
+    return _r * COLS + _c;
 };
 
 /// Round only the CORNERS of a node polyline: straight segments stay straight,
@@ -208,9 +218,9 @@ ar_start_launch = function(_idx) {
     var _hr = _cs[0].r, _hc = _cs[0].c;
     var _dist;                                  // cells for the tip to leave the board
     if      (_dr < 0) _dist = _hr + 1;          // U
-    else if (_dr > 0) _dist = N - _hr;          // D
+    else if (_dr > 0) _dist = ROWS - _hr;       // D
     else if (_dc < 0) _dist = _hc + 1;          // L
-    else              _dist = N - _hc;          // R
+    else              _dist = COLS - _hc;       // R
 
     // Full node polyline = body (tail→head) + straight exit lane past the tip.
     var _nodes = [];
@@ -291,12 +301,13 @@ ar_check_win = function() {
 
 // Win recap = the INITIAL full board (all arrows as first presented).
 win_draw_recap = function(_cx, _top, _bw, _bh) {
-    var _side = min(_bw, _bh);
-    var _cell = _side / N;
-    var _ox   = _cx - _side/2;
-    var _oy   = _top + (_bh - _side)/2;
-    ph_draw_rounded(_ox, _oy, _ox + _side, _oy + _side, 12, PH_COL_WHITE);
-    var _rw = _cell * 0.42;
+    var _cell = min(_bw / COLS, _bh / ROWS);
+    var _w    = COLS * _cell;
+    var _h    = ROWS * _cell;
+    var _ox   = _cx - _w/2;
+    var _oy   = _top + (_bh - _h)/2;
+    ph_draw_rounded(_ox, _oy, _ox + _w, _oy + _h, 12, PH_COL_WHITE);
+    var _rw = _cell * 0.34;
     for (var _i = 0; _i < NARROWS; _i++) ar_draw_one(_i, _ox, _oy, _cell, _rw, 0, 0, 1, -1);
 };
 

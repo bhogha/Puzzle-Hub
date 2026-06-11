@@ -120,11 +120,14 @@
 #macro PH_LADDER_INDEX       9
 
 // ── Hue Sort ──────────────────────────────────────────────────────────────────
-#macro PH_HUESORT_SIZE       5   // N×N board (4 locked corner anchors)
+#macro PH_HUESORT_SIZE       4   // N×N board (4 locked corner anchors)
 
 // ── Arrows ────────────────────────────────────────────────────────────────────
-#macro PH_ARROWS_SIZE          9   // N×N board
+#macro PH_ARROWS_COLS         14   // board columns (non-square; fills the portrait screen)
+#macro PH_ARROWS_ROWS         19   // board rows
 #macro PH_ARROWS_PENALTY_SECS  5   // time added on a blocked tap (no loss state — only time is lost)
+#macro PH_ARROWS_MONO          true                       // single-ink ribbons (harder: player must trace paths); false = rainbow palette
+#macro PH_ARROWS_INK           make_color_rgb(26,30,54)   // mono ribbon colour (deep navy, like the reference)
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"

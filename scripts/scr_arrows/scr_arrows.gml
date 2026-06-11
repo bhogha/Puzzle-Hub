@@ -58,9 +58,18 @@ function ph_arrows_for_date(_date_key) {
 }
 
 /// Normalise a raw JSON entry → runtime struct:
-///   { size, arrows:[ { head, cells:[{r,c},..], len, color_idx } ] }
+///   { rows, cols, arrows:[ { head, cells:[{r,c},..], len, color_idx } ] }
+/// Accepts non-square boards via `rows`/`cols`; a legacy square `size` (or the
+/// PH_ARROWS_ROWS/COLS defaults) is tolerated for back-compat.
 function ph_arrows_make(_raw) {
-    var _n = variable_struct_exists(_raw, "size") ? _raw.size : PH_ARROWS_SIZE;
+    var _rows, _cols;
+    if (variable_struct_exists(_raw, "rows") && variable_struct_exists(_raw, "cols")) {
+        _rows = _raw.rows; _cols = _raw.cols;
+    } else if (variable_struct_exists(_raw, "size")) {
+        _rows = _raw.size; _cols = _raw.size;
+    } else {
+        _rows = PH_ARROWS_ROWS; _cols = PH_ARROWS_COLS;
+    }
     var _arrows = [];
     var _src = _raw.arrows;
     for (var _i = 0; _i < array_length(_src); _i++) {
@@ -77,35 +86,47 @@ function ph_arrows_make(_raw) {
             color_idx: _i,
         });
     }
-    return { size: _n, arrows: _arrows };
+    return { rows: _rows, cols: _cols, arrows: _arrows };
 }
 
-/// Hardcoded fallback (a generator-verified, densely packed 9×9 board) when the
+/// Hardcoded fallback (a generator-verified, densely packed 17×14 board) when the
 /// data file is missing. Identical shape to ph_arrows_make's output.
 function ph_arrows_fallback() {
-    var _raw = {
-        size: 9,
-        arrows: [
-            { head: "R", cells: [[8,7],[8,6],[8,5]] },
-            { head: "D", cells: [[2,0],[1,0],[1,1],[1,2],[0,2]] },
-            { head: "D", cells: [[4,4],[3,4],[2,4],[2,3],[2,2]] },
-            { head: "R", cells: [[6,3],[6,2],[5,2],[5,3]] },
-            { head: "L", cells: [[3,1],[3,2],[3,3],[4,3],[4,2],[4,1]] },
-            { head: "D", cells: [[6,4],[5,4],[5,5],[6,5],[7,5]] },
-            { head: "R", cells: [[0,8],[0,7],[1,7],[1,8],[2,8],[2,7]] },
-            { head: "U", cells: [[1,6],[2,6],[2,5],[1,5]] },
-            { head: "R", cells: [[3,6],[3,5],[4,5]] },
-            { head: "R", cells: [[5,8],[5,7],[5,6],[6,6],[6,7],[6,8]] },
-            { head: "R", cells: [[7,8],[7,7],[7,6]] },
-            { head: "D", cells: [[8,0],[7,0],[7,1],[8,1]] },
-            { head: "L", cells: [[6,0],[6,1],[5,1],[5,0]] },
-            { head: "D", cells: [[8,4],[7,4],[7,3]] },
-            { head: "L", cells: [[0,0],[0,1]] },
-            { head: "U", cells: [[0,4],[1,4],[1,3],[0,3]] },
-            { head: "R", cells: [[3,8],[3,7],[4,7],[4,8]] },
-            { head: "D", cells: [[8,2],[7,2]] },
-        ],
-    };
+    var _raw = { rows: 17, cols: 14, arrows: [
+        { head: "L", cells: [[4,7],[4,8],[3,8],[3,9],[2,9],[2,8],[2,7],[1,7],[1,8],[1,9],[0,9],[0,10],[0,11]] },
+        { head: "L", cells: [[10,3],[10,4],[11,4],[12,4],[12,5],[13,5],[14,5],[15,5],[15,6],[14,6],[13,6],[13,7],[13,8],[13,9],[12,9],[12,10]] },
+        { head: "R", cells: [[7,3],[7,2],[7,1],[7,0],[8,0],[8,1],[8,2],[8,3],[9,3],[9,2],[10,2],[11,2]] },
+        { head: "D", cells: [[13,12],[12,12],[12,11],[13,11],[14,11],[14,10],[14,9],[14,8],[15,8],[15,7],[16,7],[16,8],[16,9],[16,10],[15,10]] },
+        { head: "R", cells: [[5,2],[5,1],[5,0],[4,0],[4,1],[4,2],[4,3],[3,3],[3,2],[3,1],[2,1],[2,0],[3,0]] },
+        { head: "U", cells: [[5,13],[6,13],[6,12],[6,11],[6,10],[6,9],[5,9],[5,8],[6,8],[7,8]] },
+        { head: "R", cells: [[7,11],[7,10],[7,9],[8,9]] },
+        { head: "U", cells: [[4,4],[5,4],[6,4],[7,4],[8,4],[8,5]] },
+        { head: "R", cells: [[9,8],[9,7],[10,7],[10,6],[10,5]] },
+        { head: "U", cells: [[0,3],[1,3],[1,2]] },
+        { head: "U", cells: [[3,12],[4,12],[4,13],[3,13],[2,13]] },
+        { head: "L", cells: [[15,1],[15,2],[14,2],[14,3],[14,4],[15,4],[15,3]] },
+        { head: "R", cells: [[10,9],[10,8],[11,8],[12,8],[12,7],[11,7]] },
+        { head: "L", cells: [[16,1],[16,2],[16,3],[16,4],[16,5],[16,6]] },
+        { head: "U", cells: [[3,6],[4,6],[4,5],[5,5],[5,6],[6,6],[6,7]] },
+        { head: "R", cells: [[1,13],[1,12],[1,11],[1,10],[2,10],[2,11],[2,12]] },
+        { head: "R", cells: [[9,12],[9,11],[10,11]] },
+        { head: "L", cells: [[10,0],[10,1],[9,1]] },
+        { head: "L", cells: [[6,2],[6,3],[5,3]] },
+        { head: "L", cells: [[1,0],[1,1],[0,1],[0,2]] },
+        { head: "L", cells: [[13,0],[13,1],[13,2],[12,2]] },
+        { head: "D", cells: [[16,13],[15,13],[14,13],[14,12]] },
+        { head: "D", cells: [[16,0],[15,0],[14,0],[14,1]] },
+        { head: "R", cells: [[11,13],[11,12],[11,11]] },
+        { head: "U", cells: [[1,6],[2,6],[2,5],[3,5],[3,4],[2,4],[2,3]] },
+        { head: "L", cells: [[12,0],[12,1],[11,1]] },
+        { head: "D", cells: [[16,11],[15,11],[15,12],[16,12]] },
+        { head: "R", cells: [[8,12],[8,11],[8,10],[9,10]] },
+        { head: "L", cells: [[6,0],[6,1]] },
+        { head: "R", cells: [[10,13],[10,12]] },
+        { head: "R", cells: [[7,13],[7,12]] },
+        { head: "U", cells: [[0,5],[1,5],[1,4],[0,4]] },
+        { head: "R", cells: [[0,13],[0,12]] },
+    ] };
     return ph_arrows_make(_raw);
 }
 
@@ -128,26 +149,27 @@ function ph_arrows_delta(_head) {
 /// edge) holds a cell of ANOTHER currently-alive arrow. `_alive` is a bool array
 /// (one per arrow). Mirrors tools/gen_arrows.py's tip_lane_clear exactly.
 function ph_arrows_sweep_clear(_puzzle, _alive, _idx) {
-    var _n   = _puzzle.size;
-    var _arr = _puzzle.arrows[_idx];
-    var _d   = ph_arrows_delta(_arr.head);
-    var _dr  = _d[0], _dc = _d[1];
+    var _rows = _puzzle.rows;
+    var _cols = _puzzle.cols;
+    var _arr  = _puzzle.arrows[_idx];
+    var _d    = ph_arrows_delta(_arr.head);
+    var _dr   = _d[0], _dc = _d[1];
 
-    // Occupancy of every OTHER alive arrow.
-    var _occ = array_create(_n * _n, false);
+    // Occupancy of every OTHER alive arrow (row-major over the rows×cols board).
+    var _occ = array_create(_rows * _cols, false);
     for (var _a = 0; _a < array_length(_puzzle.arrows); _a++) {
         if (_a == _idx || !_alive[_a]) continue;
         var _cs = _puzzle.arrows[_a].cells;
         for (var _k = 0; _k < array_length(_cs); _k++) {
-            _occ[_cs[_k].r * _n + _cs[_k].c] = true;
+            _occ[_cs[_k].r * _cols + _cs[_k].c] = true;
         }
     }
 
     // Tip-lane: straight from the tip (cells[0]) forward to the board edge.
     var _tip = _arr.cells[0];
     var _r = _tip.r + _dr, _c = _tip.c + _dc;
-    while (_r >= 0 && _r < _n && _c >= 0 && _c < _n) {
-        if (_occ[_r * _n + _c]) return false;
+    while (_r >= 0 && _r < _rows && _c >= 0 && _c < _cols) {
+        if (_occ[_r * _cols + _c]) return false;
         _r += _dr; _c += _dc;
     }
     return true;

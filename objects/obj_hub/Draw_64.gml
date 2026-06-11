@@ -138,7 +138,11 @@ if (cal_anim_t > 0.05) {
         var _mcy = _grid_top + _ri*_cell_h + _cell_h/2;
         var _is_sel_m   = (_mday.key == _sel);
         var _is_today_m = (_mday.key == today_key);
+        var _is_future_m = (ph_date_compare_keys(_mday.key, today_key) > 0);
         var _solved_m   = ph_solved_count_on(_save, _mday.key);
+
+        // Future days aren't playable yet — fade them so they read as disabled.
+        if (_is_future_m) draw_set_alpha(0.30);
 
         // Only draw a background box for days that have state (selected / today
         // / solved). Plain days show just the number on the teal band. Selected
@@ -153,6 +157,8 @@ if (cal_anim_t > 0.05) {
 
         var _mtc = (_is_sel_m || _solved_m > 0) ? PH_COL_WHITE : PH_COL_DARK;
         ph_draw_text(_mcx, _mcy, string(_mday.day), global.fnt_body_sm, _mtc, fa_center, fa_middle);
+
+        if (_is_future_m) draw_set_alpha(1);
     }
 }
 ph_scissor_reset();
@@ -173,7 +179,12 @@ if (_strip_alpha > 0.02) {
         var _scy      = _strip_top + _eff_strip_h * 0.32;
         var _is_sel   = (_sd.key == _sel);
         var _is_today = (_sd.key == today_key);
+        var _is_future = (ph_date_compare_keys(_sd.key, today_key) > 0);
         var _solved   = ph_solved_count_on(_save, _sd.key) > 0;
+
+        // Future days aren't playable yet — fade them so they read as disabled.
+        var _day_alpha = _is_future ? _strip_alpha * 0.30 : _strip_alpha;
+        draw_set_alpha(_day_alpha);
 
         // Day of week letter (above)
         var _dtc = (_is_sel || _is_today) ? PH_COL_DARK : PH_COL_GRAY;
@@ -182,7 +193,7 @@ if (_strip_alpha > 0.02) {
         // Selected/Today highlight — yellow circle sprite behind the number.
         if (_is_sel || _is_today) {
             draw_sprite_ext(global.spr_today_circle, 0, _scx, _scy + 18,
-                            80/124, 80/124, 0, c_white, _strip_alpha);
+                            80/124, 80/124, 0, c_white, _day_alpha);
         }
 
         // Number text (always dark)
@@ -194,7 +205,7 @@ if (_strip_alpha > 0.02) {
             var _badge_cx = _scx + 24;
             var _badge_cy = _scy + 44;
             draw_sprite_ext(global.spr_check_badge, 0, _badge_cx, _badge_cy,
-                            40/38, 40/38, 0, c_white, _strip_alpha);
+                            40/38, 40/38, 0, c_white, _day_alpha);
         }
     }
     draw_set_alpha(1);
@@ -254,21 +265,38 @@ ph_draw_text(LAYOUT.card_pad_x, _sec_cy,
 // ═══════════════════════════════════════════════════════════
 ph_scissor_gui(0, _body_top, PH_W, _body_bot - _body_top);
 
-// Precompute card sprite scales (card sprite is 1400×400, origin centred)
-var _card_w     = PH_W - 2*LAYOUT.card_pad_x;   // 1008
-var _card_sx    = _card_w / 1400;               // ~0.72
-var _card_sy    = LAYOUT.card_h / 400;          // ~0.575
-// Game icon: drawn at 180px so it fits comfortably inside the white well baked
-// into the card sprite (the well is only ~190px tall and the icon sprites have
-// content close to their bounding box, so 220 was clipping vertically against
-// the well's rounded corners). A scissor box still guards against overflow.
-var _icon_sz    = LAYOUT.card_h - 40;           // 190 — layout footprint (for title offset)
-var _icon_draw  = 180;                          // visual draw size — fits inside the well with margin
-var _icon_s     = _icon_draw / 512;             // game icon scale
-var _icon_cx    = LAYOUT.card_pad_x + 14 + _icon_sz/2; // centre of icon well
-// Bounds of the white icon well in the card sprite (tuned by eye).
-var _icon_clip_x = LAYOUT.card_pad_x + 14;      // ~50
-var _icon_clip_w = 220;
+// Precompute card sprite scales. Derive the scale from the sprite's ACTUAL
+// source dimensions (1430×450, origin centred) rather than hardcoded numbers,
+// so re-exporting the card art at a different size can't desync the scale and
+// break card sizing/spacing. All card sprites share one size, so the first
+// card's dimensions drive the scale for every card. card_h (317) is set to keep
+// the source aspect, so _card_sx ≈ _card_sy and everything scales uniformly.
+var _card_w      = PH_W - 2*LAYOUT.card_pad_x;          // 1008 (target render width)
+var _card_src_w  = sprite_get_width(cards[0].card_spr); // 1430
+var _card_src_h  = sprite_get_height(cards[0].card_spr);// 450
+var _card_sx     = _card_w / _card_src_w;
+var _card_sy     = LAYOUT.card_h / _card_src_h;
+var _card_left   = PH_W/2 - _card_src_w*0.5*_card_sx;   // == card_pad_x; tile's left edge in screen space
+
+// ── Penpot tile layout (source space 1430×450) → screen ─────────────────────
+// All metrics below are authored in the 1430×450 source-tile space (the values
+// Bora gave from the Penpot "Puzzle Tile") and mapped to screen via _card_sx so
+// the rendered card matches the design 1:1. Source x → screen: _card_left + x*_card_sx.
+//   • Icon  — 320×320, left edge +50, vertically centred.
+//   • Title/Description — left-aligned at icon-right (370) + 50 = 420.
+//   • Pill  — right edge +50 from the tile's right side → x = 1430-50 = 1380.
+var _icon_src    = 250;                                  // design 320, dialled down a touch (Bora: icons can be smaller)
+var _icon_draw   = _icon_src * _card_sx;                 // square, ≈176px
+var _icon_s      = _icon_draw / 512;                     // icon sprites are 512px native
+var _icon_cx     = _card_left + (50 + _icon_src*0.5) * _card_sx;
+var _text_x      = _card_left + (50 + _icon_src + 50) * _card_sx; // icon-right + 50
+var _pill_right  = _card_left + 1380 * _card_sx;         // pill right edge
+var _pill_w      = 350 * _card_sx;                       // uniform pill width (design = 350)
+var _pill_left   = _pill_right - _pill_w;
+var _pill_hh     = 50  * _card_sx;                       // half-height (design pill h = 100)
+// Icon clip well — guards against any icon art spilling onto the coloured card.
+var _icon_clip_x = _icon_cx - _icon_draw*0.5 - 6;
+var _icon_clip_w = _icon_draw + 12;
 
 for (var _i = 0; _i < array_length(cards); _i++) {
     var _card = cards[_i];
@@ -309,7 +337,7 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     // REPLACES (not intersects) the outer body scissor, so without this clamp an
     // icon on a card scrolled partly above the list would draw over the
     // "TODAY'S GAMES" header / progress tube.
-    var _icon_clip_h   = 200;
+    var _icon_clip_h   = _icon_draw + 12;
     var _icon_clip_top = max(_body_top, _ccy - _icon_clip_h/2);
     var _icon_clip_bot = min(_body_bot, _ccy + _icon_clip_h/2);
     if (_icon_clip_bot > _icon_clip_top) {
@@ -319,93 +347,79 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     ph_scissor_gui(0, _body_top, PH_W, _body_bot - _body_top);
 
     // ── Title + subtitle ────────────────────────────────────
-    // Both lines are black @ 60% opacity for consistent contrast on every card
-    // colour. Title fnt_disp_md (44px), subtitle fnt_body_sm (28px).
-    var _tx = _icon_cx + _icon_sz/2 + 22;
-    draw_set_alpha(0.6);
-    ph_draw_text(_tx, _ccy - 26, _card.name,     global.fnt_disp_md, c_black, fa_left, fa_middle);
-    ph_draw_text(_tx, _ccy + 28, _card.subtitle, global.fnt_body_sm, c_black, fa_left, fa_middle);
+    // Left-aligned at icon-right + 50 (_text_x). Both lines black @ 60% to match
+    // the Penpot fills. Title fnt_disp_lg (60), description fnt_body_md (36) —
+    // dialled down from the raw design sizes (Bora: text can be smaller), pair
+    // centred on _ccy. Clipped on the right so a long title/description can't
+    // slide under the white pill (matches the design's truncating text box).
+    var _text_clip_r = _pill_left - 16;
+    ph_scissor_gui(_text_x, _body_top, max(1, _text_clip_r - _text_x), _body_bot - _body_top);
+    // Drawn at 0.9 scale via draw_text_transformed so the effective sizes are ~10%
+    // below the font's native px (Bora: text can be even ~10% smaller). Title
+    // fnt_disp_lg (60→~54), description fnt_body_md (36→~32), both black @ 60%.
+    var _txt_sc = 0.9;
+    draw_set_alpha(0.6); draw_set_halign(fa_left); draw_set_valign(fa_middle); draw_set_color(c_black);
+    draw_set_font(global.fnt_disp_lg);
+    draw_text_transformed(_text_x, _ccy - LAYOUT.card_h*0.12, _card.name,     _txt_sc, _txt_sc, 0);
+    draw_set_font(global.fnt_body_md);
+    draw_text_transformed(_text_x, _ccy + LAYOUT.card_h*0.11, _card.subtitle, _txt_sc, _txt_sc, 0);
     draw_set_alpha(1);
+    ph_scissor_gui(0, _body_top, PH_W, _body_bot - _body_top);
 
-    // ── Right badge ─────────────────────────────────────────
-    var _btn_right = PH_W - LAYOUT.card_pad_x - 18; // 1026
-    var _btn_cy    = _ccy;
-    var _btn_hh    = 34;  // half-height
+    // ── Right pill (Penpot "Pill") ──────────────────────────
+    // Solid #ffffff pill, dark (#000000-ish) text/icons, right edge +50 from the
+    // tile's right side and one uniform width (design = 350×100), regardless of
+    // variant. All variants share the same white capsule; only the contents
+    // change. Replaces the old per-variant translucent / dark-chip pills.
+    var _btn_cy   = _ccy;
+    var _ink      = PH_COL_DARK;
+    // Stopwatch / trophy sit ON the pill's left edge and overhang outward onto the
+    // card — same "3D badge on a pill" look as the coin + level pills up top. Big
+    // (≈2.9× the pill half-height) and centred just inside the left cap so ~half
+    // spills off the left. The value text is then centred in the space to the right.
+    var _ic_s     = (_pill_hh * 2.9) / 512;
+    var _ic_x     = _pill_left + _pill_hh * 0.10;
+    var _txt_cx   = _pill_left + _pill_w * 0.62;      // centre of the value text (right of the icon)
+    var _pill_cx  = (_pill_left + _pill_right) * 0.5; // centre for single-label pills
 
     var _btype = variable_struct_exists(_card, "btn_type") ? _card.btn_type : "play";
 
+    // White capsule (shared by every variant).
+    ph_draw_pill(_pill_left, _btn_cy-_pill_hh, _pill_right, _btn_cy+_pill_hh, PH_COL_WHITE, 1);
+
     if (_card.name == "WORDLE" && ph_wordle_is_missed(_save, _sel)) {
         // MISSED — out of guesses / gave up. Finish time shown in RED (Penpot
-        // Pill "Missed" variant), distinct from a solved day's white time.
+        // Pill "Missed" variant), distinct from a solved day's dark time.
         var _mt_key = "wordle_time_" + _sel;
         var _mt     = variable_struct_exists(_save, _mt_key) ? _save[$ _mt_key] : "--:--";
-        var _btn_hw = 140;
-        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,            _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
-        draw_sprite_ext(global.spr_stopwatch, 0,
-                        _btn_right-_btn_hw*2+50, _btn_cy, 72/512, 72/512, 0, c_white, 1);
-        ph_draw_text(_btn_right-_btn_hw*2+102, _btn_cy,
-                     _mt, global.fnt_body_md, make_color_rgb(165,36,36), fa_left, fa_middle);
+        // Stopwatch is a full-colour 3D sprite — draw c_white (no tint) so it keeps its art.
+        ph_draw_text(_txt_cx, _btn_cy, _mt, global.fnt_body_md, make_color_rgb(165,36,36), fa_center, fa_middle);
+        draw_sprite_ext(global.spr_stopwatch, 0, _ic_x, _btn_cy, _ic_s, _ic_s, 0, c_white, 1);
     } else if (_is_solved) {
         // Finish-time pill — CENTRALIZED for every solved puzzle (no per-name list).
         // The save key prefix is derived from the card's room: every puzzle stores
         // its time under "<key>_time_<date>" where the room is "rm_<key>", so a new
         // puzzle shows its finish time automatically. Wordle's MISSED case is the
-        // only exception (handled above, time shown in red). Style: translucent
-        // white @ 30% pill so the card colour shows through; stopwatch + mm:ss.
+        // only exception (handled above, time shown in red). Dark stopwatch + mm:ss.
         var _pkey     = (string_copy(_card.room, 1, 3) == "rm_")
                         ? string_delete(_card.room, 1, 3) : string_lower(_card.name);
         var _time_key = _pkey + "_time_" + _sel;
         var _ag_time  = variable_struct_exists(_save, _time_key)
                         ? _save[$ _time_key] : "--:--";
-        var _btn_hw = 140;
-        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,            _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
-        draw_sprite_ext(global.spr_stopwatch, 0,
-                        _btn_right-_btn_hw*2+50, _btn_cy,
-                        72/512, 72/512, 0, c_white, 1);
-        ph_draw_text(_btn_right-_btn_hw*2+102, _btn_cy,
-                     _ag_time, global.fnt_body_md, PH_COL_WHITE, fa_left, fa_middle);
+        // Time first, then the stopwatch on top so the icon's overhang reads cleanly.
+        ph_draw_text(_txt_cx, _btn_cy, _ag_time, global.fnt_body_md, _ink, fa_center, fa_middle);
+        // Stopwatch is a full-colour 3D sprite — draw c_white (no tint) so it keeps its art.
+        draw_sprite_ext(global.spr_stopwatch, 0, _ic_x, _btn_cy, _ic_s, _ic_s, 0, c_white, 1);
     } else if (_btype == "time_trophy") {
-        var _btn_hw = 120;
-        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.20);
-        draw_sprite_ext(global.spr_trophy3d, 0,
-                        _btn_right-_btn_hw*2+46, _btn_cy,
-                        52/512, 52/512, 0, c_white, 1);
-        ph_draw_text(_btn_right-_btn_hw*2+86, _btn_cy,
-                     _card.best_time, global.fnt_body_sm, PH_COL_WHITE, fa_left, fa_middle);
+        // Best-time badge — full-colour 3D trophy (drawn c_white to keep its art) + dark time.
+        ph_draw_text(_txt_cx, _btn_cy, _card.best_time, global.fnt_body_md, _ink, fa_center, fa_middle);
+        draw_sprite_ext(global.spr_trophy3d, 0, _ic_x, _btn_cy, _ic_s, _ic_s, 0, c_white, 1);
     } else if (_btype == "locked") {
-        // Wider pill so "COMING SOON" fits without clipping.
-        var _btn_hw = 155;
-        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.20);
-        // Use the 3D lock sprite (icon_lock3d.png) — the flat spr_icon_lock.png
-        // asset does not exist, so referencing it returned sprite -1 and crashed
-        // the Draw event. Matches the colour-3D badge style used by time_trophy.
-        draw_sprite_ext(global.spr_lock3d, 0, _btn_right-_btn_hw*2+40, _btn_cy,
-                        52/512, 52/512, 0, c_white, 1);
-        ph_draw_text(_btn_right-_btn_hw*2+74, _btn_cy, "COMING SOON",
-                     global.fnt_body_xs, PH_COL_WHITE, fa_left, fa_middle);
-    } else if (_btype == "play_translucent") {
-        var _btn_hw = 90;
-        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,           _btn_cy+_btn_hh, PH_COL_WHITE, 0.30);
-        ph_draw_text(_btn_right-_btn_hw, _btn_cy, "PLAY",
-                     global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
-    } else if (_btype == "play_light") {
-        var _btn_hw = 90;
-        ph_draw_pill(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,           _btn_cy+_btn_hh, make_color_rgb(255, 245, 200), 1);
-        ph_draw_text(_btn_right-_btn_hw, _btn_cy, "PLAY",
-                     global.fnt_body_sm, _card.text_col, fa_center, fa_middle);
+        // COMING SOON — text only, centred (matches the Penpot locked pill).
+        ph_draw_text(_pill_cx, _btn_cy, "COMING SOON", global.fnt_body_sm, _ink, fa_center, fa_middle);
     } else {
-        var _btn_hw = 90;
-        ph_draw_chip(_btn_right-_btn_hw*2, _btn_cy-_btn_hh,
-                     _btn_right,           _btn_cy+_btn_hh,
-                     _btn_hh, PH_COL_DARK, make_color_rgb(10,5,20), 5);
-        ph_draw_text(_btn_right-_btn_hw, _btn_cy, "PLAY",
-                     global.fnt_body_sm, PH_COL_WHITE, fa_center, fa_middle);
+        // Every play variant (play / play_translucent / play_light) → centred dark PLAY.
+        ph_draw_text(_pill_cx, _btn_cy, "PLAY", global.fnt_body_lg, _ink, fa_center, fa_middle);
     }
 }
 

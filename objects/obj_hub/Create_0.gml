@@ -13,7 +13,7 @@ LAYOUT = {
     calexpand_h:   560,
     strip_h:       280,   // taller so the day strip and progress tube have breathing room
     section_h:     120,   // "TODAY'S GAMES" header row — extra height lets the title sit lower, clear of the progress tube
-    card_h:        230,
+    card_h:        317,   // keeps the Penpot tile's 1430×450 (≈3.18:1) proportions at the 1008px render width, so icon/text/pill scale uniformly
     card_gap:       28,
     card_pad_x:     36,
     nav_h:         190,

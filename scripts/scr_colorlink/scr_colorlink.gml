@@ -22,11 +22,13 @@
 // indices per flow (empty until the player draws it). Solved is checked here.
 
 // ── Vibrant flow palette (reuses the hub game accents per design note) ────────
-/// GameMaker colour for a flow colour index (cycled if a puzzle ever exceeds 8).
+/// GameMaker colour for a flow colour index. 10 distinct hues so the larger 12×9
+/// board can carry up to 10 flows without colour reuse (cycled past that).
 function ph_colorlink_color(_idx) {
     var _pal = [
-        PH_COL_PINK, PH_COL_TEAL, PH_COL_PURPLE, PH_COL_ORANGE,
-        PH_COL_BLUE, PH_COL_GREEN, PH_COL_VIOLET, PH_COL_YELLOW_DEEP,
+        PH_COL_PINK, PH_COL_TEAL,   PH_COL_PURPLE,    PH_COL_ORANGE,
+        PH_COL_BLUE, PH_COL_GREEN,  PH_COL_VIOLET,    PH_COL_YELLOW,
+        PH_COL_TANGERINE, PH_COL_SKYBLUE,
     ];
     return _pal[_idx mod array_length(_pal)];
 }
@@ -63,8 +65,12 @@ function ph_colorlink_for_date(_date_key) {
 }
 
 /// Normalise a raw JSON entry → runtime struct (a/b/path as {r,c}, cached length).
+/// Supports non-square boards via "rows"/"cols"; legacy square "size" still works.
 function ph_colorlink_make(_raw) {
-    var _n = variable_struct_exists(_raw, "size") ? _raw.size : 6;
+    var _cols = variable_struct_exists(_raw, "cols") ? _raw.cols
+              : (variable_struct_exists(_raw, "size") ? _raw.size : 9);
+    var _rows = variable_struct_exists(_raw, "rows") ? _raw.rows
+              : (variable_struct_exists(_raw, "size") ? _raw.size : _cols);
     var _flows = [];
     var _src = _raw.flows;
     for (var _i = 0; _i < array_length(_src); _i++) {
@@ -81,20 +87,24 @@ function ph_colorlink_make(_raw) {
             len:  array_length(_path),
         });
     }
-    return { size: _n, flows: _flows };
+    // `size` kept = cols for any legacy reader; rows/cols are authoritative.
+    return { rows: _rows, cols: _cols, size: _cols, flows: _flows };
 }
 
-/// Hardcoded fallback (a validated 9×9, 6-flow board) when the data file is missing.
+/// Hardcoded fallback (a validated 12×9, 9-flow board) when the data file is missing.
 function ph_colorlink_fallback() {
     var _raw = {
-        size: 9,
+        rows: 12, cols: 9,
         flows: [
-            { color: 0, a: [4,6], b: [4,0], path: [[4,6],[4,5],[3,5],[2,5],[2,4],[3,4],[3,3],[2,3],[2,2],[3,2],[3,1],[2,1],[2,0],[3,0],[4,0]] },
-            { color: 1, a: [5,0], b: [5,5], path: [[5,0],[5,1],[4,1],[4,2],[5,2],[6,2],[6,3],[5,3],[4,3],[4,4],[5,4],[5,5]] },
-            { color: 2, a: [5,6], b: [6,0], path: [[5,6],[6,6],[6,7],[7,7],[7,6],[7,5],[6,5],[6,4],[7,4],[7,3],[7,2],[7,1],[6,1],[6,0]] },
-            { color: 3, a: [7,0], b: [5,7], path: [[7,0],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[7,8],[6,8],[5,8],[5,7]] },
-            { color: 4, a: [4,7], b: [0,2], path: [[4,7],[4,8],[3,8],[2,8],[1,8],[0,8],[0,7],[0,6],[0,5],[0,4],[0,3],[0,2]] },
-            { color: 5, a: [0,1], b: [3,7], path: [[0,1],[0,0],[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7],[2,7],[2,6],[3,6],[3,7]] },
+            { color: 0, a: [8,2], b: [2,0], path: [[8,2],[7,2],[6,2],[5,2],[5,1],[6,1],[7,1],[7,0],[6,0],[5,0],[4,0],[4,1],[3,1],[3,0],[2,0]] },
+            { color: 1, a: [2,1], b: [3,2], path: [[2,1],[1,1],[1,0],[0,0],[0,1],[0,2],[0,3],[0,4],[1,4],[1,3],[1,2],[2,2],[3,2]] },
+            { color: 2, a: [4,2], b: [9,5], path: [[4,2],[4,3],[3,3],[2,3],[2,4],[3,4],[4,4],[5,4],[5,3],[6,3],[7,3],[8,3],[8,4],[9,4],[9,5]] },
+            { color: 3, a: [8,5], b: [4,5], path: [[8,5],[8,6],[8,7],[7,7],[7,6],[7,5],[7,4],[6,4],[6,5],[5,5],[4,5]] },
+            { color: 4, a: [3,5], b: [0,8], path: [[3,5],[2,5],[1,5],[0,5],[0,6],[0,7],[0,8]] },
+            { color: 5, a: [1,8], b: [5,6], path: [[1,8],[2,8],[3,8],[3,7],[2,7],[1,7],[1,6],[2,6],[3,6],[4,6],[5,6]] },
+            { color: 6, a: [6,6], b: [8,8], path: [[6,6],[6,7],[5,7],[4,7],[4,8],[5,8],[6,8],[7,8],[8,8]] },
+            { color: 7, a: [9,8], b: [9,0], path: [[9,8],[9,7],[9,6],[10,6],[10,5],[10,4],[10,3],[9,3],[9,2],[9,1],[8,1],[8,0],[9,0]] },
+            { color: 8, a: [10,0], b: [10,7], path: [[10,0],[11,0],[11,1],[10,1],[10,2],[11,2],[11,3],[11,4],[11,5],[11,6],[11,7],[11,8],[10,8],[10,7]] },
         ],
     };
     return ph_colorlink_make(_raw);
@@ -114,16 +124,16 @@ function ph_colorlink_endpoint_color(_puzzle, _r, _c) {
 /// every flow connects its two endpoints with a contiguous line, lines never
 /// overlap, and every cell is covered. Mirrors the Flow Free win rule.
 function ph_colorlink_is_solved(_puzzle, _route) {
-    var _n  = _puzzle.size;
-    var _nc = _n * _n;
+    var _cols = _puzzle.cols;
+    var _nc   = _puzzle.rows * _cols;
     var _cov = array_create(_nc, -1);
     for (var _f = 0; _f < array_length(_puzzle.flows); _f++) {
         var _r   = _route[_f];
         var _len = array_length(_r);
         if (_len < 2) return false;                       // flow not drawn yet
         var _fl = _puzzle.flows[_f];
-        var _a  = _fl.a.r * _n + _fl.a.c;
-        var _b  = _fl.b.r * _n + _fl.b.c;
+        var _a  = _fl.a.r * _cols + _fl.a.c;
+        var _b  = _fl.b.r * _cols + _fl.b.c;
         if (!((_r[0] == _a && _r[_len-1] == _b) ||
               (_r[0] == _b && _r[_len-1] == _a))) return false;   // endpoints
         for (var _i = 0; _i < _len; _i++) {
@@ -133,7 +143,7 @@ function ph_colorlink_is_solved(_puzzle, _route) {
             _cov[_ci] = _f;
             if (_i > 0) {                                  // contiguity
                 var _pr = _r[_i-1];
-                if (abs(_ci div _n - _pr div _n) + abs(_ci mod _n - _pr mod _n) != 1) return false;
+                if (abs(_ci div _cols - _pr div _cols) + abs(_ci mod _cols - _pr mod _cols) != 1) return false;
             }
         }
     }

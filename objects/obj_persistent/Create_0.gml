@@ -140,16 +140,16 @@ global.spr_stopwatch    = sprite_add(_d + "icon_stopwatch.png",    1, false, fal
 global.spr_trophy3d     = sprite_add(_d + "icon_trophy3d.png",     1, false, false, 256, 256);
 global.spr_boxing_glove = sprite_add(_d + "icon_boxing_glove.png", 1, false, false, 256, 256);
 
-// ── Game card backgrounds (1400×400, origin centred) ──────────────────────────
-global.spr_card_yellow = sprite_add(_d + "card_yellow.png", 1, false, false, 700, 200);
-global.spr_card_purple = sprite_add(_d + "card_purple.png", 1, false, false, 700, 200);
-global.spr_card_teal   = sprite_add(_d + "card_teal.png",   1, false, false, 700, 200);
-global.spr_card_orange = sprite_add(_d + "card_orange.png", 1, false, false, 700, 200);
-global.spr_card_blue   = sprite_add(_d + "card_blue.png",   1, false, false, 700, 200);
-global.spr_card_green  = sprite_add(_d + "card_green.png",  1, false, false, 700, 200);
-global.spr_card_skyblue = sprite_add(_d + "card_skyblue.png", 1, false, false, 700, 200);   // Hue Sort (#6ea5e6)
-global.spr_card_lime    = sprite_add(_d + "card_lime.png",    1, false, false, 700, 200);   // Color Link (#c7e70f)
-global.spr_card_tangerine = sprite_add(_d + "card_tangerine.png", 1, false, false, 700, 200); // Word Bend (#ff5b38)
+// ── Game card backgrounds (1430×450, origin centred → 715,225) ────────────────
+global.spr_card_yellow = sprite_add(_d + "card_yellow.png", 1, false, false, 715, 225);
+global.spr_card_purple = sprite_add(_d + "card_purple.png", 1, false, false, 715, 225);
+global.spr_card_teal   = sprite_add(_d + "card_teal.png",   1, false, false, 715, 225);
+global.spr_card_orange = sprite_add(_d + "card_orange.png", 1, false, false, 715, 225);
+global.spr_card_blue   = sprite_add(_d + "card_blue.png",   1, false, false, 715, 225);
+global.spr_card_green  = sprite_add(_d + "card_green.png",  1, false, false, 715, 225);
+global.spr_card_skyblue = sprite_add(_d + "card_skyblue.png", 1, false, false, 715, 225);   // Hue Sort (#6ea5e6)
+global.spr_card_lime    = sprite_add(_d + "card_lime.png",    1, false, false, 715, 225);   // Color Link (#c7e70f)
+global.spr_card_tangerine = sprite_add(_d + "card_tangerine.png", 1, false, false, 715, 225); // Word Bend (#ff5b38)
 global.spr_card_silver    = sprite_add(_d + "card_silver.png",    1, false, false, 715, 225);   // Arrows (#b8b9bd, 1430×450)
 
 // ── Game icons (512×512, origin centred) ──────────────────────────────────────

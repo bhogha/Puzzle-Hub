@@ -59,7 +59,7 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
     // Start a draw from a board cell.
     var _ci = cl_cell_at(_mx, _my);
     if (_ci != -1) {
-        var _ec = ph_colorlink_endpoint_color(puzzle, _ci div N, _ci mod N);
+        var _ec = ph_colorlink_endpoint_color(puzzle, _ci div COLS, _ci mod COLS);
         if (_ec != -1 && !hint_locked[_ec]) {
             // Grab an endpoint → redraw that flow from scratch.
             cl_clear_flow(_ec);
@@ -82,7 +82,7 @@ if (dragging && device_mouse_check_button(0, mb_left)) {
     var _fc = cl_cell_at(_mx, _my);
     if (_fc != -1) {
         var _guard = 0;
-        while (_fc != cl_head() && _guard < N * 2) {
+        while (_fc != cl_head() && _guard < NCELLS) {
             _guard++;
             var _nxt = cl_step_toward(cl_head(), _fc);
             if (_nxt == -1) break;

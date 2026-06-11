@@ -1,51 +1,3282 @@
 [
   {
-    "date": "2026-06-10",
+    "date": "2026-05-12",
     "length": 4,
-    "start": "COLD",
+    "start": "FISH",
     "steps": [
-      { "word": "CORD", "clue": "A thin rope or string" },
-      { "word": "WORD", "clue": "A single unit of language" },
-      { "word": "WARD", "clue": "A section of a hospital" },
-      { "word": "WARM", "clue": "Pleasantly hot" },
-      { "word": "WARE", "clue": "Goods for sale (as in 'soft-___')" },
-      { "word": "BARE", "clue": "Naked or uncovered" },
-      { "word": "BARN", "clue": "A farm building for animals" },
-      { "word": "BORN", "clue": "Brought into life" },
-      { "word": "CORN", "clue": "A yellow grain on a cob" },
-      { "word": "CORK", "clue": "A stopper for a wine bottle" }
+      {
+        "word": "WISH",
+        "clue": "A strong desire or hope."
+      },
+      {
+        "word": "WISE",
+        "clue": "Having good judgment; sagacious."
+      },
+      {
+        "word": "WIPE",
+        "clue": "Clean a surface; remove."
+      },
+      {
+        "word": "WILE",
+        "clue": "Clever trick; cunning artifice."
+      },
+      {
+        "word": "WINE",
+        "clue": "Fermented grape beverage."
+      },
+      {
+        "word": "PINE",
+        "clue": "Evergreen tree; long for something."
+      },
+      {
+        "word": "FINE",
+        "clue": "Excellent; a monetary penalty."
+      },
+      {
+        "word": "FILE",
+        "clue": "Desktop organizer; smooth with a tool."
+      },
+      {
+        "word": "TILE",
+        "clue": "Ceramic piece for floors."
+      },
+      {
+        "word": "TILL",
+        "clue": "Until; cultivate soil."
+      }
     ]
   },
   {
+    "date": "2026-05-13",
     "length": 4,
-    "start": "HEAD",
+    "start": "HIDE",
     "steps": [
-      { "word": "HEAL", "clue": "Make healthy again" },
-      { "word": "TEAL", "clue": "A blue-green color" },
-      { "word": "TELL", "clue": "Share information aloud" },
-      { "word": "BELL", "clue": "It rings to signal the time" },
-      { "word": "BALL", "clue": "A round object used in sport" },
-      { "word": "BALD", "clue": "Having no hair" },
-      { "word": "BOLD", "clue": "Brave and confident" },
-      { "word": "BOLT", "clue": "A metal fastener, or to dash off" },
-      { "word": "BOOT", "clue": "Footwear covering the whole foot" },
-      { "word": "BOAT", "clue": "It floats on water" }
+      {
+        "word": "SIDE",
+        "clue": "A surface or edge of something."
+      },
+      {
+        "word": "WIDE",
+        "clue": "Broad; not narrow."
+      },
+      {
+        "word": "TIDE",
+        "clue": "Ocean's rise and fall."
+      },
+      {
+        "word": "TIME",
+        "clue": "Measured in minutes, hours."
+      },
+      {
+        "word": "TIRE",
+        "clue": "Get weary; car's wheel."
+      },
+      {
+        "word": "HIRE",
+        "clue": "Employ someone for a job."
+      },
+      {
+        "word": "HIKE",
+        "clue": "Long walk in nature."
+      },
+      {
+        "word": "BIKE",
+        "clue": "Two-wheeled vehicle."
+      },
+      {
+        "word": "LIKE",
+        "clue": "Similar to; to enjoy."
+      },
+      {
+        "word": "LAKE",
+        "clue": "Large body of fresh water."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-14",
+    "length": 5,
+    "start": "STEEL",
+    "steps": [
+      {
+        "word": "STEEP",
+        "clue": "Sharply inclined; a difficult climb"
+      },
+      {
+        "word": "SWEEP",
+        "clue": "Clean with a broom."
+      },
+      {
+        "word": "SWEET",
+        "clue": "Opposite of sour; sugary taste."
+      },
+      {
+        "word": "SWEPT",
+        "clue": "Cleaned with a broom, yesterday."
+      },
+      {
+        "word": "SWEAT",
+        "clue": "Body's natural cooling liquid."
+      },
+      {
+        "word": "SWEAR",
+        "clue": "Utter an oath; promise solemnly."
+      },
+      {
+        "word": "SHEAR",
+        "clue": "Cut wool from a lamb."
+      },
+      {
+        "word": "SHEER",
+        "clue": "Utterly complete; very thin fabric."
+      },
+      {
+        "word": "SHEEP",
+        "clue": "Woolly farm animal."
+      },
+      {
+        "word": "SHEET",
+        "clue": "Flat piece of paper or fabric."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-15",
+    "length": 5,
+    "start": "SHARE",
+    "steps": [
+      {
+        "word": "SHAKE",
+        "clue": "Tremble; move vigorously."
+      },
+      {
+        "word": "SHAPE",
+        "clue": "Form or outline of an object."
+      },
+      {
+        "word": "SHADE",
+        "clue": "Dim area; partial darkness."
+      },
+      {
+        "word": "SHAME",
+        "clue": "Humiliation; feeling of disgrace."
+      },
+      {
+        "word": "SHAVE",
+        "clue": "Remove facial hair with a blade."
+      },
+      {
+        "word": "SHOVE",
+        "clue": "Push forcefully."
+      },
+      {
+        "word": "SHORE",
+        "clue": "Land bordering a sea or lake."
+      },
+      {
+        "word": "WHORE",
+        "clue": "Sound like a loud cry."
+      },
+      {
+        "word": "WHORL",
+        "clue": "Spiral pattern; fingerprint ridge."
+      },
+      {
+        "word": "WHIRL",
+        "clue": "Spin rapidly in circles."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-16",
+    "length": 4,
+    "start": "TRIM",
+    "steps": [
+      {
+        "word": "TRIO",
+        "clue": "Group of three performers."
+      },
+      {
+        "word": "TRIP",
+        "clue": "Journey, often for pleasure."
+      },
+      {
+        "word": "TRAP",
+        "clue": "Device to catch an animal."
+      },
+      {
+        "word": "TRAY",
+        "clue": "Flat holder for serving food."
+      },
+      {
+        "word": "PRAY",
+        "clue": "Speak to a deity."
+      },
+      {
+        "word": "GRAY",
+        "clue": "Color between black and white."
+      },
+      {
+        "word": "GREY",
+        "clue": "Color between black and white."
+      },
+      {
+        "word": "GREW",
+        "clue": "Increased in size; became larger."
+      },
+      {
+        "word": "GROW",
+        "clue": "Get bigger over time."
+      },
+      {
+        "word": "GLOW",
+        "clue": "Emit soft, steady light."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-17",
+    "length": 5,
+    "start": "STORE",
+    "steps": [
+      {
+        "word": "STORM",
+        "clue": "Weather event with strong wind"
+      },
+      {
+        "word": "STORY",
+        "clue": "Narrative tale; building level"
+      },
+      {
+        "word": "STONY",
+        "clue": "Rocky; unfeeling or cold"
+      },
+      {
+        "word": "STONE",
+        "clue": "Small rock; fruit pit"
+      },
+      {
+        "word": "STOVE",
+        "clue": "Kitchen appliance for cooking food"
+      },
+      {
+        "word": "SHOVE",
+        "clue": "Push forcefully."
+      },
+      {
+        "word": "SHONE",
+        "clue": "Emitted light in the past."
+      },
+      {
+        "word": "SHINE",
+        "clue": "Emit light; glow brightly."
+      },
+      {
+        "word": "WHINE",
+        "clue": "High-pitched complaining sound."
+      },
+      {
+        "word": "WHILE",
+        "clue": "During the time that."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-18",
+    "length": 5,
+    "start": "CHECK",
+    "steps": [
+      {
+        "word": "CHEEK",
+        "clue": "Side of the face below the eye."
+      },
+      {
+        "word": "CHEER",
+        "clue": "Shout for joy; encourage someone."
+      },
+      {
+        "word": "SHEER",
+        "clue": "Utterly complete; very thin fabric."
+      },
+      {
+        "word": "STEER",
+        "clue": "Guide a car; young male bovine"
+      },
+      {
+        "word": "STEEP",
+        "clue": "Sharply inclined; a difficult climb"
+      },
+      {
+        "word": "SWEEP",
+        "clue": "Clean with a broom."
+      },
+      {
+        "word": "SHEEP",
+        "clue": "Woolly farm animal."
+      },
+      {
+        "word": "SHEET",
+        "clue": "Flat piece of paper or fabric."
+      },
+      {
+        "word": "SWEET",
+        "clue": "Opposite of sour; sugary taste."
+      },
+      {
+        "word": "SWEPT",
+        "clue": "Cleaned with a broom, yesterday."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-19",
+    "length": 4,
+    "start": "SCOT",
+    "steps": [
+      {
+        "word": "SPOT",
+        "clue": "Small mark or particular location."
+      },
+      {
+        "word": "SPIT",
+        "clue": "Eject saliva from mouth."
+      },
+      {
+        "word": "SUIT",
+        "clue": "Matching clothes; be appropriate for"
+      },
+      {
+        "word": "SLIT",
+        "clue": "A long, narrow cut or opening."
+      },
+      {
+        "word": "SLIP",
+        "clue": "Lose one's footing; small mistake."
+      },
+      {
+        "word": "SHIP",
+        "clue": "Large vessel for ocean travel."
+      },
+      {
+        "word": "CHIP",
+        "clue": "Small piece of wood or potato."
+      },
+      {
+        "word": "CHOP",
+        "clue": "Cut into small pieces with an axe."
+      },
+      {
+        "word": "SHOP",
+        "clue": "Go to stores for purchases."
+      },
+      {
+        "word": "SHOT",
+        "clue": "Fired projectile; a small drink."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-20",
+    "length": 5,
+    "start": "HOUSE",
+    "steps": [
+      {
+        "word": "HORSE",
+        "clue": "Large animal for riding."
+      },
+      {
+        "word": "WORSE",
+        "clue": "Of lower quality or condition."
+      },
+      {
+        "word": "WORST",
+        "clue": "The absolute poorest quality."
+      },
+      {
+        "word": "WORKT",
+        "clue": "Session of physical exercise."
+      },
+      {
+        "word": "WORKS",
+        "clue": "It functions as intended."
+      },
+      {
+        "word": "WORKW",
+        "clue": "Clothes worn for specific jobs."
+      },
+      {
+        "word": "WORKR",
+        "clue": "Person who completes tasks for pay."
+      },
+      {
+        "word": "WORKP",
+        "clue": "Where you do your daily job."
+      },
+      {
+        "word": "WORKG",
+        "clue": "Initial letters of a staff collective."
+      },
+      {
+        "word": "WORDG",
+        "clue": "Initial letters of a puzzle game."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-21",
+    "length": 5,
+    "start": "STONY",
+    "steps": [
+      {
+        "word": "STONE",
+        "clue": "Small rock; fruit pit"
+      },
+      {
+        "word": "STOVE",
+        "clue": "Kitchen appliance for cooking food"
+      },
+      {
+        "word": "SHOVE",
+        "clue": "Push forcefully."
+      },
+      {
+        "word": "SHONE",
+        "clue": "Emitted light in the past."
+      },
+      {
+        "word": "SHINE",
+        "clue": "Emit light; glow brightly."
+      },
+      {
+        "word": "SPINE",
+        "clue": "Backbone or part of a book."
+      },
+      {
+        "word": "SPIKE",
+        "clue": "Sharp point or sudden upward movement."
+      },
+      {
+        "word": "SPITE",
+        "clue": "Desire to harm or annoy."
+      },
+      {
+        "word": "SPICE",
+        "clue": "Flavor added to food."
+      },
+      {
+        "word": "SPACE",
+        "clue": "Area between things or cosmic void."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-22",
+    "length": 4,
+    "start": "THEY",
+    "steps": [
+      {
+        "word": "THEN",
+        "clue": "Next in sequence; afterward."
+      },
+      {
+        "word": "THAN",
+        "clue": "Used for comparison; greater ____."
+      },
+      {
+        "word": "THAT",
+        "clue": "Points to a specific thing."
+      },
+      {
+        "word": "WHAT",
+        "clue": "Asking for information about something."
+      },
+      {
+        "word": "CHAT",
+        "clue": "Informal conversation; friendly talk."
+      },
+      {
+        "word": "COAT",
+        "clue": "Outer garment for warmth; fur cover."
+      },
+      {
+        "word": "COAL",
+        "clue": "Black mineral fuel; burns for heat."
+      },
+      {
+        "word": "COOL",
+        "clue": "Not warm, or very impressive."
+      },
+      {
+        "word": "FOOL",
+        "clue": "Silly person; to trick someone."
+      },
+      {
+        "word": "FOOD",
+        "clue": "Something you eat to live."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-23",
+    "length": 4,
+    "start": "COOK",
+    "steps": [
+      {
+        "word": "LOOK",
+        "clue": "To gaze; a glance."
+      },
+      {
+        "word": "TOOK",
+        "clue": "Picked up; past of take."
+      },
+      {
+        "word": "BOOK",
+        "clue": "Read it; turn a page."
+      },
+      {
+        "word": "HOOK",
+        "clue": "Curved fishing tool."
+      },
+      {
+        "word": "HOOD",
+        "clue": "Part of a car or sweatshirt."
+      },
+      {
+        "word": "WOOD",
+        "clue": "Material from trees."
+      },
+      {
+        "word": "WOOF",
+        "clue": "Dog's bark sound."
+      },
+      {
+        "word": "ROOF",
+        "clue": "Top covering of a building."
+      },
+      {
+        "word": "ROOT",
+        "clue": "Plant's underground part; origin."
+      },
+      {
+        "word": "ROOM",
+        "clue": "Space or area within a building."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-24",
+    "length": 4,
+    "start": "STAG",
+    "steps": [
+      {
+        "word": "STAR",
+        "clue": "Celestial body; famous performer."
+      },
+      {
+        "word": "SCAR",
+        "clue": "Mark from an old wound."
+      },
+      {
+        "word": "SCAN",
+        "clue": "Quick look; read by machine."
+      },
+      {
+        "word": "SWAN",
+        "clue": "Large elegant water bird"
+      },
+      {
+        "word": "SWAY",
+        "clue": "Gentle back and forth motion."
+      },
+      {
+        "word": "STAY",
+        "clue": "Linger; remain in a location"
+      },
+      {
+        "word": "STAE",
+        "clue": "A condition or nation."
+      },
+      {
+        "word": "STAF",
+        "clue": "Group of workers or a stick."
+      },
+      {
+        "word": "STAB",
+        "clue": "Pierce with a pointed weapon."
+      },
+      {
+        "word": "SLAB",
+        "clue": "Thick, flat piece of stone or wood."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-25",
+    "length": 4,
+    "start": "POET",
+    "steps": [
+      {
+        "word": "PORT",
+        "clue": "Harbor for ships; a sweet wine."
+      },
+      {
+        "word": "PORK",
+        "clue": "Meat from a pig."
+      },
+      {
+        "word": "PORE",
+        "clue": "Tiny skin opening; read intently."
+      },
+      {
+        "word": "POLE",
+        "clue": "Long rod; an extreme end."
+      },
+      {
+        "word": "POPE",
+        "clue": "Head of the Catholic Church."
+      },
+      {
+        "word": "POSE",
+        "clue": "Hold a position; put forth a question."
+      },
+      {
+        "word": "ROSE",
+        "clue": "A fragrant flower; past tense of go up."
+      },
+      {
+        "word": "NOSE",
+        "clue": "Sense of smell organ."
+      },
+      {
+        "word": "NONE",
+        "clue": "Not a single one."
+      },
+      {
+        "word": "BONE",
+        "clue": "Skeleton part; dog's favorite chew."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-26",
+    "length": 5,
+    "start": "THING",
+    "steps": [
+      {
+        "word": "THINK",
+        "clue": "Use your brain; ponder."
+      },
+      {
+        "word": "THANK",
+        "clue": "Express gratitude for kindness."
+      },
+      {
+        "word": "SHANK",
+        "clue": "Leg bone; cut of meat."
+      },
+      {
+        "word": "SHARK",
+        "clue": "Large ocean predator, often feared."
+      },
+      {
+        "word": "SHARD",
+        "clue": "Broken piece of pottery or glass."
+      },
+      {
+        "word": "SHARP",
+        "clue": "Keen edge; quick-witted."
+      },
+      {
+        "word": "SHARE",
+        "clue": "Divide or give a portion."
+      },
+      {
+        "word": "SPARE",
+        "clue": "Extra item; to show mercy."
+      },
+      {
+        "word": "SCARE",
+        "clue": "Frighten; give a jolt."
+      },
+      {
+        "word": "SCORE",
+        "clue": "Game total; musical notation."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-27",
+    "length": 5,
+    "start": "BRAVE",
+    "steps": [
+      {
+        "word": "GRAVE",
+        "clue": "Very serious; a burial spot."
+      },
+      {
+        "word": "GRACE",
+        "clue": "Elegant movement or divine blessing."
+      },
+      {
+        "word": "GRADE",
+        "clue": "School year level or quality score."
+      },
+      {
+        "word": "TRADE",
+        "clue": "Exchange goods; profession."
+      },
+      {
+        "word": "TRACE",
+        "clue": "Smallest amount; outline."
+      },
+      {
+        "word": "TRACT",
+        "clue": "Area of land; pamphlet."
+      },
+      {
+        "word": "TRAIT",
+        "clue": "Distinguishing quality or feature."
+      },
+      {
+        "word": "TRAIL",
+        "clue": "Path through woods; follow."
+      },
+      {
+        "word": "TRAIN",
+        "clue": "Locomotive; teach skills."
+      },
+      {
+        "word": "BRAIN",
+        "clue": "Organ for thinking and memory."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-28",
+    "length": 4,
+    "start": "POST",
+    "steps": [
+      {
+        "word": "PEST",
+        "clue": "Annoying bug; an irritating person."
+      },
+      {
+        "word": "VEST",
+        "clue": "Sleeveless garment worn over a shirt."
+      },
+      {
+        "word": "NEST",
+        "clue": "Bird's cozy home."
+      },
+      {
+        "word": "WEST",
+        "clue": "Opposite direction of east."
+      },
+      {
+        "word": "ZEST",
+        "clue": "Great enthusiasm or energy."
+      },
+      {
+        "word": "BEST",
+        "clue": "Superior to all others."
+      },
+      {
+        "word": "TEST",
+        "clue": "Examination to check knowledge."
+      },
+      {
+        "word": "TEXT",
+        "clue": "Words on a screen or page."
+      },
+      {
+        "word": "NEXT",
+        "clue": "Coming immediately after."
+      },
+      {
+        "word": "NEAT",
+        "clue": "Tidy and orderly."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-29",
+    "length": 4,
+    "start": "STIR",
+    "steps": [
+      {
+        "word": "STAR",
+        "clue": "Celestial body; famous performer."
+      },
+      {
+        "word": "SOAR",
+        "clue": "Fly high in the air."
+      },
+      {
+        "word": "SOAK",
+        "clue": "Immerse in liquid; get very wet."
+      },
+      {
+        "word": "SNAK",
+        "clue": "Quick bite to eat."
+      },
+      {
+        "word": "SNAP",
+        "clue": "Break suddenly with a sharp sound."
+      },
+      {
+        "word": "SOAP",
+        "clue": "Cleansing agent for washing."
+      },
+      {
+        "word": "SLAP",
+        "clue": "Strike with an open hand."
+      },
+      {
+        "word": "SWAP",
+        "clue": "Trade places; make an exchange."
+      },
+      {
+        "word": "SWAM",
+        "clue": "Moved through water, past tense"
+      },
+      {
+        "word": "SLAM",
+        "clue": "Shut with force and noise."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-30",
+    "length": 5,
+    "start": "GREEN",
+    "steps": [
+      {
+        "word": "GREEK",
+        "clue": "From an ancient European country."
+      },
+      {
+        "word": "GREET",
+        "clue": "Say hello to someone."
+      },
+      {
+        "word": "GREAT",
+        "clue": "Wonderful, excellent, or very large."
+      },
+      {
+        "word": "TREAT",
+        "clue": "Special reward or indulgence."
+      },
+      {
+        "word": "TREAD",
+        "clue": "Part of a tire that grips."
+      },
+      {
+        "word": "BREAD",
+        "clue": "Staple food, often made from flour."
+      },
+      {
+        "word": "BREED",
+        "clue": "Type of animal; raise and multiply."
+      },
+      {
+        "word": "BLEED",
+        "clue": "Lose blood from a wound."
+      },
+      {
+        "word": "BLEND",
+        "clue": "Mix ingredients smoothly together."
+      },
+      {
+        "word": "BLOND",
+        "clue": "Light-colored hair."
+      }
+    ]
+  },
+  {
+    "date": "2026-05-31",
+    "length": 4,
+    "start": "WEEP",
+    "steps": [
+      {
+        "word": "WEED",
+        "clue": "Unwanted plant in a garden."
+      },
+      {
+        "word": "WEEK",
+        "clue": "Seven-day period."
+      },
+      {
+        "word": "WEAK",
+        "clue": "Lacking strength or power."
+      },
+      {
+        "word": "WEAR",
+        "clue": "Put clothes on one's body."
+      },
+      {
+        "word": "YEAR",
+        "clue": "Period of twelve months."
+      },
+      {
+        "word": "REAR",
+        "clue": "Back part; to raise a child."
+      },
+      {
+        "word": "READ",
+        "clue": "Interpret written words or music."
+      },
+      {
+        "word": "ROAD",
+        "clue": "Paved path for vehicles."
+      },
+      {
+        "word": "LOAD",
+        "clue": "A heavy burden."
+      },
+      {
+        "word": "LEAD",
+        "clue": "Go first, show the way."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-01",
+    "length": 5,
+    "start": "STATS",
+    "steps": [
+      {
+        "word": "STATE",
+        "clue": "Nation or condition of being"
+      },
+      {
+        "word": "SLATE",
+        "clue": "Fine-grained rock; dark gray color."
+      },
+      {
+        "word": "SLAVE",
+        "clue": "Person owned by another."
+      },
+      {
+        "word": "SHAVE",
+        "clue": "Remove facial hair with a blade."
+      },
+      {
+        "word": "SHARE",
+        "clue": "Divide or give a portion."
+      },
+      {
+        "word": "STARE",
+        "clue": "Look fixedly with wide eyes."
+      },
+      {
+        "word": "STAKE",
+        "clue": "Wooden post or a wager."
+      },
+      {
+        "word": "STAGE",
+        "clue": "Platform for performers or a phase."
+      },
+      {
+        "word": "STALE",
+        "clue": "No longer fresh; old and uninteresting."
+      },
+      {
+        "word": "SCALE",
+        "clue": "Ladder of notes; weigh device."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-02",
+    "length": 4,
+    "start": "ZEST",
+    "steps": [
+      {
+        "word": "BEST",
+        "clue": "Superior to all others."
+      },
+      {
+        "word": "BEAT",
+        "clue": "Rhythm in music; defeat opponent."
+      },
+      {
+        "word": "BELT",
+        "clue": "Holds up pants; martial arts sash."
+      },
+      {
+        "word": "FELT",
+        "clue": "A sturdy fabric; experienced an emotion."
+      },
+      {
+        "word": "FEAT",
+        "clue": "Remarkable accomplishment; a notable deed."
+      },
+      {
+        "word": "SEAT",
+        "clue": "Place to rest your bottom."
+      },
+      {
+        "word": "SEAM",
+        "clue": "Joint line in fabric."
+      },
+      {
+        "word": "SEAL",
+        "clue": "Ocean mammal; close up tight."
+      },
+      {
+        "word": "SELL",
+        "clue": "Exchange for cash; market goods."
+      },
+      {
+        "word": "SELF",
+        "clue": "One's own identity."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-03",
+    "length": 5,
+    "start": "STOVE",
+    "steps": [
+      {
+        "word": "STORE",
+        "clue": "Retail shop; keep for later"
+      },
+      {
+        "word": "SWORE",
+        "clue": "Made a solemn promise, past tense."
+      },
+      {
+        "word": "SWORD",
+        "clue": "Knight's sharp blade."
+      },
+      {
+        "word": "SWORN",
+        "clue": "Under oath, having promised."
+      },
+      {
+        "word": "SCORN",
+        "clue": "Feeling of strong contempt."
+      },
+      {
+        "word": "SCORE",
+        "clue": "Game total; musical notation."
+      },
+      {
+        "word": "SHORE",
+        "clue": "Land bordering a sea or lake."
+      },
+      {
+        "word": "SHORT",
+        "clue": "Not long; brief."
+      },
+      {
+        "word": "SHOOT",
+        "clue": "Fire a weapon; new plant growth."
+      },
+      {
+        "word": "SHOUT",
+        "clue": "Yell loudly; holler."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-04",
+    "length": 4,
+    "start": "WOOD",
+    "steps": [
+      {
+        "word": "WOOL",
+        "clue": "Sheep's soft coat."
+      },
+      {
+        "word": "TOOL",
+        "clue": "Implement for a task."
+      },
+      {
+        "word": "TOLL",
+        "clue": "Fee for a bridge; bell sound."
+      },
+      {
+        "word": "TALL",
+        "clue": "Not short; of great height."
+      },
+      {
+        "word": "TAIL",
+        "clue": "Animal's rear appendage."
+      },
+      {
+        "word": "NAIL",
+        "clue": "Finger tip growth; construction fastener."
+      },
+      {
+        "word": "FAIL",
+        "clue": "Not succeed; miss the mark."
+      },
+      {
+        "word": "FALL",
+        "clue": "Tumble down, or an autumn season."
+      },
+      {
+        "word": "FULL",
+        "clue": "Containing maximum capacity."
+      },
+      {
+        "word": "FILL",
+        "clue": "Make something completely full."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-05",
+    "length": 4,
+    "start": "LAMP",
+    "steps": [
+      {
+        "word": "LIMP",
+        "clue": "Walk with a slight injury."
+      },
+      {
+        "word": "LIMB",
+        "clue": "An arm or a leg."
+      },
+      {
+        "word": "LIME",
+        "clue": "Green citrus fruit."
+      },
+      {
+        "word": "LIVE",
+        "clue": "To exist; not recorded."
+      },
+      {
+        "word": "GIVE",
+        "clue": "Present a gift; hand over."
+      },
+      {
+        "word": "FIVE",
+        "clue": "The number after four."
+      },
+      {
+        "word": "FIRE",
+        "clue": "Flames; to discharge from employment."
+      },
+      {
+        "word": "FARE",
+        "clue": "Travel cost, or meals provided."
+      },
+      {
+        "word": "FATE",
+        "clue": "Inevitable future, or one's destiny."
+      },
+      {
+        "word": "LATE",
+        "clue": "Not on time; tardy."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-06",
+    "length": 4,
+    "start": "ZEAL",
+    "steps": [
+      {
+        "word": "REAL",
+        "clue": "Authentic, not fake or imagined."
+      },
+      {
+        "word": "REAC",
+        "clue": "Respond to a stimulus or event."
+      },
+      {
+        "word": "READ",
+        "clue": "Interpret written words or music."
+      },
+      {
+        "word": "HEAD",
+        "clue": "Top body part; a leader."
+      },
+      {
+        "word": "HEAT",
+        "clue": "Warmth or high temperature."
+      },
+      {
+        "word": "MEAT",
+        "clue": "Steak or chicken, for example."
+      },
+      {
+        "word": "MEET",
+        "clue": "Come together; sporting event."
+      },
+      {
+        "word": "MELT",
+        "clue": "Change from ice to water."
+      },
+      {
+        "word": "WELT",
+        "clue": "Raised mark on skin from a blow."
+      },
+      {
+        "word": "WELD",
+        "clue": "Join metal pieces with heat."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-07",
+    "length": 5,
+    "start": "ROBOT",
+    "steps": [
+      {
+        "word": "ROBST",
+        "clue": "Strong and healthy."
+      },
+      {
+        "word": "ROAST",
+        "clue": "Cook with dry heat; make fun."
+      },
+      {
+        "word": "COAST",
+        "clue": "Seashore; slide down a hill."
+      },
+      {
+        "word": "BOAST",
+        "clue": "Brag about oneself."
+      },
+      {
+        "word": "BEAST",
+        "clue": "Wild, untamed creature."
+      },
+      {
+        "word": "YEAST",
+        "clue": "Fungus used to make bread rise."
+      },
+      {
+        "word": "LEAST",
+        "clue": "Smallest amount possible."
+      },
+      {
+        "word": "LEASE",
+        "clue": "Agreement to rent property."
+      },
+      {
+        "word": "TEASE",
+        "clue": "Playfully annoy or prod."
+      },
+      {
+        "word": "TENSE",
+        "clue": "Stressed or stretched tight."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-08",
+    "length": 5,
+    "start": "STAKE",
+    "steps": [
+      {
+        "word": "SHAKE",
+        "clue": "Tremble; move vigorously."
+      },
+      {
+        "word": "SHAKY",
+        "clue": "Unsteady; wobbly."
+      },
+      {
+        "word": "SHADY",
+        "clue": "Covered by trees; suspicious character."
+      },
+      {
+        "word": "SHADO",
+        "clue": "Dark area cast by body."
+      },
+      {
+        "word": "SHADE",
+        "clue": "Dim area; partial darkness."
+      },
+      {
+        "word": "SHAPE",
+        "clue": "Form or outline of an object."
+      },
+      {
+        "word": "SHARE",
+        "clue": "Divide or give a portion."
+      },
+      {
+        "word": "SHAME",
+        "clue": "Humiliation; feeling of disgrace."
+      },
+      {
+        "word": "SHAVE",
+        "clue": "Remove facial hair with a blade."
+      },
+      {
+        "word": "SHOVE",
+        "clue": "Push forcefully."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-09",
+    "length": 5,
+    "start": "BRAIN",
+    "steps": [
+      {
+        "word": "DRAIN",
+        "clue": "Empty liquid; a pipe for water."
+      },
+      {
+        "word": "GRAIN",
+        "clue": "Tiny seed, like wheat or rice."
+      },
+      {
+        "word": "TRAIN",
+        "clue": "Locomotive; teach skills."
+      },
+      {
+        "word": "TRAIL",
+        "clue": "Path through woods; follow."
+      },
+      {
+        "word": "TRAIT",
+        "clue": "Distinguishing quality or feature."
+      },
+      {
+        "word": "TRACT",
+        "clue": "Area of land; pamphlet."
+      },
+      {
+        "word": "TRACK",
+        "clue": "Path for a runner; observe."
+      },
+      {
+        "word": "TRUCK",
+        "clue": "Large vehicle for carrying goods."
+      },
+      {
+        "word": "TRICK",
+        "clue": "Deceptive or clever action."
+      },
+      {
+        "word": "THICK",
+        "clue": "Not thin; dense or wide."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-10",
+    "length": 5,
+    "start": "WORKR",
+    "steps": [
+      {
+        "word": "WORKT",
+        "clue": "Session of physical exercise."
+      },
+      {
+        "word": "WORKS",
+        "clue": "It functions as intended."
+      },
+      {
+        "word": "WORKP",
+        "clue": "Where you do your daily job."
+      },
+      {
+        "word": "WORKW",
+        "clue": "Clothes worn for specific jobs."
+      },
+      {
+        "word": "WORKG",
+        "clue": "Initial letters of a staff collective."
+      },
+      {
+        "word": "WORDG",
+        "clue": "Initial letters of a puzzle game."
+      },
+      {
+        "word": "WORDY",
+        "clue": "Using too many words."
+      },
+      {
+        "word": "WORMY",
+        "clue": "Full of small crawling creatures."
+      },
+      {
+        "word": "WORRY",
+        "clue": "Feel anxious or uneasy."
+      },
+      {
+        "word": "SORRY",
+        "clue": "What you say after a mistake."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-11",
+    "length": 4,
+    "start": "FORK",
+    "steps": [
+      {
+        "word": "FOLK",
+        "clue": "Ordinary people; traditional music style."
+      },
+      {
+        "word": "FOLD",
+        "clue": "Bend over upon itself."
+      },
+      {
+        "word": "GOLD",
+        "clue": "Valuable yellow metal; Olympic first place."
+      },
+      {
+        "word": "BOLD",
+        "clue": "Brave; strong and clear."
+      },
+      {
+        "word": "TOLD",
+        "clue": "Spoke a story; informed."
+      },
+      {
+        "word": "COLD",
+        "clue": "Low temperature; not hot."
+      },
+      {
+        "word": "SOLD",
+        "clue": "Past tense of \"sell\"."
+      },
+      {
+        "word": "SOLO",
+        "clue": "Performed by one person alone."
+      },
+      {
+        "word": "SOLE",
+        "clue": "Bottom of a foot or shoe."
+      },
+      {
+        "word": "SALE",
+        "clue": "Exchange for money; bargain event."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-12",
+    "length": 5,
+    "start": "SHADE",
+    "steps": [
+      {
+        "word": "SHAKE",
+        "clue": "Tremble; move vigorously."
+      },
+      {
+        "word": "SHAPE",
+        "clue": "Form or outline of an object."
+      },
+      {
+        "word": "SHARE",
+        "clue": "Divide or give a portion."
+      },
+      {
+        "word": "SHARD",
+        "clue": "Broken piece of pottery or glass."
+      },
+      {
+        "word": "SHARK",
+        "clue": "Large ocean predator, often feared."
+      },
+      {
+        "word": "SPARK",
+        "clue": "Tiny flash of light or energy."
+      },
+      {
+        "word": "STARK",
+        "clue": "Harsh, plain, or severe."
+      },
+      {
+        "word": "STACK",
+        "clue": "Neatly arranged pile of items."
+      },
+      {
+        "word": "STICK",
+        "clue": "Small piece of wood; adhere"
+      },
+      {
+        "word": "STOCK",
+        "clue": "Inventory of goods; farm animals"
+      }
+    ]
+  },
+  {
+    "date": "2026-06-13",
+    "length": 5,
+    "start": "SHAKY",
+    "steps": [
+      {
+        "word": "SHADY",
+        "clue": "Covered by trees; suspicious character."
+      },
+      {
+        "word": "SHADE",
+        "clue": "Dim area; partial darkness."
+      },
+      {
+        "word": "SHAKE",
+        "clue": "Tremble; move vigorously."
+      },
+      {
+        "word": "SHAME",
+        "clue": "Humiliation; feeling of disgrace."
+      },
+      {
+        "word": "SHARE",
+        "clue": "Divide or give a portion."
+      },
+      {
+        "word": "SHAVE",
+        "clue": "Remove facial hair with a blade."
+      },
+      {
+        "word": "SLAVE",
+        "clue": "Person owned by another."
+      },
+      {
+        "word": "SLATE",
+        "clue": "Fine-grained rock; dark gray color."
+      },
+      {
+        "word": "PLATE",
+        "clue": "Flat dish; license tag."
+      },
+      {
+        "word": "PLACE",
+        "clue": "Specific location; put something somewhere."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-14",
+    "length": 4,
+    "start": "WHAT",
+    "steps": [
+      {
+        "word": "THAT",
+        "clue": "Points to a specific thing."
+      },
+      {
+        "word": "CHAT",
+        "clue": "Informal conversation; friendly talk."
+      },
+      {
+        "word": "COAT",
+        "clue": "Outer garment for warmth; fur cover."
+      },
+      {
+        "word": "GOAT",
+        "clue": "Farm animal that may climb mountains."
+      },
+      {
+        "word": "GOAL",
+        "clue": "Target to achieve in a game."
+      },
+      {
+        "word": "COAL",
+        "clue": "Black mineral fuel; burns for heat."
+      },
+      {
+        "word": "COOL",
+        "clue": "Not warm, or very impressive."
+      },
+      {
+        "word": "POOL",
+        "clue": "Swimming area; shared collection."
+      },
+      {
+        "word": "POOR",
+        "clue": "Lacking wealth; unfortunate quality."
+      },
+      {
+        "word": "DOOR",
+        "clue": "Entryway to a room or building."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-15",
+    "length": 4,
+    "start": "CITY",
+    "steps": [
+      {
+        "word": "CITE",
+        "clue": "Quote as evidence; refer to."
+      },
+      {
+        "word": "SITE",
+        "clue": "Location for a building or event."
+      },
+      {
+        "word": "KITE",
+        "clue": "Toy flown on a string."
+      },
+      {
+        "word": "RITE",
+        "clue": "Ceremony or formal observance."
+      },
+      {
+        "word": "RATE",
+        "clue": "Evaluate, or a speed of change."
+      },
+      {
+        "word": "DATE",
+        "clue": "Calendar entry or a sweet fruit."
+      },
+      {
+        "word": "DARE",
+        "clue": "Issue a challenge; be brave."
+      },
+      {
+        "word": "HARE",
+        "clue": "Fast mammal, similar to a rabbit."
+      },
+      {
+        "word": "WARE",
+        "clue": "Articles for sale; merchandise."
+      },
+      {
+        "word": "WARM",
+        "clue": "Not cold, but comfortably hot."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-16",
+    "length": 5,
+    "start": "SHELF",
+    "steps": [
+      {
+        "word": "SHELL",
+        "clue": "Hard outer covering of a nut."
+      },
+      {
+        "word": "SHALL",
+        "clue": "Future auxiliary verb."
+      },
+      {
+        "word": "SMALL",
+        "clue": "Not large; little."
+      },
+      {
+        "word": "SMELL",
+        "clue": "Detect an odor with the nose."
+      },
+      {
+        "word": "SPELL",
+        "clue": "Magic charm or short duration."
+      },
+      {
+        "word": "SPILL",
+        "clue": "To accidentally pour out liquid."
+      },
+      {
+        "word": "STILL",
+        "clue": "Motionless; quiet"
+      },
+      {
+        "word": "STALL",
+        "clue": "Delay progress or a small booth."
+      },
+      {
+        "word": "STALK",
+        "clue": "Plant stem or to pursue secretly."
+      },
+      {
+        "word": "STARK",
+        "clue": "Harsh, plain, or severe."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-17",
+    "length": 4,
+    "start": "RICE",
+    "steps": [
+      {
+        "word": "RIDE",
+        "clue": "Travel on horseback or in car."
+      },
+      {
+        "word": "RIPE",
+        "clue": "Ready to eat, like fruit."
+      },
+      {
+        "word": "PIPE",
+        "clue": "Smoking tube; plumbing conduit."
+      },
+      {
+        "word": "PILE",
+        "clue": "A stack of items; a heap."
+      },
+      {
+        "word": "VILE",
+        "clue": "Extremely unpleasant or evil."
+      },
+      {
+        "word": "MILE",
+        "clue": "Unit of road distance."
+      },
+      {
+        "word": "MINE",
+        "clue": "Dig for coal; belonging to me."
+      },
+      {
+        "word": "SINE",
+        "clue": "Wavy mathematical curve."
+      },
+      {
+        "word": "SANE",
+        "clue": "Of sound mind; rational."
+      },
+      {
+        "word": "SANG",
+        "clue": "Performed a tune vocally."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-18",
+    "length": 4,
+    "start": "GOAT",
+    "steps": [
+      {
+        "word": "BOAT",
+        "clue": "Vessel that floats on water."
+      },
+      {
+        "word": "BOOT",
+        "clue": "Footwear for rain or snow."
+      },
+      {
+        "word": "FOOT",
+        "clue": "Bottom of leg; twelve inches."
+      },
+      {
+        "word": "FOOL",
+        "clue": "Silly person; to trick someone."
+      },
+      {
+        "word": "FOUL",
+        "clue": "Unpleasant smell; unfair play."
+      },
+      {
+        "word": "FOUR",
+        "clue": "The number before five."
+      },
+      {
+        "word": "HOUR",
+        "clue": "Sixty minutes of time."
+      },
+      {
+        "word": "TOUR",
+        "clue": "Guided trip or journey."
+      },
+      {
+        "word": "YOUR",
+        "clue": "Belonging to the person addressed."
+      },
+      {
+        "word": "POUR",
+        "clue": "Flow out; rain heavily."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-19",
+    "length": 5,
+    "start": "GRAIN",
+    "steps": [
+      {
+        "word": "DRAIN",
+        "clue": "Empty liquid; a pipe for water."
+      },
+      {
+        "word": "BRAIN",
+        "clue": "Organ for thinking and memory."
+      },
+      {
+        "word": "TRAIN",
+        "clue": "Locomotive; teach skills."
+      },
+      {
+        "word": "TRAIT",
+        "clue": "Distinguishing quality or feature."
+      },
+      {
+        "word": "TRACT",
+        "clue": "Area of land; pamphlet."
+      },
+      {
+        "word": "TRACK",
+        "clue": "Path for a runner; observe."
+      },
+      {
+        "word": "CRACK",
+        "clue": "Small split, or a funny joke."
+      },
+      {
+        "word": "WRACK",
+        "clue": "Cause severe damage or destruction."
+      },
+      {
+        "word": "WRECK",
+        "clue": "Severely damage or destroy something."
+      },
+      {
+        "word": "WREAK",
+        "clue": "Inflict damage or cause havoc."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-20",
+    "length": 4,
+    "start": "YARN",
+    "steps": [
+      {
+        "word": "YARD",
+        "clue": "Grassy area around a house."
+      },
+      {
+        "word": "WARD",
+        "clue": "Room in a hospital or prison."
+      },
+      {
+        "word": "WARN",
+        "clue": "Give notice of danger."
+      },
+      {
+        "word": "WART",
+        "clue": "Small, rough skin growth."
+      },
+      {
+        "word": "WARP",
+        "clue": "Twist or bend out of shape."
+      },
+      {
+        "word": "WASP",
+        "clue": "Stinging yellow-and-black insect."
+      },
+      {
+        "word": "WASH",
+        "clue": "Clean with soap and water."
+      },
+      {
+        "word": "RASH",
+        "clue": "Skin irritation or hurried decision."
+      },
+      {
+        "word": "CASH",
+        "clue": "Paper money or coins for payment."
+      },
+      {
+        "word": "CAST",
+        "clue": "Actors in a play; throw a line."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-21",
+    "length": 4,
+    "start": "MEAT",
+    "steps": [
+      {
+        "word": "MEAN",
+        "clue": "Not nice; statistical average."
+      },
+      {
+        "word": "BEAN",
+        "clue": "Small edible seed."
+      },
+      {
+        "word": "BEAR",
+        "clue": "Large furry animal; carry weight."
+      },
+      {
+        "word": "NEAR",
+        "clue": "Not far away."
+      },
+      {
+        "word": "HEAR",
+        "clue": "Perceive sounds with your ears."
+      },
+      {
+        "word": "FEAR",
+        "clue": "Unpleasant emotion caused by perceived danger."
+      },
+      {
+        "word": "DEAR",
+        "clue": "Beloved, or a letter's opening word."
+      },
+      {
+        "word": "GEAR",
+        "clue": "Equipment; clothing; toothed wheel."
+      },
+      {
+        "word": "TEAR",
+        "clue": "Rip cloth; a salty drop."
+      },
+      {
+        "word": "TEAG",
+        "clue": "A name, for short."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-22",
+    "length": 4,
+    "start": "FOUL",
+    "steps": [
+      {
+        "word": "SOUL",
+        "clue": "Inner self or spirit."
+      },
+      {
+        "word": "SOIL",
+        "clue": "Earth or ground for plants."
+      },
+      {
+        "word": "SAIL",
+        "clue": "Travel by boat with wind."
+      },
+      {
+        "word": "MAIL",
+        "clue": "Letters and packages delivered."
+      },
+      {
+        "word": "JAIL",
+        "clue": "Place to hold offenders."
+      },
+      {
+        "word": "RAIL",
+        "clue": "Train track; fence bar."
+      },
+      {
+        "word": "WAIL",
+        "clue": "Long, mournful cry of pain."
+      },
+      {
+        "word": "WALL",
+        "clue": "Vertical surface enclosing a room."
+      },
+      {
+        "word": "WELL",
+        "clue": "Source of liquid; doing fine."
+      },
+      {
+        "word": "WILL",
+        "clue": "Future tense auxiliary verb."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-23",
+    "length": 5,
+    "start": "WITCH",
+    "steps": [
+      {
+        "word": "PITCH",
+        "clue": "Baseball throw; musical highness or lowness."
+      },
+      {
+        "word": "PINCH",
+        "clue": "Squeeze between fingers; a small amount."
+      },
+      {
+        "word": "PUNCH",
+        "clue": "Fist strike; a fruit drink."
+      },
+      {
+        "word": "BUNCH",
+        "clue": "A cluster or group of things."
+      },
+      {
+        "word": "BENCH",
+        "clue": "Long seat for multiple people."
+      },
+      {
+        "word": "BEACH",
+        "clue": "Sandy shore by the ocean."
+      },
+      {
+        "word": "TEACH",
+        "clue": "Instruct; impart knowledge."
+      },
+      {
+        "word": "PEACH",
+        "clue": "Fuzzy fruit; a lovely person."
+      },
+      {
+        "word": "PEACE",
+        "clue": "Calmness; absence of war."
+      },
+      {
+        "word": "PLACE",
+        "clue": "Specific location; put something somewhere."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-24",
+    "length": 5,
+    "start": "SHOOT",
+    "steps": [
+      {
+        "word": "SHOOK",
+        "clue": "Trembled or vibrated in the past."
+      },
+      {
+        "word": "SHOCK",
+        "clue": "Sudden surprise; electric jolt."
+      },
+      {
+        "word": "STOCK",
+        "clue": "Inventory of goods; farm animals"
+      },
+      {
+        "word": "STICK",
+        "clue": "Small piece of wood; adhere"
+      },
+      {
+        "word": "STACK",
+        "clue": "Neatly arranged pile of items."
+      },
+      {
+        "word": "SLACK",
+        "clue": "Not taut; loose."
+      },
+      {
+        "word": "BLACK",
+        "clue": "Darkest color; opposite of white."
+      },
+      {
+        "word": "BLOCK",
+        "clue": "Solid piece; stop movement."
+      },
+      {
+        "word": "CLOCK",
+        "clue": "Tells time; has hands."
+      },
+      {
+        "word": "FLOCK",
+        "clue": "A group of birds or sheep."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-25",
+    "length": 4,
+    "start": "POKE",
+    "steps": [
+      {
+        "word": "WOKE",
+        "clue": "Past tense of awaken."
+      },
+      {
+        "word": "WAKE",
+        "clue": "Stop sleeping or become alert."
+      },
+      {
+        "word": "CAKE",
+        "clue": "Sweet baked dessert, often for birthdays."
+      },
+      {
+        "word": "BAKE",
+        "clue": "Cook in an oven."
+      },
+      {
+        "word": "TAKE",
+        "clue": "Grab hold of; acquire."
+      },
+      {
+        "word": "TALE",
+        "clue": "A narrated story."
+      },
+      {
+        "word": "TAME",
+        "clue": "Domesticated; not wild."
+      },
+      {
+        "word": "NAME",
+        "clue": "Your given identification."
+      },
+      {
+        "word": "GAME",
+        "clue": "A contest for amusement."
+      },
+      {
+        "word": "SAME",
+        "clue": "Not different; carbon copy."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-26",
+    "length": 4,
+    "start": "WORK",
+    "steps": [
+      {
+        "word": "WORE",
+        "clue": "Past tense of wear."
+      },
+      {
+        "word": "WORD",
+        "clue": "Single unit of language."
+      },
+      {
+        "word": "LORD",
+        "clue": "A master or ruler."
+      },
+      {
+        "word": "LOUD",
+        "clue": "Not quiet; high volume."
+      },
+      {
+        "word": "LOAD",
+        "clue": "A heavy burden."
+      },
+      {
+        "word": "LOAN",
+        "clue": "Money borrowed from a bank."
+      },
+      {
+        "word": "LEAN",
+        "clue": "To tilt or incline."
+      },
+      {
+        "word": "LEAK",
+        "clue": "Unintended escape of fluid or gas."
+      },
+      {
+        "word": "BEAK",
+        "clue": "Bird's mouth part."
+      },
+      {
+        "word": "PEAK",
+        "clue": "Mountain top; highest point."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-27",
+    "length": 5,
+    "start": "SCORN",
+    "steps": [
+      {
+        "word": "SWORN",
+        "clue": "Under oath, having promised."
+      },
+      {
+        "word": "SWORD",
+        "clue": "Knight's sharp blade."
+      },
+      {
+        "word": "SWORE",
+        "clue": "Made a solemn promise, past tense."
+      },
+      {
+        "word": "STORE",
+        "clue": "Retail shop; keep for later"
+      },
+      {
+        "word": "STONE",
+        "clue": "Small rock; fruit pit"
+      },
+      {
+        "word": "STOVE",
+        "clue": "Kitchen appliance for cooking food"
+      },
+      {
+        "word": "SHOVE",
+        "clue": "Push forcefully."
+      },
+      {
+        "word": "SHORE",
+        "clue": "Land bordering a sea or lake."
+      },
+      {
+        "word": "SHONE",
+        "clue": "Emitted light in the past."
+      },
+      {
+        "word": "SHINE",
+        "clue": "Emit light; glow brightly."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-28",
+    "length": 5,
+    "start": "WRITE",
+    "steps": [
+      {
+        "word": "WHITE",
+        "clue": "Color of snow or milk."
+      },
+      {
+        "word": "WHILE",
+        "clue": "During the time that."
+      },
+      {
+        "word": "WHOLE",
+        "clue": "Entire; not broken into parts."
+      },
+      {
+        "word": "WHOSE",
+        "clue": "Possessive pronoun asking ownership."
+      },
+      {
+        "word": "WHORE",
+        "clue": "Sound like a loud cry."
+      },
+      {
+        "word": "WHERE",
+        "clue": "Asking for a place or position."
+      },
+      {
+        "word": "WHENE",
+        "clue": "At what time? (assumed typo for WHEN)"
+      },
+      {
+        "word": "WHINE",
+        "clue": "High-pitched complaining sound."
+      },
+      {
+        "word": "SHINE",
+        "clue": "Emit light; glow brightly."
+      },
+      {
+        "word": "SHINY",
+        "clue": "Gleaming, reflecting light well."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-29",
+    "length": 5,
+    "start": "SWORD",
+    "steps": [
+      {
+        "word": "SWORE",
+        "clue": "Made a solemn promise, past tense."
+      },
+      {
+        "word": "SHORE",
+        "clue": "Land bordering a sea or lake."
+      },
+      {
+        "word": "STORE",
+        "clue": "Retail shop; keep for later"
+      },
+      {
+        "word": "STORM",
+        "clue": "Weather event with strong wind"
+      },
+      {
+        "word": "STORY",
+        "clue": "Narrative tale; building level"
+      },
+      {
+        "word": "STONY",
+        "clue": "Rocky; unfeeling or cold"
+      },
+      {
+        "word": "STONE",
+        "clue": "Small rock; fruit pit"
+      },
+      {
+        "word": "STOVE",
+        "clue": "Kitchen appliance for cooking food"
+      },
+      {
+        "word": "SHOVE",
+        "clue": "Push forcefully."
+      },
+      {
+        "word": "SHONE",
+        "clue": "Emitted light in the past."
+      }
+    ]
+  },
+  {
+    "date": "2026-06-30",
+    "length": 5,
+    "start": "STRIP",
+    "steps": [
+      {
+        "word": "STRAP",
+        "clue": "A long, narrow band"
+      },
+      {
+        "word": "STRAW",
+        "clue": "Dried plant stalks; drinking tube"
+      },
+      {
+        "word": "STRAT",
+        "clue": "Short for a famous electric guitar"
+      },
+      {
+        "word": "STRUT",
+        "clue": "Walk with proud bearing; support"
+      },
+      {
+        "word": "STOUT",
+        "clue": "Rather heavy-set; robust"
+      },
+      {
+        "word": "SCOUT",
+        "clue": "Explorer; search for talent."
+      },
+      {
+        "word": "SHOUT",
+        "clue": "Yell loudly; holler."
+      },
+      {
+        "word": "SHOOT",
+        "clue": "Fire a weapon; new plant growth."
+      },
+      {
+        "word": "SHORT",
+        "clue": "Not long; brief."
+      },
+      {
+        "word": "SHIRT",
+        "clue": "Upper body garment with sleeves."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-01",
+    "length": 4,
+    "start": "KITE",
+    "steps": [
+      {
+        "word": "BITE",
+        "clue": "Use teeth to cut food."
+      },
+      {
+        "word": "RITE",
+        "clue": "Ceremony or formal observance."
+      },
+      {
+        "word": "RISE",
+        "clue": "Go up; get out of bed."
+      },
+      {
+        "word": "RISK",
+        "clue": "Potential for loss or danger."
+      },
+      {
+        "word": "DISK",
+        "clue": "Flat, round object for computer storage."
+      },
+      {
+        "word": "DESK",
+        "clue": "Workspace furniture with a flat top."
+      },
+      {
+        "word": "DECK",
+        "clue": "Outdoor platform or a card stack."
+      },
+      {
+        "word": "DUCK",
+        "clue": "Water bird, or quickly lower one's head."
+      },
+      {
+        "word": "LUCK",
+        "clue": "Good fortune or chance."
+      },
+      {
+        "word": "TUCK",
+        "clue": "Fold or gather fabric neatly."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-02",
+    "length": 4,
+    "start": "HAND",
+    "steps": [
+      {
+        "word": "BAND",
+        "clue": "Musical group; ring of gold."
+      },
+      {
+        "word": "SAND",
+        "clue": "Beach material; tiny grains."
+      },
+      {
+        "word": "SAID",
+        "clue": "Spoke aloud, uttered words."
+      },
+      {
+        "word": "PAID",
+        "clue": "Gave money for goods."
+      },
+      {
+        "word": "PAIR",
+        "clue": "Two items together."
+      },
+      {
+        "word": "HAIR",
+        "clue": "Strands on a person's head."
+      },
+      {
+        "word": "FAIR",
+        "clue": "Just and equitable, or a carnival."
+      },
+      {
+        "word": "FAIL",
+        "clue": "Not succeed; miss the mark."
+      },
+      {
+        "word": "NAIL",
+        "clue": "Finger tip growth; construction fastener."
+      },
+      {
+        "word": "JAIL",
+        "clue": "Place to hold offenders."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-03",
+    "length": 5,
+    "start": "MOUSE",
+    "steps": [
+      {
+        "word": "HOUSE",
+        "clue": "Building where a family lives."
+      },
+      {
+        "word": "HORSE",
+        "clue": "Large animal for riding."
+      },
+      {
+        "word": "WORSE",
+        "clue": "Of lower quality or condition."
+      },
+      {
+        "word": "WORST",
+        "clue": "The absolute poorest quality."
+      },
+      {
+        "word": "WORKT",
+        "clue": "Session of physical exercise."
+      },
+      {
+        "word": "WORKG",
+        "clue": "Initial letters of a staff collective."
+      },
+      {
+        "word": "WORKP",
+        "clue": "Where you do your daily job."
+      },
+      {
+        "word": "WORKW",
+        "clue": "Clothes worn for specific jobs."
+      },
+      {
+        "word": "WORKR",
+        "clue": "Person who completes tasks for pay."
+      },
+      {
+        "word": "WORKS",
+        "clue": "It functions as intended."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-04",
+    "length": 5,
+    "start": "STEAD",
+    "steps": [
+      {
+        "word": "STEAK",
+        "clue": "Grilled cut of beef"
+      },
+      {
+        "word": "STEAM",
+        "clue": "Hot vapor from a kettle"
+      },
+      {
+        "word": "STEAL",
+        "clue": "Illegally take another's property"
+      },
+      {
+        "word": "STEEL",
+        "clue": "Strong, durable metal alloy"
+      },
+      {
+        "word": "STEEP",
+        "clue": "Sharply inclined; a difficult climb"
+      },
+      {
+        "word": "SWEEP",
+        "clue": "Clean with a broom."
+      },
+      {
+        "word": "SWEET",
+        "clue": "Opposite of sour; sugary taste."
+      },
+      {
+        "word": "SWEAT",
+        "clue": "Body's natural cooling liquid."
+      },
+      {
+        "word": "SWEAR",
+        "clue": "Utter an oath; promise solemnly."
+      },
+      {
+        "word": "SHEAR",
+        "clue": "Cut wool from a lamb."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-05",
+    "length": 5,
+    "start": "SHINE",
+    "steps": [
+      {
+        "word": "WHINE",
+        "clue": "High-pitched complaining sound."
+      },
+      {
+        "word": "WHENE",
+        "clue": "At what time? (assumed typo for WHEN)"
+      },
+      {
+        "word": "WHERE",
+        "clue": "Asking for a place or position."
+      },
+      {
+        "word": "WHORE",
+        "clue": "Sound like a loud cry."
+      },
+      {
+        "word": "WHOSE",
+        "clue": "Possessive pronoun asking ownership."
+      },
+      {
+        "word": "WHOLE",
+        "clue": "Entire; not broken into parts."
+      },
+      {
+        "word": "WHALE",
+        "clue": "Large ocean mammal."
+      },
+      {
+        "word": "WHILE",
+        "clue": "During the time that."
+      },
+      {
+        "word": "WHITE",
+        "clue": "Color of snow or milk."
+      },
+      {
+        "word": "WRITE",
+        "clue": "Put words on paper."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-06",
+    "length": 5,
+    "start": "BLOND",
+    "steps": [
+      {
+        "word": "BLIND",
+        "clue": "Unable to see; window covering."
+      },
+      {
+        "word": "BLEND",
+        "clue": "Mix ingredients smoothly together."
+      },
+      {
+        "word": "BLEED",
+        "clue": "Lose blood from a wound."
+      },
+      {
+        "word": "BREED",
+        "clue": "Type of animal; raise and multiply."
+      },
+      {
+        "word": "BREAD",
+        "clue": "Staple food, often made from flour."
+      },
+      {
+        "word": "BREAK",
+        "clue": "Take a rest; separate into pieces."
+      },
+      {
+        "word": "WREAK",
+        "clue": "Inflict damage or cause havoc."
+      },
+      {
+        "word": "WRECK",
+        "clue": "Severely damage or destroy something."
+      },
+      {
+        "word": "WRACK",
+        "clue": "Cause severe damage or destruction."
+      },
+      {
+        "word": "TRACK",
+        "clue": "Path for a runner; observe."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-07",
+    "length": 5,
+    "start": "SWEET",
+    "steps": [
+      {
+        "word": "SWEAT",
+        "clue": "Body's natural cooling liquid."
+      },
+      {
+        "word": "SWEAR",
+        "clue": "Utter an oath; promise solemnly."
+      },
+      {
+        "word": "SHEAR",
+        "clue": "Cut wool from a lamb."
+      },
+      {
+        "word": "SHEER",
+        "clue": "Utterly complete; very thin fabric."
+      },
+      {
+        "word": "SHEET",
+        "clue": "Flat piece of paper or fabric."
+      },
+      {
+        "word": "SHEEP",
+        "clue": "Woolly farm animal."
+      },
+      {
+        "word": "STEEP",
+        "clue": "Sharply inclined; a difficult climb"
+      },
+      {
+        "word": "STEER",
+        "clue": "Guide a car; young male bovine"
+      },
+      {
+        "word": "STEEL",
+        "clue": "Strong, durable metal alloy"
+      },
+      {
+        "word": "STEAL",
+        "clue": "Illegally take another's property"
+      }
+    ]
+  },
+  {
+    "date": "2026-07-08",
+    "length": 5,
+    "start": "TOWER",
+    "steps": [
+      {
+        "word": "LOWER",
+        "clue": "Reduce in height or amount."
+      },
+      {
+        "word": "LOSER",
+        "clue": "One who doesn't win."
+      },
+      {
+        "word": "LASER",
+        "clue": "Focused beam of light."
+      },
+      {
+        "word": "LATER",
+        "clue": "At a subsequent time."
+      },
+      {
+        "word": "WATER",
+        "clue": "Drinkable clear liquid."
+      },
+      {
+        "word": "MATER",
+        "clue": "Latin word for mother."
+      },
+      {
+        "word": "MAKER",
+        "clue": "One who creates things."
+      },
+      {
+        "word": "TAKER",
+        "clue": "One who acquires something."
+      },
+      {
+        "word": "TAKEN",
+        "clue": "Acquired or captured, past participle."
+      },
+      {
+        "word": "WAKEN",
+        "clue": "Rouse someone from slumber."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-09",
+    "length": 4,
+    "start": "WORD",
+    "steps": [
+      {
+        "word": "WORN",
+        "clue": "Not new; showing signs of age."
+      },
+      {
+        "word": "BORN",
+        "clue": "Brought into existence; start of life."
+      },
+      {
+        "word": "TORN",
+        "clue": "Ripped apart; in pieces."
+      },
+      {
+        "word": "TURN",
+        "clue": "Change direction while moving."
+      },
+      {
+        "word": "BURN",
+        "clue": "Feel hot; consume with fire."
+      },
+      {
+        "word": "BURY",
+        "clue": "Place in the ground; hide away."
+      },
+      {
+        "word": "JURY",
+        "clue": "Group deciding a legal verdict."
+      },
+      {
+        "word": "JULY",
+        "clue": "Seventh month, after June."
+      },
+      {
+        "word": "DULY",
+        "clue": "In a proper and expected manner."
+      },
+      {
+        "word": "DULL",
+        "clue": "Not sharp, or very uninteresting."
+      }
+    ]
+  },
+  {
+    "date": "2026-07-10",
+    "length": 5,
+    "start": "SWEPT",
+    "steps": [
+      {
+        "word": "SWEAT",
+        "clue": "Body's natural cooling liquid."
+      },
+      {
+        "word": "SWEET",
+        "clue": "Opposite of sour; sugary taste."
+      },
+      {
+        "word": "SWEEP",
+        "clue": "Clean with a broom."
+      },
+      {
+        "word": "SHEEP",
+        "clue": "Woolly farm animal."
+      },
+      {
+        "word": "SHEER",
+        "clue": "Utterly complete; very thin fabric."
+      },
+      {
+        "word": "STEER",
+        "clue": "Guide a car; young male bovine"
+      },
+      {
+        "word": "STEEP",
+        "clue": "Sharply inclined; a difficult climb"
+      },
+      {
+        "word": "STEEL",
+        "clue": "Strong, durable metal alloy"
+      },
+      {
+        "word": "STEAL",
+        "clue": "Illegally take another's property"
+      },
+      {
+        "word": "STEAK",
+        "clue": "Grilled cut of beef"
+      }
     ]
   },
   {
     "length": 5,
-    "start": "PLANT",
+    "start": "SWORE",
     "steps": [
-      { "word": "PLANE", "clue": "It flies passengers" },
-      { "word": "PLATE", "clue": "You eat dinner off it" },
-      { "word": "SLATE", "clue": "A grey roofing rock" },
-      { "word": "STATE", "clue": "A region within a country" },
-      { "word": "STARE", "clue": "Look fixedly" },
-      { "word": "SPARE", "clue": "Extra, or kept in reserve" },
-      { "word": "SPADE", "clue": "A tool for digging" },
-      { "word": "SHADE", "clue": "Shelter from the sun" },
-      { "word": "SHAKE", "clue": "Move quickly back and forth" },
-      { "word": "SNAKE", "clue": "A long, legless reptile" }
+      {
+        "word": "SCORE",
+        "clue": "Game total; musical notation."
+      },
+      {
+        "word": "SHORE",
+        "clue": "Land bordering a sea or lake."
+      },
+      {
+        "word": "WHORE",
+        "clue": "Sound like a loud cry."
+      },
+      {
+        "word": "WHOSE",
+        "clue": "Possessive pronoun asking ownership."
+      },
+      {
+        "word": "WHOLE",
+        "clue": "Entire; not broken into parts."
+      },
+      {
+        "word": "WHALE",
+        "clue": "Large ocean mammal."
+      },
+      {
+        "word": "WHILE",
+        "clue": "During the time that."
+      },
+      {
+        "word": "WHITE",
+        "clue": "Color of snow or milk."
+      },
+      {
+        "word": "WHINE",
+        "clue": "High-pitched complaining sound."
+      },
+      {
+        "word": "SHINE",
+        "clue": "Emit light; glow brightly."
+      }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "CORE",
+    "steps": [
+      {
+        "word": "CORK",
+        "clue": "Bottle stopper from tree bark."
+      },
+      {
+        "word": "FORK",
+        "clue": "Eating utensil; road division."
+      },
+      {
+        "word": "FORM",
+        "clue": "Shape; document to complete."
+      },
+      {
+        "word": "FARM",
+        "clue": "Land for growing food and animals."
+      },
+      {
+        "word": "HARM",
+        "clue": "Cause injury or damage."
+      },
+      {
+        "word": "HARD",
+        "clue": "Not soft; difficult to do."
+      },
+      {
+        "word": "HERD",
+        "clue": "Group of animals together."
+      },
+      {
+        "word": "HERE",
+        "clue": "Not there, but this spot."
+      },
+      {
+        "word": "WERE",
+        "clue": "Past tense of \"to be.\""
+      },
+      {
+        "word": "WIRE",
+        "clue": "Metal strand for electricity."
+      }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "TEAG",
+    "steps": [
+      {
+        "word": "TEAM",
+        "clue": "Group of players or workers."
+      },
+      {
+        "word": "BEAM",
+        "clue": "Ray of light; long support."
+      },
+      {
+        "word": "BEAN",
+        "clue": "Small edible seed."
+      },
+      {
+        "word": "WEAN",
+        "clue": "Stop feeding a baby milk."
+      },
+      {
+        "word": "WEAL",
+        "clue": "A red, swollen mark on skin."
+      },
+      {
+        "word": "VEAL",
+        "clue": "Meat from a young calf."
+      },
+      {
+        "word": "MEAL",
+        "clue": "Breakfast, lunch, or dinner."
+      },
+      {
+        "word": "HEAL",
+        "clue": "Mend a wound; become well."
+      },
+      {
+        "word": "HEEL",
+        "clue": "Back part of your foot."
+      },
+      {
+        "word": "FEEL",
+        "clue": "Sense with your fingers; have an emotion."
+      }
+    ]
+  },
+  {
+    "length": 5,
+    "start": "WORKT",
+    "steps": [
+      {
+        "word": "WORKP",
+        "clue": "Where you do your daily job."
+      },
+      {
+        "word": "WORKS",
+        "clue": "It functions as intended."
+      },
+      {
+        "word": "WORKW",
+        "clue": "Clothes worn for specific jobs."
+      },
+      {
+        "word": "WORKR",
+        "clue": "Person who completes tasks for pay."
+      },
+      {
+        "word": "WORKG",
+        "clue": "Initial letters of a staff collective."
+      },
+      {
+        "word": "WORDG",
+        "clue": "Initial letters of a puzzle game."
+      },
+      {
+        "word": "WORDY",
+        "clue": "Using too many words."
+      },
+      {
+        "word": "WOODY",
+        "clue": "Like a forest; full of trees."
+      },
+      {
+        "word": "WOODS",
+        "clue": "Forest area."
+      },
+      {
+        "word": "WOODW",
+        "clue": "Letters for a worker with timber."
+      }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "SORT",
+    "steps": [
+      {
+        "word": "SOFT",
+        "clue": "Not hard or firm; gentle."
+      },
+      {
+        "word": "SIFT",
+        "clue": "Separate fine particles from coarse ones."
+      },
+      {
+        "word": "LIFT",
+        "clue": "Raise up; an elevator."
+      },
+      {
+        "word": "LIST",
+        "clue": "A series of items."
+      },
+      {
+        "word": "MIST",
+        "clue": "Fine water droplets in air."
+      },
+      {
+        "word": "MISS",
+        "clue": "Fail to hit; feel absence."
+      },
+      {
+        "word": "MASS",
+        "clue": "Large quantity; church service."
+      },
+      {
+        "word": "MASK",
+        "clue": "Facial covering; disguise."
+      },
+      {
+        "word": "MARK",
+        "clue": "A sign or a stain."
+      },
+      {
+        "word": "BARK",
+        "clue": "Tree covering; dog's sound."
+      }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "DUST",
+    "steps": [
+      {
+        "word": "RUST",
+        "clue": "Reddish-brown coating on metal."
+      },
+      {
+        "word": "JUST",
+        "clue": "Fair and righteous."
+      },
+      {
+        "word": "MUST",
+        "clue": "Absolute necessity; required."
+      },
+      {
+        "word": "MOST",
+        "clue": "Majority of; nearly all."
+      },
+      {
+        "word": "HOST",
+        "clue": "One who entertains guests."
+      },
+      {
+        "word": "LOST",
+        "clue": "Misplaced; not found."
+      },
+      {
+        "word": "LAST",
+        "clue": "The very final one."
+      },
+      {
+        "word": "VAST",
+        "clue": "Extremely large in area."
+      },
+      {
+        "word": "PAST",
+        "clue": "Gone by; a time gone."
+      },
+      {
+        "word": "FAST",
+        "clue": "Moving quickly, or securely attached."
+      }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "REED",
+    "steps": [
+      {
+        "word": "DEED",
+        "clue": "An action or legal document."
+      },
+      {
+        "word": "SEED",
+        "clue": "Plant starter; kernel."
+      },
+      {
+        "word": "SEND",
+        "clue": "Dispatch; mail out."
+      },
+      {
+        "word": "BEND",
+        "clue": "Curve or flex something."
+      },
+      {
+        "word": "LEND",
+        "clue": "Offer money to be repaid."
+      },
+      {
+        "word": "LAND",
+        "clue": "Solid ground, not water."
+      },
+      {
+        "word": "LAID",
+        "clue": "Set something down gently."
+      },
+      {
+        "word": "MAID",
+        "clue": "Housekeeper or female servant."
+      },
+      {
+        "word": "RAID",
+        "clue": "Sudden attack; surprise inspection."
+      },
+      {
+        "word": "RAIN",
+        "clue": "Water falling from clouds."
+      }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "SAVE",
+    "steps": [
+      {
+        "word": "SAFE",
+        "clue": "Secure from harm; strongbox."
+      },
+      {
+        "word": "SAKE",
+        "clue": "Purpose or benefit; Japanese drink."
+      },
+      {
+        "word": "MAKE",
+        "clue": "To create or construct."
+      },
+      {
+        "word": "MALE",
+        "clue": "Not female; a man."
+      },
+      {
+        "word": "MATE",
+        "clue": "Ship's officer; chess game ending."
+      },
+      {
+        "word": "HATE",
+        "clue": "Strong feeling of dislike."
+      },
+      {
+        "word": "GATE",
+        "clue": "Opening in a fence."
+      },
+      {
+        "word": "GAZE",
+        "clue": "Look intently and steadily."
+      },
+      {
+        "word": "GAME",
+        "clue": "A contest for amusement."
+      },
+      {
+        "word": "FAME",
+        "clue": "Widespread public recognition and renown."
+      }
+    ]
+  },
+  {
+    "length": 5,
+    "start": "SHAME",
+    "steps": [
+      {
+        "word": "SHADE",
+        "clue": "Dim area; partial darkness."
+      },
+      {
+        "word": "SHADO",
+        "clue": "Dark area cast by body."
+      },
+      {
+        "word": "SHADY",
+        "clue": "Covered by trees; suspicious character."
+      },
+      {
+        "word": "SHAKY",
+        "clue": "Unsteady; wobbly."
+      },
+      {
+        "word": "SHAKE",
+        "clue": "Tremble; move vigorously."
+      },
+      {
+        "word": "SHAVE",
+        "clue": "Remove facial hair with a blade."
+      },
+      {
+        "word": "SHAPE",
+        "clue": "Form or outline of an object."
+      },
+      {
+        "word": "SHARE",
+        "clue": "Divide or give a portion."
+      },
+      {
+        "word": "SHORE",
+        "clue": "Land bordering a sea or lake."
+      },
+      {
+        "word": "SHORT",
+        "clue": "Not long; brief."
+      }
+    ]
+  },
+  {
+    "length": 4,
+    "start": "GATE",
+    "steps": [
+      {
+        "word": "FATE",
+        "clue": "Inevitable future, or one's destiny."
+      },
+      {
+        "word": "FADE",
+        "clue": "Gradually lose color or strength."
+      },
+      {
+        "word": "WADE",
+        "clue": "Walk through water slowly."
+      },
+      {
+        "word": "WANE",
+        "clue": "Gradually decrease in size or strength."
+      },
+      {
+        "word": "WANT",
+        "clue": "Desire to possess something."
+      },
+      {
+        "word": "WAIT",
+        "clue": "Remain in place until something happens."
+      },
+      {
+        "word": "WATT",
+        "clue": "Unit of power."
+      },
+      {
+        "word": "WART",
+        "clue": "Small, rough skin growth."
+      },
+      {
+        "word": "PART",
+        "clue": "Section; piece of something."
+      },
+      {
+        "word": "TART",
+        "clue": "Sour taste; a small pie."
+      }
     ]
   }
 ]

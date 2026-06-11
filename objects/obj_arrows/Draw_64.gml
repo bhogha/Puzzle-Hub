@@ -45,18 +45,19 @@ ph_hint_draw_feedback(hint);
 ph_draw_game_tip(grid_y, ph_game_tip("arrows"));
 
 // ── Board: white rounded card + faint dot grid ────────────────────────────────
-ph_draw_rounded(grid_x, grid_y, grid_x + BOARD, grid_y + BOARD, 28, PH_COL_WHITE);
+ph_draw_rounded(grid_x, grid_y, grid_x + BOARD_W, grid_y + BOARD_H, 24, PH_COL_WHITE);
 draw_set_color(PH_COL_INK_FAINT);
 draw_set_alpha(0.55);
-for (var _r = 0; _r < N; _r++) {
-    for (var _c = 0; _c < N; _c++) {
-        draw_circle(grid_x + _c*CELL + CELL/2, grid_y + _r*CELL + CELL/2, 5, false);
+var _dot_r = max(3, CELL * 0.05);
+for (var _r = 0; _r < ROWS; _r++) {
+    for (var _c = 0; _c < COLS; _c++) {
+        draw_circle(grid_x + _c*CELL + CELL/2, grid_y + _r*CELL + CELL/2, _dot_r, false);
     }
 }
 draw_set_alpha(1);
 
 // ── Arrows (clipped to the board so a launch slides cleanly off the edge) ─────
-ph_scissor_gui(grid_x, grid_y, BOARD, BOARD);
+ph_scissor_gui(grid_x, grid_y, BOARD_W, BOARD_H);
 
 for (var _i = 0; _i < NARROWS; _i++) {
     if (!alive[_i] || _i == launching) continue;

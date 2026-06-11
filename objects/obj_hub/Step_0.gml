@@ -129,9 +129,13 @@ if (device_mouse_check_button_released(0, mb_left)) {
                     var _cx1 = _ci * _cell_w;
                     var _cy1 = _grid_top + _ri * _cell_h;
                     if (ph_point_in_rect(_tap_x,_tap_y, _cx1,_cy1, _cx1+_cell_w,_cy1+_cell_h)) {
-                        global.selected_date_key = month_days[_mi].key;
-                        hub_center_strip_on(month_days[_mi].dt);   // re-centre strip on selected day
-                        cal_open = false;
+                        // Future days are not playable yet — consume the tap so it
+                        // doesn't fall through, but don't change the selection.
+                        if (ph_date_compare_keys(month_days[_mi].key, today_key) <= 0) {
+                            global.selected_date_key = month_days[_mi].key;
+                            hub_center_strip_on(month_days[_mi].dt);   // re-centre strip on selected day
+                            cal_open = false;
+                        }
                         _matched = true;
                         _stop    = true;
                         break;
@@ -150,8 +154,11 @@ if (device_mouse_check_button_released(0, mb_left)) {
             if (ph_point_in_rect(_tap_x,_tap_y, 0,_strip_top, PH_W,_strip_top+_eff_strip_h)) {
                 var _col = floor(_tap_x / _sw);
                 _col = clamp(_col, 0, 6);
-                global.selected_date_key = strip_days[_col].key;
-                hub_center_strip_on(strip_days[_col].dt);   // re-centre strip on tapped day
+                // Future days are not playable yet — ignore taps on them.
+                if (ph_date_compare_keys(strip_days[_col].key, today_key) <= 0) {
+                    global.selected_date_key = strip_days[_col].key;
+                    hub_center_strip_on(strip_days[_col].dt);   // re-centre strip on tapped day
+                }
             }
         }
 

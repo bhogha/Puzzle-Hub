@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
-"""Color Link (Flow Free) board generator for Puzzle Hub — 9x9.
+"""Color Link (Flow Free) board generator for Puzzle Hub — 12x9 (rows x cols).
 
-Method (matches the documented approach, scaled to 9x9): build a random
-Hamiltonian path that visits every one of the 81 cells, then cut it into K
-contiguous segments. Each segment becomes one flow — its two ends are the
+Method (matches the documented approach, on a non-square ROWS x COLS board): build
+a random Hamiltonian path that visits every one of the ROWS*COLS cells, then cut it
+into K contiguous segments. Each segment becomes one flow — its two ends are the
 endpoint dots and its cells are the solution path. Because the segments are
 slices of a single board-filling path they always tile the board with no gaps or
 overlaps, so the puzzle is guaranteed solvable.
 
-K is kept at 6-8 so flows stay long (a real step up from the old 6x6 / 4-6 flow
-boards) while not exceeding the 8-colour palette (no colour reuse on a board).
+The board is taller than it is wide (12 rows x 9 cols) so it fills the portrait
+play area to the top. K is kept at 7-8 (the most "dot pairs" the 8-colour palette
+allows without colour reuse) so the bigger board carries more flows.
 
 Output JSON entry shape (matches scr_colorlink.gml):
-  { "date":"YYYY-MM-DD"(optional), "size":9,
+  { "date":"YYYY-MM-DD"(optional), "rows":12, "cols":9,
     "flows":[ {"color":i,"a":[r,c],"b":[r,c],"path":[[r,c],...]}, ... ] }
 """
 import json, random, datetime, sys
 
-N = 9
-NCELLS = N * N
-FLOWS_MIN, FLOWS_MAX = 6, 8
-SEG_MIN = 5                       # min cells per flow (avoid trivial short flows)
+ROWS, COLS = 12, 9
+NCELLS = ROWS * COLS
+FLOWS_MIN, FLOWS_MAX = 9, 10     # more (shorter) flows = more dot pairs, easier solve
+SEG_MIN = 4                       # min cells per flow (avoid trivial short flows)
+SEG_MAX = 15                      # cap so no single flow snakes across the whole board
 
 sys.setrecursionlimit(10000)
 DIRS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -29,21 +31,21 @@ DIRS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 def neighbors(r, c):
     for dr, dc in DIRS:
         nr, nc = r + dr, c + dc
-        if 0 <= nr < N and 0 <= nc < N:
+        if 0 <= nr < ROWS and 0 <= nc < COLS:
             yield nr, nc
 
 
 def initial_snake():
     """A boustrophedon (snake) Hamiltonian path covering every cell."""
     path = []
-    for r in range(N):
-        cols = range(N) if r % 2 == 0 else range(N - 1, -1, -1)
+    for r in range(ROWS):
+        cols = range(COLS) if r % 2 == 0 else range(COLS - 1, -1, -1)
         for c in cols:
             path.append((r, c))
     return path
 
 
-def hamiltonian_path(rng, iters=4000):
+def hamiltonian_path(rng, iters=5000):
     """Random Hamiltonian path via the BACKBITE algorithm: from a snake path,
     repeatedly take an endpoint, pick a random grid-neighbour w of it that lies
     earlier in the path, and reverse the tail past w. Each move maps one
@@ -54,7 +56,7 @@ def hamiltonian_path(rng, iters=4000):
             path.reverse()                     # operate on either end
         end = path[-1]
         nbrs = [(end[0] + dr, end[1] + dc) for dr, dc in DIRS]
-        nbrs = [(r, c) for r, c in nbrs if 0 <= r < N and 0 <= c < N]
+        nbrs = [(r, c) for r, c in nbrs if 0 <= r < ROWS and 0 <= c < COLS]
         w = rng.choice(nbrs)
         j = path.index(w)
         if j >= len(path) - 2:                  # w is already the adjacent cell -> no-op
@@ -63,25 +65,29 @@ def hamiltonian_path(rng, iters=4000):
     return path
 
 
-def cut_lengths(total, k, lo, rng):
-    """Random composition of `total` into k parts each >= lo."""
+def cut_lengths(total, k, lo, hi, rng):
+    """Random composition of `total` into k parts, each in [lo, hi]."""
+    if total < lo * k or total > hi * k:
+        raise ValueError("total out of range for k parts")
     while True:
-        # start each part at lo, distribute the remainder randomly
+        # start each part at lo, distribute the remainder randomly (respecting hi)
         parts = [lo] * k
         rem = total - lo * k
-        if rem < 0:
-            raise ValueError("total too small for k parts")
+        ok = True
         for _ in range(rem):
-            parts[rng.randrange(k)] += 1
-        # light balance check: avoid one giant flow swallowing the board
-        if max(parts) <= total * 0.45:
+            choices = [i for i in range(k) if parts[i] < hi]
+            if not choices:
+                ok = False
+                break
+            parts[rng.choice(choices)] += 1
+        if ok:
             return parts
 
 
 def gen_board(rng):
     path = hamiltonian_path(rng)
     k = rng.randint(FLOWS_MIN, FLOWS_MAX)
-    lengths = cut_lengths(NCELLS, k, SEG_MIN, rng)
+    lengths = cut_lengths(NCELLS, k, SEG_MIN, SEG_MAX, rng)
     flows = []
     idx = 0
     for i, L in enumerate(lengths):
@@ -93,25 +99,25 @@ def gen_board(rng):
             "b": [seg[-1][0], seg[-1][1]],
             "path": [[r, c] for (r, c) in seg],
         })
-    return {"size": N, "flows": flows}
+    return {"rows": ROWS, "cols": COLS, "flows": flows}
 
 
 # ── Verification (mirrors ph_colorlink_is_solved) ─────────────────────────────
 def verify(board):
-    n = board["size"]
-    cov = [-1] * (n * n)
+    rows, cols = board["rows"], board["cols"]
+    cov = [-1] * (rows * cols)
     for f, fl in enumerate(board["flows"]):
         p = fl["path"]
         if len(p) < 2:
             return False
-        a = fl["a"][0] * n + fl["a"][1]
-        b = fl["b"][0] * n + fl["b"][1]
-        first = p[0][0] * n + p[0][1]
-        last = p[-1][0] * n + p[-1][1]
+        a = fl["a"][0] * cols + fl["a"][1]
+        b = fl["b"][0] * cols + fl["b"][1]
+        first = p[0][0] * cols + p[0][1]
+        last = p[-1][0] * cols + p[-1][1]
         if not ((first == a and last == b) or (first == b and last == a)):
             return False
         for i, (r, c) in enumerate(p):
-            ci = r * n + c
+            ci = r * cols + c
             if cov[ci] != -1:
                 return False
             cov[ci] = f

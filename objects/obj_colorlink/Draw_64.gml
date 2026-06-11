@@ -45,14 +45,16 @@ ph_hint_draw_feedback(hint);
 ph_draw_game_tip(grid_y, ph_game_tip("colorlink"));
 
 // ── Board: flat #f1eae1 base + thin per-cell borders (1px, black @30%) ────────
-ph_draw_rounded(grid_x, grid_y, grid_x + BOARD, grid_y + BOARD, 8, PH_COL_HUE_TILE_BG);
+ph_draw_rounded(grid_x, grid_y, grid_x + BOARD_W, grid_y + BOARD_H, 8, PH_COL_HUE_TILE_BG);
 draw_set_color(c_black);
 draw_set_alpha(0.3);
-for (var _g = 0; _g <= N; _g++) {
+for (var _g = 0; _g <= COLS; _g++) {               // column borders
     var _gx = grid_x + _g * CELL;
+    draw_line(_gx, grid_y, _gx, grid_y + BOARD_H);
+}
+for (var _g = 0; _g <= ROWS; _g++) {               // row borders
     var _gy = grid_y + _g * CELL;
-    draw_line(_gx, grid_y, _gx, grid_y + BOARD);   // column border
-    draw_line(grid_x, _gy, grid_x + BOARD, _gy);   // row border
+    draw_line(grid_x, _gy, grid_x + BOARD_W, _gy);
 }
 draw_set_alpha(1);
 

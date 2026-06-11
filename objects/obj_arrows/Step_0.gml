@@ -73,7 +73,7 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
     // Tap an arrow → launch if its lane is clear, else blocked (+5 s).
     var _ci = ar_cell_at(_mx, _my);
     if (_ci != -1) {
-        var _idx = ph_arrows_at(puzzle, alive, _ci div N, _ci mod N);
+        var _idx = ph_arrows_at(puzzle, alive, _ci div COLS, _ci mod COLS);
         if (_idx != -1) {
             if (ph_arrows_sweep_clear(puzzle, alive, _idx)) {
                 ar_start_launch(_idx);

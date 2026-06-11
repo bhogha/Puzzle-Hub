@@ -3,17 +3,24 @@
 // the lines never cross and every cell is filled. No loss state. Lime accent.
 
 puzzle  = ph_colorlink_for_date(global.selected_date_key);
-N       = puzzle.size;                 // 6
-NCELLS  = N * N;
+ROWS    = puzzle.rows;                  // 12
+COLS    = puzzle.cols;                  // 9
+NCELLS  = ROWS * COLS;
 NFLOWS  = array_length(puzzle.flows);
 
-// ── Board geometry (centred square, bottom-anchored above the toolbar) ────────
-BOARD  = 1020;
-CELL   = BOARD / N;                     // 170 px per cell at N=6
-grid_x = floor((PH_W - BOARD) / 2);     // 30
-grid_y = 300 + global.safe_top_gui;
-var _target_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP;
-grid_y += max(0, _target_bot - (grid_y + BOARD));
+// ── Board geometry (non-square; FILLS the portrait play area to the top) ──────
+// Square cells; CELL is the largest that fits both the available width and the
+// vertical band between the top HUD and the bottom toolbar, then centred — so a
+// tall rows>cols grid uses the whole screen (mirrors Arrows).
+var _avail_top = 240 + global.safe_top_gui;                               // below HUD + game tip
+var _avail_bot = PH_H - global.safe_bottom_gui - 155 - PH_PLAY_BOTTOM_GAP; // above toolbar
+var _avail_w   = PH_W - 40;                                               // 20px side margins
+var _avail_h   = _avail_bot - _avail_top;
+CELL    = floor(min(_avail_w / COLS, _avail_h / ROWS));
+BOARD_W = COLS * CELL;
+BOARD_H = ROWS * CELL;
+grid_x  = floor((PH_W - BOARD_W) / 2);
+grid_y  = floor(_avail_top + (_avail_h - BOARD_H) / 2);
 
 ACCENT      = PH_COL_LIME;
 ACCENT_DEEP = PH_COL_LIME_DEEP;
@@ -52,24 +59,24 @@ HINT_PILL_T = PH_H - 143 - global.safe_bottom_gui;
 HINT_PILL_B = PH_H - 77  - global.safe_bottom_gui;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-cl_idx        = function(_r, _c) { return _r * N + _c; };
-cl_cell_row   = function(_i) { return _i div N; };
-cl_cell_col   = function(_i) { return _i mod N; };
-cl_manhattan  = function(_a, _b) { return abs(_a div N - _b div N) + abs(_a mod N - _b mod N); };
+cl_idx        = function(_r, _c) { return _r * COLS + _c; };
+cl_cell_row   = function(_i) { return _i div COLS; };
+cl_cell_col   = function(_i) { return _i mod COLS; };
+cl_manhattan  = function(_a, _b) { return abs(_a div COLS - _b div COLS) + abs(_a mod COLS - _b mod COLS); };
 
 /// Cell index under a GUI point, or -1 if off the board.
 cl_cell_at = function(_px, _py) {
-    if (_px < grid_x || _py < grid_y || _px >= grid_x + BOARD || _py >= grid_y + BOARD) return -1;
-    var _c = clamp(floor((_px - grid_x) / CELL), 0, N - 1);
-    var _r = clamp(floor((_py - grid_y) / CELL), 0, N - 1);
-    return _r * N + _c;
+    if (_px < grid_x || _py < grid_y || _px >= grid_x + BOARD_W || _py >= grid_y + BOARD_H) return -1;
+    var _c = clamp(floor((_px - grid_x) / CELL), 0, COLS - 1);
+    var _r = clamp(floor((_py - grid_y) / CELL), 0, ROWS - 1);
+    return _r * COLS + _c;
 };
 
 /// Centre (GUI x,y) of a cell index.
 cl_center = function(_i) {
     return {
-        x: grid_x + (_i mod N) * CELL + CELL/2,
-        y: grid_y + (_i div N) * CELL + CELL/2,
+        x: grid_x + (_i mod COLS) * CELL + CELL/2,
+        y: grid_y + (_i div COLS) * CELL + CELL/2,
     };
 };
 
@@ -119,7 +126,7 @@ cl_flow_connected = function(_f) {
     var _len = array_length(_r);
     if (_len < 2) return false;
     var _fl = puzzle.flows[_f];
-    var _a = _fl.a.r * N + _fl.a.c, _b = _fl.b.r * N + _fl.b.c;
+    var _a = _fl.a.r * COLS + _fl.a.c, _b = _fl.b.r * COLS + _fl.b.c;
     return ((_r[0] == _a && _r[_len-1] == _b) || (_r[0] == _b && _r[_len-1] == _a));
 };
 
@@ -142,15 +149,15 @@ cl_try_step = function(_to) {
     // Once the line has reached its opposite endpoint, it can only retract (above),
     // not extend past it — matches Flow Free.
     var _fl  = puzzle.flows[_f];
-    var _ea  = _fl.a.r * N + _fl.a.c;
-    var _eb  = _fl.b.r * N + _fl.b.c;
+    var _ea  = _fl.a.r * COLS + _fl.a.c;
+    var _eb  = _fl.b.r * COLS + _fl.b.c;
     var _far = (_r[0] == _ea) ? _eb : _ea;
     if (_head == _far) return false;
 
     if (cell_owner[_to] == _f) return false;                  // would loop on itself
 
     // Another colour's endpoint blocks the path (can't pass through it).
-    var _ec = ph_colorlink_endpoint_color(puzzle, _to div N, _to mod N);
+    var _ec = ph_colorlink_endpoint_color(puzzle, _to div COLS, _to mod COLS);
     if (_ec != -1 && _ec != _f) return false;
 
     // Drawing over another flow cuts it back — unless that flow is hint-locked.
@@ -166,12 +173,12 @@ cl_try_step = function(_to) {
 
 /// One orthogonal step from `_from` toward `_to` (prefer the larger-delta axis).
 cl_step_toward = function(_from, _to) {
-    var _fr = _from div N, _fc = _from mod N;
-    var _tr = _to div N,  _tc = _to mod N;
+    var _fr = _from div COLS, _fc = _from mod COLS;
+    var _tr = _to div COLS,  _tc = _to mod COLS;
     var _dr = _tr - _fr, _dc = _tc - _fc;
     if (_dr == 0 && _dc == 0) return -1;
-    if (abs(_dc) >= abs(_dr)) return _fr * N + (_fc + sign(_dc));
-    return (_fr + sign(_dr)) * N + _fc;
+    if (abs(_dc) >= abs(_dr)) return _fr * COLS + (_fc + sign(_dc));
+    return (_fr + sign(_dr)) * COLS + _fc;
 };
 
 /// Indices of flows revealed by a hint (for persistence).
@@ -206,7 +213,7 @@ cl_apply_hint = function() {
     var _sol = puzzle.flows[_idx].path;
     var _cells = [];
     for (var _i = 0; _i < array_length(_sol); _i++) {
-        var _ci = _sol[_i].r * N + _sol[_i].c;
+        var _ci = _sol[_i].r * COLS + _sol[_i].c;
         var _g  = cell_owner[_ci];
         if (_g != -1 && _g != _idx && !hint_locked[_g]) cl_truncate_at(_g, _ci);
         array_push(_cells, _ci);
@@ -257,12 +264,13 @@ cl_check_win = function() {
 
 // Mini result board for the shared win screen (draws the solved flows).
 win_draw_recap = function(_cx, _top, _bw, _bh) {
-    var _side = min(_bw, _bh);
-    var _cell = _side / N;
-    var _ox   = _cx - _side/2;
-    var _oy   = _top + (_bh - _side)/2;
+    var _cell = min(_bw / COLS, _bh / ROWS);
+    var _rw   = COLS * _cell;
+    var _rh   = ROWS * _cell;
+    var _ox   = _cx - _rw/2;
+    var _oy   = _top + (_bh - _rh)/2;
     draw_set_color(make_color_rgb(236,229,217));
-    ph_draw_rounded(_ox, _oy, _ox + _side, _oy + _side, 12, make_color_rgb(236,229,217));
+    ph_draw_rounded(_ox, _oy, _ox + _rw, _oy + _rh, 12, make_color_rgb(236,229,217));
     var _lw = _cell * 0.36;
     for (var _f = 0; _f < NFLOWS; _f++) {
         var _col = ph_colorlink_color(puzzle.flows[_f].color);
