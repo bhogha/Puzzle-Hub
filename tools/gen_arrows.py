@@ -24,7 +24,7 @@ removing an arrow only frees cells, the player can never get stuck.
 """
 import json, random
 
-N = 8
+N = 9
 DIRS = {"U": (-1, 0), "D": (1, 0), "L": (0, -1), "R": (0, 1)}
 
 def tip_lane_clear(cells, head, blocked):
@@ -92,30 +92,48 @@ def greedy_solvable(arrows):
             return False
     return True
 
-def gen_board(target_min=8, target_max=11):
-    for _attempt in range(400):
-        grid = [[None] * N for _ in range(N)]
-        arrows = []
-        target = random.randint(target_min, target_max)
-        fails = 0
-        while len(arrows) < target and fails < 80:
-            length = random.randint(3, 5)
-            head = random.choice(list(DIRS.keys()))
-            cand = try_make_arrow(grid, length, head)
-            if cand is None:
-                fails += 1; continue
-            # Tip-lane must be clear of all placed cells AND this arrow's own body.
-            blocked = occupied_set(arrows) | set(cand)
-            if tip_lane_clear(cand, head, blocked):
-                for (r, c) in cand:
-                    grid[r][c] = len(arrows)
-                arrows.append({"head": head, "cells": [[r, c] for (r, c) in cand]})
-                fails = 0
-            else:
-                fails += 1
-        if len(arrows) >= target_min and greedy_solvable(arrows):
-            return {"size": N, "arrows": arrows}
-    raise RuntimeError("could not generate a board")
+def pack_once():
+    """Pack arrows onto an empty board until no more can be placed. Each arrow is
+    committed only if its tip-lane is clear of every already-placed cell AND its
+    own body, so the placement order reversed is always a valid solve order (the
+    board is solvable by construction). Returns the arrow list."""
+    grid = [[None] * N for _ in range(N)]
+    arrows = []
+    fails = 0
+    while fails < 250:
+        # Bias toward medium arrows but allow 2-cell arrows to mop up leftover
+        # gaps so the board fills as densely as possible.
+        length = random.choices([2, 3, 4, 5, 6], weights=[1, 4, 4, 3, 2])[0]
+        head = random.choice(list(DIRS.keys()))
+        cand = try_make_arrow(grid, length, head)
+        if cand is None:
+            fails += 1
+            continue
+        blocked = occupied_set(arrows) | set(cand)
+        if tip_lane_clear(cand, head, blocked):
+            for (r, c) in cand:
+                grid[r][c] = len(arrows)
+            arrows.append({"head": head, "cells": [[r, c] for (r, c) in cand]})
+            fails = 0
+        else:
+            fails += 1
+    return arrows
+
+
+def gen_board(attempts=120):
+    """Generate the DENSEST solvable board found over many packing attempts
+    ("fill the board with arrows as much as possible")."""
+    best, best_fill = None, -1
+    for _ in range(attempts):
+        arrows = pack_once()
+        if len(arrows) < 8 or not greedy_solvable(arrows):
+            continue
+        fill = sum(len(a["cells"]) for a in arrows)
+        if fill > best_fill:
+            best, best_fill = arrows, fill
+    if best is None:
+        raise RuntimeError("could not generate a board")
+    return {"size": N, "arrows": best}
 
 def date_keys(start, count):
     import datetime
@@ -124,8 +142,8 @@ def date_keys(start, count):
     return [(base + datetime.timedelta(days=i)).isoformat() for i in range(count)]
 
 def main():
-    random.seed(20260610)
-    dated_keys = date_keys("2026-06-10", 30)   # curated launch month
+    random.seed(20260611)
+    dated_keys = date_keys("2026-06-11", 30)   # curated launch month
     pool = []
     for dk in dated_keys:
         b = gen_board(); b["date"] = dk; pool.append(b)
@@ -137,7 +155,7 @@ def main():
     cells = [sum(len(a["cells"]) for a in b["arrows"]) for b in pool]
     print(f"wrote {len(pool)} boards -> puzzles_arrows.json")
     print(f"arrows/board: min {min(sizes)} max {max(sizes)} avg {sum(sizes)/len(sizes):.1f}")
-    print(f"filled cells/board: min {min(cells)} max {max(cells)} avg {sum(cells)/len(cells):.1f} ({sum(cells)/len(cells)/64*100:.0f}%)")
+    print(f"filled cells/board: min {min(cells)} max {max(cells)} avg {sum(cells)/len(cells):.1f} ({sum(cells)/len(cells)/(N*N)*100:.0f}%)")
     assert all(greedy_solvable(b["arrows"]) for b in pool), "unsolvable board slipped through"
     print("all boards verified solvable (tip-lane rule)")
     print("sample board[0]:", json.dumps(pool[0]["arrows"], separators=(",", ":")))

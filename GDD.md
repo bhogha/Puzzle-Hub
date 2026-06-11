@@ -1,6 +1,8 @@
 # Puzzle Hub — Game Design Document
 
-_Last updated: 2026-06-01 · Version: 0.2 (in development; v0.1 tagged baseline)_
+_Last updated: 2026-06-11 · Version: 0.3 (in development; v0.2 tagged milestone)_
+
+> **2026-06-11 — Board-size standardisation.** Shikaku, Color Link, Word Bend and Arrows were all resized to a uniform **9×9** board to bring their difficulty / solve times in line with each other and the rest of the pool. All four level pools were regenerated (30 dated from 2026-06-11 + 30 seed-fallback each); see the per-puzzle sections and §7 (2026-06-11).
 
 This document captures **what is actually implemented in code** today, not the long-term vision. Update it whenever an economy rule changes, a new puzzle ships, or a balancing constant is tuned. All gameplay numbers live in `scripts/scr_constants/scr_constants.gml` as `#macro`s — change them there and reflect the change here.
 
@@ -295,11 +297,11 @@ Indexing is row-major (`index = row*9 + col`). `date` is optional. **Date select
 
 ### 4.4 Shikaku
 
-**Genre.** Rectangle-division logic puzzle ("Shikaku" / "divide by squares") on a **6×6 grid**. The grid carries numbers; the player partitions the whole grid into rectangles so that **each rectangle contains exactly one number and that number equals the rectangle's area** (cell count). Every cell ends up inside exactly one rectangle. Generation guarantees each puzzle has a **unique** solution.
+**Genre.** Rectangle-division logic puzzle ("Shikaku" / "divide by squares") on a **9×9 grid**. The grid carries numbers; the player partitions the whole grid into rectangles so that **each rectangle contains exactly one number and that number equals the rectangle's area** (cell count). Every cell ends up inside exactly one rectangle. Generation guarantees each puzzle has a **unique** solution.
 
 **Reward.** Solving grants a single **+100 XP** (`PH_XP_PER_PUZZLE`), once on completion — identical to the other puzzles. Shikaku counts toward the daily 4th-puzzle gift box and the streak. **No bonus-word / secondary reward** (the genre has none).
 
-**Layout (mirrors Sudoku).** Back arrow + live timer in the top HUD strip; **coin balance + HINT pill in the bottom toolbar — no bonus chest**, exactly like Sudoku. The accent colour is **blue** (`PH_COL_BLUE`). The board is a 6×6 grid (`BOARD = 960`, `CELL = 160`) centred horizontally below the HUD. There is no number pad.
+**Layout (mirrors Sudoku).** Back arrow + live timer in the top HUD strip; **coin balance + HINT pill in the bottom toolbar — no bonus chest**, exactly like Sudoku. The accent colour is **blue** (`PH_COL_BLUE`). The board is a 9×9 grid (`BOARD = 960`, `CELL ≈ 107`) centred horizontally below the HUD. There is no number pad.
 
 **Interaction.** **Drag corner-to-corner** to draw a rectangle: press a cell, drag to the opposite corner, release to commit. Committing removes any existing rectangles that overlap the new one (so you can redraw freely). **Single-cell tap on an existing rectangle deletes it.** Each drawn rectangle is filled soft (blue) with a coloured border: **teal** when it is correct (contains exactly one number whose value equals its area), **pink** otherwise. The in-progress drag shows a translucent blue preview.
 
@@ -307,18 +309,18 @@ Indexing is row-major (`index = row*9 + col`). `date` is optional. **Date select
 
 **Completion.** When the player's rectangles form a complete valid partition (`ph_shikaku_check_solution`), the controller records `save.shikaku_time_<date>` (mm:ss), sets the `SHIKAKU` flag in `save.puzzles_solved[date_key]`, grants the single +100 XP, triggers the 4th-puzzle gift if applicable, updates streak, and shows the win overlay with the confetti burst.
 
-**Win screen.** Same teal-backdrop celebration as the other puzzles: Blinky → "WELL DONE!" → a **mini solved board** (the completed 6×6 partition: solution rectangles drawn as teal rings with their numbers) → "+100 XP" pill → level row + XP bar → finish-time + streak chips → optional GIFT banner → BACK TO HUB.
+**Win screen.** Same teal-backdrop celebration as the other puzzles: Blinky → "WELL DONE!" → a **mini solved board** (the completed 9×9 partition: solution rectangles drawn as teal rings with their numbers) → "+100 XP" pill → level row + XP bar → finish-time + streak chips → optional GIFT banner → BACK TO HUB.
 
 **Review mode.** Tapping a completed Shikaku on the hub re-enters with `global.shikaku_review_mode = true`, going straight to the win overlay (rectangles rebuilt from the solution) with the recorded finish time. The hub queries `ph_shikaku_is_done` for the solved-state badge and reads `shikaku_time_<date>`.
 
 **Data source.** `datafiles/puzzles_shikaku.json` — an array of puzzles, cached in `global.ph_shikaku_cache`. Each entry:
 
 ```json
-{ "date": "YYYY-MM-DD", "size": 6,
+{ "date": "YYYY-MM-DD", "size": 9,
   "rects": [ {"r":0,"c":0,"w":2,"h":3,"cr":1,"cc":0}, ... ] }
 ```
 
-Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed number = `w*h` and sits at clue cell `(cr,cc)` inside the rect. The `rects` list is **both the clue source and the unique solution**. `date` is optional; **date selection** uses the same two-pass logic as the other puzzles (exact `date` match wins, else `seed mod length`). If the file is missing, a hardcoded fallback (six 1×6 columns) is used. The shipped pool is 20 generator-verified unique puzzles dated 2026-06-01 onward.
+Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed number = `w*h` and sits at clue cell `(cr,cc)` inside the rect. The `rects` list is **both the clue source and the unique solution**. `date` is optional; **date selection** uses the same two-pass logic as the other puzzles (exact `date` match wins, else `seed mod length`). If the file is missing, a hardcoded 9×9 fallback board is used. The shipped pool is **60 generator-verified unique 9×9 puzzles** (30 dated from 2026-06-11 + 30 seed-fallback), ~13–18 rectangles each, produced by `tools/gen_shikaku.py` (random partition → unique-solution backtracking check).
 
 **Save shape.** Completion is the single `SHIKAKU` key in `puzzles_solved` (counted automatically by `ph_solved_count_on` — no bookkeeping sub-keys to skip). In-progress state is persisted under `save.shikaku_state[date] = { rects: "r,c,w,h;…", hints: "i,j,…" }` so a player who leaves mid-puzzle resumes their rectangles and purchased hints. Finish time is `shikaku_time_<date>`.
 
@@ -390,11 +392,11 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 ### 4.7 Color Link (Flow Free)
 
-**Genre.** Classic "Flow Free" pipe-connection puzzle on a **6×6 grid**. Connect each pair of matching coloured dots with a continuous line so that (a) lines never cross, overlap, or touch, and (b) **every** cell is filled. There is **no loss state**. The accent colour is **lime** (`PH_COL_LIME`, #c7e70f); the flow lines use the vibrant hub palette (`ph_colorlink_color`: pink, teal, purple, orange, blue, green, violet, deep-yellow, cycled by colour index).
+**Genre.** Classic "Flow Free" pipe-connection puzzle on a **9×9 grid**. Connect each pair of matching coloured dots with a continuous line so that (a) lines never cross, overlap, or touch, and (b) **every** cell is filled. There is **no loss state**. The accent colour is **lime** (`PH_COL_LIME`, #c7e70f); the flow lines use the vibrant hub palette (`ph_colorlink_color`: pink, teal, purple, orange, blue, green, violet, deep-yellow, cycled by colour index).
 
 **Reward.** Solving grants the single **+100 XP** on the shared win screen; it counts toward the 4th-puzzle gift box and the streak, exactly like the other puzzles.
 
-**Board.** A centred square board (`BOARD = 1020`, `CELL = 170`) on a flat **#f1eae1** base (no shadow), bottom-anchored above the toolbar, with a thin **per-cell border** (1px grid lines, black @ 30%) so empty cells read as a grid. Each flow draws as a thick rounded line (`LINE_W ≈ 0.40·CELL`) through cell centres with round joins, plus solid endpoint dots (`DOT_R ≈ 0.27·CELL`). The active drawing tip shows a small white ring.
+**Board.** A centred square board (`BOARD = 1020`, `CELL ≈ 113`) on a flat **#f1eae1** base (no shadow), bottom-anchored above the toolbar, with a thin **per-cell border** (1px grid lines, black @ 30%) so empty cells read as a grid. Each flow draws as a thick rounded line (`LINE_W ≈ 0.40·CELL`) through cell centres with round joins, plus solid endpoint dots (`DOT_R ≈ 0.27·CELL`). The active drawing tip shows a small white ring.
 
 **Layout.** Top HUD (back · "COLOR LINK" in lime · coin pill) → message/toast → game tip ("Connect colors without leaving empty spaces") → board → bottom toolbar (**timer** centre, **HINT** right). **No bonus.**
 
@@ -406,16 +408,16 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 **Review mode.** Tapping a completed Color Link re-enters with `global.colorlink_review_mode = true`, going straight to the win overlay (the recap redraws the solved flows). The hub queries `ph_colorlink_is_done` for the solved badge + finish time.
 
-**Data source.** `datafiles/puzzles_colorlink.json` — a plain array (cached in `global.ph_colorlink_cache`), generated to guarantee solvability (a random Hamiltonian path over the grid, cut into 4–6 contiguous segments → each segment is one flow, so the flows always tile the board). Each entry:
+**Data source.** `datafiles/puzzles_colorlink.json` — a plain array (cached in `global.ph_colorlink_cache`), generated to guarantee solvability (a random Hamiltonian path over the 9×9 grid, cut into **6–8** contiguous segments → each segment is one flow, so the flows always tile the board; `tools/gen_colorlink.py`). Each entry:
 
 ```json
 { "date": "YYYY-MM-DD",
-  "size": 6,
+  "size": 9,
   "flows": [ { "color": 0, "a": [r,c], "b": [r,c],
                "path": [[r,c],[r,c], ...] }, ... ] }
 ```
 
-`date`/`size` optional. `a`/`b` are the endpoint dots; `path` is the full solution route from `a` to `b` (used by the hint and the win recap). Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 6-flow board is the fallback if the file is missing.
+`date`/`size` optional. `a`/`b` are the endpoint dots; `path` is the full solution route from `a` to `b` (used by the hint and the win recap). Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 9×9 6-flow board is the fallback if the file is missing. Shipped pool: 60 boards (30 dated from 2026-06-11 + 30 seed-fallback).
 
 **Save shape.** Completion is the generic `puzzles_solved` `COLORLINK` flag (single key, counted automatically). Finish time is `colorlink_time_<date>`. In-progress routes + hint-locked flow indices persist under `save.colorlink_state[date] = { routes, hints }` (`routes` = per-flow cell-index lists joined by `|`, `hints` = comma-joined flow indices). XP claim guarded by `save.xp_claimed["colorlink_<date>"]`.
 
@@ -423,7 +425,7 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 ### 4.8 Word Bend
 
-**Genre.** Word-fill / path-trace puzzle (modelled on Elevate's *Daily Wordbend*) on a **4×4 … 6×6 grid that is completely filled with letters**. Every letter belongs to exactly one hidden word, and the words' cell-paths **tile the whole board** — no empty cells, no overlaps. To find a word the player **taps its first letter and drags across the rest**; the path may **bend at right angles** but only steps **orthogonally** (no diagonals). Found words lock and the puzzle is solved once all of them are found. There is **no loss state** and **no bonus word**. The accent colour is **tangerine** (`PH_COL_TANGERINE`, #ff5b38); each found word locks in **its own distinct hue** from the vibrant hub palette (`word_colors`: pink, teal, purple, orange, blue, green, violet, deep-yellow, cycled by word index) with white letters, so the bending words read as separate ribbons.
+**Genre.** Word-fill / path-trace puzzle (modelled on Elevate's *Daily Wordbend*) on a **9×9 grid that is completely filled with letters** (~14–18 words tile the board). Every letter belongs to exactly one hidden word, and the words' cell-paths **tile the whole board** — no empty cells, no overlaps. To find a word the player **taps its first letter and drags across the rest**; the path may **bend at right angles** but only steps **orthogonally** (no diagonals). Found words lock and the puzzle is solved once all of them are found. There is **no loss state** and **no bonus word**. The accent colour is **tangerine** (`PH_COL_TANGERINE`, #ff5b38); each found word locks in **its own distinct hue** from the vibrant hub palette (`word_colors`: pink, teal, purple, orange, blue, green, violet, deep-yellow, cycled by word index) with white letters, so the bending words read as separate ribbons.
 
 **Reward.** Solving grants the single **+100 XP** on the shared win screen; it counts toward the 4th-puzzle gift box and the streak, exactly like the other puzzles.
 
@@ -443,11 +445,11 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 ```json
 { "date": "YYYY-MM-DD",
-  "size": 6,
+  "size": 9,
   "words": [ { "text": "PUZZLE", "path": [[r,c],[r,c], ...] }, ... ] }
 ```
 
-`date`/`size` optional. Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 4×4 board is the fallback if the file is missing.
+`date`/`size` optional. Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 9×9 board is the fallback if the file is missing. The shipped pool is 60 boards (30 dated from 2026-06-11 + 30 seed-fallback), generated by `tools/gen_wordbend.py` (Hamiltonian-path cut into length-3–7 snake segments, each assigned a distinct real word). Words are drawn from the curated `Level Editors/Word List.txt` and **validated against an offline dictionary** so no misspelled words ever appear on the board.
 
 **Save shape.** Completion is the generic `puzzles_solved` `WORDBEND` flag (single key, counted automatically). Finish time is `wordbend_time_<date>`. In-progress found-word + hinted-word indices persist under `save.wordbend_state[date] = { found, hints }` (each a comma-joined index list). XP claim guarded by `save.xp_claimed["wordbend_<date>"]`.
 
@@ -455,13 +457,13 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 ### 4.9 Arrows
 
-**Genre.** Tap-to-clear logic puzzle (modelled on *Arrows – Puzzle Escape*) on an **8×8 grid** packed with bent, multi-cell **"snake" arrows**. Each arrow is a connected orthogonal path of cells with an **arrowhead at one end** pointing one of 4 directions (Up/Down/Left/Right). Tapping an arrow launches it **snake-style** — the tip leads straight out in its heading and the body follows its own trail head-first off the board. An arrow can escape **only if the straight lane in front of its tip is completely clear of other arrows**; clear all arrows to solve. Boards are generated so a full clear order always exists and removing an arrow only frees space, so the player **can never get stuck**. There is **no loss state** and **no bonus** — see the time mechanic below. The accent colour is **silver** (`PH_COL_SILVER`, #b8b9bd); each arrow draws in its **own distinct hue** from the vibrant palette (`ph_colorlink_color` by index) as a slim ribbon with softly-rounded corners.
+**Genre.** Tap-to-clear logic puzzle (modelled on *Arrows – Puzzle Escape*) on a **9×9 grid** packed as densely as possible (~93% of cells filled, ~18–25 arrows) with bent, multi-cell **"snake" arrows**. Each arrow is a connected orthogonal path of cells with an **arrowhead at one end** pointing one of 4 directions (Up/Down/Left/Right). Tapping an arrow launches it **snake-style** — the tip leads straight out in its heading and the body follows its own trail head-first off the board. An arrow can escape **only if the straight lane in front of its tip is completely clear of other arrows**; clear all arrows to solve. Boards are generated so a full clear order always exists and removing an arrow only frees space, so the player **can never get stuck**. There is **no loss state** and **no bonus** — see the time mechanic below. The accent colour is **silver** (`PH_COL_SILVER`, #b8b9bd); each arrow draws in its **own distinct hue** from the vibrant palette (`ph_colorlink_color` by index) as a slim ribbon with softly-rounded corners.
 
 **The "only time can be lost" mechanic.** Unlike the source game there are no lives/hearts. Tapping a **blocked** arrow (tip lane obstructed) does not fail the run — it shakes, floats a **"+5 s"** label, and adds a **5-second penalty** (`PH_ARROWS_PENALTY_SECS`) folded straight into the play timer. Careless taps cost time; nothing else. The finish time is the player's score.
 
 **Reward.** Solving grants the single **+100 XP** on the shared win screen; it counts toward the 4th-puzzle gift box and the streak, exactly like the other puzzles.
 
-**Board.** A centred square white card (`BOARD = 1020`, per-cell `CELL = BOARD/8`) over a faint dot grid, bottom-anchored above the toolbar. Arrows are drawn as slim ribbons (`RIBBON_W ≈ 0.30·CELL`): straight runs stay straight and bends are softened by a quadratic corner fillet (`AR_CORNER ≈ 0.42·CELL`), capped with a triangular arrowhead at the tip. Drawing is clipped to the board so a launched arrow slides cleanly off the edge.
+**Board.** A centred square white card (`BOARD = 1020`, per-cell `CELL = BOARD/9 ≈ 113`) over a faint dot grid, bottom-anchored above the toolbar. Arrows are drawn as slim ribbons (`RIBBON_W ≈ 0.30·CELL`): straight runs stay straight and bends are softened by a quadratic corner fillet (`AR_CORNER ≈ 0.42·CELL`), capped with a triangular arrowhead at the tip. Drawing is clipped to the board so a launched arrow slides cleanly off the edge.
 
 **Layout.** Top HUD (back · "ARROWS" in silver · coin pill) → toast → game tip ("Guide arrows out without causing any collisions") → board → bottom toolbar (**timer** centre, **HINT** right). **No bonus pill.**
 
@@ -477,11 +479,11 @@ Each rect is `(r,c)` top-left, `w` width (cols), `h` height (rows); the printed 
 
 ```json
 { "date": "YYYY-MM-DD",
-  "size": 8,
+  "size": 9,
   "arrows": [ { "head": "R", "cells": [[r,c],[r,c], ...] }, ... ] }
 ```
 
-`cells[0]` is the tip (arrowhead) cell; `cells[1]` is directly behind it (opposite the head direction) so the tip is always frontmost. `date`/`size` optional. Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 8×8 board is the fallback if the file is missing.
+`cells[0]` is the tip (arrowhead) cell; `cells[1]` is directly behind it (opposite the head direction) so the tip is always frontmost. `date`/`size` optional. Two-pass date selection (exact `date`, else `seed mod length`); a hardcoded 9×9 board is the fallback if the file is missing. The shipped pool is 60 boards (30 dated from 2026-06-11 + 30 seed-fallback); `gen_arrows.py` now packs each board to maximum density (~93% fill).
 
 **Save shape.** Completion is the generic `puzzles_solved` `ARROWS` flag (single key, counted automatically). Finish time is `arrows_time_<date>` (includes accrued +5 s penalties, since they fold into the timer). In-progress state persists under `save.arrows_state[date] = { cleared, penalty }` (`cleared` = comma-joined indices of arrows already launched, so `alive = !cleared`; `penalty` = accumulated penalty seconds) for resume. XP claim guarded by `save.xp_claimed["arrows_<date>"]`.
 
@@ -588,6 +590,20 @@ Intended for player-driven QA and "start over" without an in-game settings UI. I
 
 - Should the 10-coin bonus-word reward stay? It pads the wallet quickly if the puzzle author packs a lot of bonus words.
 - Hint pricing: 100 coins per cell is steep — players need a full level-up to afford one hint after spending their starting wallet.
+
+---
+
+## 7. Recent code changes (2026-06-11)
+
+**Board-size standardisation → uniform 9×9.** To bring difficulty / solve times in line with each other and the rest of the pool, **Shikaku, Color Link, Word Bend and Arrows** were all moved from their previous sizes (6×6 / 6×6 / 4×4–6×6 / 8×8) to a uniform **9×9** board. The puzzle controllers already derive `N` and `CELL` from each board's `size` field, so **no controller code changed** — the work was regenerating the level pools and updating the size-dependent constants/fallbacks/docs.
+
+- **Level pools regenerated** — each file now holds **60 boards (30 dated from 2026-06-11 + 30 seed-fallback)**, all `size: 9`:
+  - `puzzles_shikaku.json` — `tools/gen_shikaku.py` (random rectangle partition, biased toward larger pieces → ~13–18 rects/board, **verified unique solution** via a backtracking exact-cover solver).
+  - `puzzles_colorlink.json` — `tools/gen_colorlink.py` (random Hamiltonian path via the **backbite** algorithm, cut into **6–8** flows that tile the board).
+  - `puzzles_wordbend.json` — `tools/gen_wordbend.py` (Hamiltonian-path cut into length-3–7 snake segments → ~14–18 words/board, each a **distinct real word validated against an offline dictionary** so no misspellings reach the board; note the curated `Word List.txt` itself contained typos like WHISTL/WINSOM/COMPAC, now filtered out).
+  - `puzzles_arrows.json` — `tools/gen_arrows.py` updated to `N=9` with a **density-maximising packing loop** ("fill the board with arrows as much as possible") → ~93% of cells filled, ~18–25 arrows/board, still reverse-construction-solvable + greedy-solver-verified.
+- **Constants / fallbacks** — `PH_ARROWS_SIZE` 8 → 9; the hardcoded "file missing" fallback boards in `scr_shikaku` / `scr_colorlink` / `scr_wordbend` / `scr_arrows` were replaced with verified 9×9 boards.
+- **Open item (manual check).** Since cells shrink (`CELL` now ≈ 88–113 px depending on puzzle), the on-board glyphs/letters/numbers and hint rings should be eyeballed on-device to confirm nothing crowds or clips at 9×9.
 
 ---
 

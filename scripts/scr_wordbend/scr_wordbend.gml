@@ -87,15 +87,27 @@ function ph_wordbend_make(_raw) {
     return { size: _n, grid: _grid, words: _words };
 }
 
-/// Hardcoded fallback (a validated 4×4 board) when the data file is missing.
+/// Hardcoded fallback (a validated 9×9 board, words tile every cell) when the data
+/// file is missing.
 function ph_wordbend_fallback() {
     var _raw = {
-        size: 4,
+        size: 9,
         words: [
-            { text: "CARD", path: [[0,0],[0,1],[0,2],[0,3]] },
-            { text: "MOON", path: [[1,0],[1,1],[1,2],[1,3]] },
-            { text: "LIME", path: [[2,0],[2,1],[2,2],[2,3]] },
-            { text: "SNAP", path: [[3,0],[3,1],[3,2],[3,3]] },
+            { text: "STURDY",  path: [[3,5],[4,5],[5,5],[5,4],[5,3],[6,3]] },
+            { text: "SHATTER", path: [[7,3],[8,3],[8,2],[8,1],[8,0],[7,0],[7,1]] },
+            { text: "PEBBLE",  path: [[7,2],[6,2],[5,2],[4,2],[3,2],[3,3]] },
+            { text: "FIFTY",   path: [[4,3],[4,4],[3,4],[2,4],[2,5]] },
+            { text: "TOILET",  path: [[1,5],[1,4],[1,3],[2,3],[2,2],[2,1]] },
+            { text: "POLITE",  path: [[3,1],[4,1],[5,1],[6,1],[6,0],[5,0]] },
+            { text: "ROCKY",   path: [[4,0],[3,0],[2,0],[1,0],[0,0]] },
+            { text: "WESTER",  path: [[0,1],[1,1],[1,2],[0,2],[0,3],[0,4]] },
+            { text: "TOAST",   path: [[0,5],[0,6],[0,7],[0,8],[1,8]] },
+            { text: "DIRECT",  path: [[1,7],[1,6],[2,6],[2,7],[2,8],[3,8]] },
+            { text: "SAW",     path: [[4,8],[5,8],[6,8]] },
+            { text: "PEAK",    path: [[6,7],[5,7],[4,7],[3,7]] },
+            { text: "WHIFF",   path: [[3,6],[4,6],[5,6],[6,6],[7,6]] },
+            { text: "SERVICE", path: [[7,7],[7,8],[8,8],[8,7],[8,6],[8,5],[7,5]] },
+            { text: "WISH",    path: [[6,5],[6,4],[7,4],[8,4]] },
         ],
     };
     return ph_wordbend_make(_raw);

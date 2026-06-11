@@ -80,21 +80,30 @@ function ph_arrows_make(_raw) {
     return { size: _n, arrows: _arrows };
 }
 
-/// Hardcoded fallback (a generator-verified 8×8 board) when the data file is
-/// missing. Identical shape to ph_arrows_make's output.
+/// Hardcoded fallback (a generator-verified, densely packed 9×9 board) when the
+/// data file is missing. Identical shape to ph_arrows_make's output.
 function ph_arrows_fallback() {
     var _raw = {
-        size: 8,
+        size: 9,
         arrows: [
-            { head: "D", cells: [[5,0],[4,0],[4,1]] },
-            { head: "U", cells: [[2,4],[3,4],[3,3],[4,3],[5,3]] },
+            { head: "R", cells: [[8,7],[8,6],[8,5]] },
+            { head: "D", cells: [[2,0],[1,0],[1,1],[1,2],[0,2]] },
+            { head: "D", cells: [[4,4],[3,4],[2,4],[2,3],[2,2]] },
+            { head: "R", cells: [[6,3],[6,2],[5,2],[5,3]] },
+            { head: "L", cells: [[3,1],[3,2],[3,3],[4,3],[4,2],[4,1]] },
+            { head: "D", cells: [[6,4],[5,4],[5,5],[6,5],[7,5]] },
+            { head: "R", cells: [[0,8],[0,7],[1,7],[1,8],[2,8],[2,7]] },
+            { head: "U", cells: [[1,6],[2,6],[2,5],[1,5]] },
             { head: "R", cells: [[3,6],[3,5],[4,5]] },
-            { head: "D", cells: [[6,5],[5,5],[5,6]] },
-            { head: "D", cells: [[7,3],[6,3],[6,4]] },
-            { head: "R", cells: [[0,5],[0,4],[0,3]] },
-            { head: "R", cells: [[2,7],[2,6],[2,5],[1,5],[1,6]] },
-            { head: "L", cells: [[0,1],[0,2],[1,2],[2,2],[2,3]] },
-            { head: "D", cells: [[6,1],[5,1],[5,2]] },
+            { head: "R", cells: [[5,8],[5,7],[5,6],[6,6],[6,7],[6,8]] },
+            { head: "R", cells: [[7,8],[7,7],[7,6]] },
+            { head: "D", cells: [[8,0],[7,0],[7,1],[8,1]] },
+            { head: "L", cells: [[6,0],[6,1],[5,1],[5,0]] },
+            { head: "D", cells: [[8,4],[7,4],[7,3]] },
+            { head: "L", cells: [[0,0],[0,1]] },
+            { head: "U", cells: [[0,4],[1,4],[1,3],[0,3]] },
+            { head: "R", cells: [[3,8],[3,7],[4,7],[4,8]] },
+            { head: "D", cells: [[8,2],[7,2]] },
         ],
     };
     return ph_arrows_make(_raw);

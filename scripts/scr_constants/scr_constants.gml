@@ -123,7 +123,7 @@
 #macro PH_HUESORT_SIZE       5   // N×N board (4 locked corner anchors)
 
 // ── Arrows ────────────────────────────────────────────────────────────────────
-#macro PH_ARROWS_SIZE          8   // N×N board
+#macro PH_ARROWS_SIZE          9   // N×N board
 #macro PH_ARROWS_PENALTY_SECS  5   // time added on a blocked tap (no loss state — only time is lost)
 
 // ── Save ──────────────────────────────────────────────────────────────────────

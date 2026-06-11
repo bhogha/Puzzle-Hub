@@ -78,13 +78,24 @@ function ph_shikaku_make(_raw) {
 }
 
 /// Minimal hard-coded puzzle used when the data file is missing.
-/// A simple 6×6 split into six 1×6 columns (each clue = 6).
+/// A verified-unique 9×9 board (generator output) so the fallback matches the
+/// shipped 9×9 board size.
 function ph_shikaku_fallback() {
-    var _rects = [];
-    for (var _c = 0; _c < 6; _c++) {
-        array_push(_rects, { r: 0, c: _c, w: 1, h: 6, cr: 0, cc: _c });
-    }
-    return ph_shikaku_make({ size: 6, rects: _rects });
+    return ph_shikaku_make({ size: 9, rects: [
+        { r:0, c:0, w:1, h:5, cr:3, cc:0 },
+        { r:0, c:1, w:3, h:3, cr:1, cc:3 },
+        { r:0, c:4, w:3, h:3, cr:2, cc:5 },
+        { r:0, c:7, w:2, h:4, cr:3, cc:8 },
+        { r:3, c:1, w:4, h:2, cr:4, cc:3 },
+        { r:3, c:5, w:2, h:4, cr:4, cc:6 },
+        { r:4, c:7, w:2, h:4, cr:4, cc:8 },
+        { r:5, c:0, w:2, h:3, cr:7, cc:0 },
+        { r:5, c:2, w:1, h:4, cr:5, cc:2 },
+        { r:5, c:3, w:2, h:4, cr:6, cc:3 },
+        { r:7, c:5, w:2, h:2, cr:8, cc:5 },
+        { r:8, c:0, w:2, h:1, cr:8, cc:0 },
+        { r:8, c:7, w:2, h:1, cr:8, cc:8 }
+    ] });
 }
 
 /// True if cell (r,c) lies inside rectangle _rect (top-left r,c + w,h).
