@@ -121,11 +121,14 @@ def pack_once():
     arrows = []          # [{head, cells}], placement index == list index
     lanes = []           # per-arrow frozen exit-lane cells
 
+    last_tip = [None]                     # tip of the most recently placed arrow
+
     def commit(cells, h):
         for p in cells:
             empties.discard(p); occ.add(p)
         arrows.append({"head": h, "cells": [list(p) for p in cells]})
         lanes.append(set(ray(cells[0], h)))
+        last_tip[0] = cells[0]
 
     def place(target_fn, max_fails, min_len, max_place=None, chain_p=0.95):
         """Pack snakes. With probability chain_p a snake is grown FROM a cell on
@@ -139,7 +142,17 @@ def pack_once():
                 break
             targets = free_lane_cells()
             if targets and random.random() < chain_p:
-                start = random.choice(tuple(targets))
+                # Consecutive placements are consecutive SOLVE steps (reverse
+                # order), so pick the chain target FARTHEST from the previous
+                # arrow — the lazy player is then forced to jump across the
+                # board between taps instead of riding a local cascade.
+                cand = random.sample(sorted(targets), min(8, len(targets)))
+                if last_tip[0] is None:
+                    start = random.choice(cand)
+                else:
+                    lt = last_tip[0]
+                    cand.sort(key=lambda p: -(abs(p[0]-lt[0]) + abs(p[1]-lt[1])))
+                    start = random.choice(cand[:2])   # far-bias, softened just enough to keep commit rate up
             else:
                 start = random.choice(tuple(empties))
             path = grow_snake(empties, start, target_fn())
@@ -234,10 +247,10 @@ def pack_once():
                     break
 
     # Phase A: a few long winding feature arrows while the board is open.
-    place(lambda: random.randint(12, 17), 80, min_len=9, max_place=random.randint(3, 4))
-    # Phase B: medium snakes pack the bulk of the board (more arrows = more taps,
-    # and more arrows per lane = deeper blocking chains).
-    place(lambda: random.randint(4, 8), 400, min_len=4)
+    place(lambda: random.randint(11, 15), 80, min_len=9, max_place=3)
+    # Phase B: shorter snakes -> MORE arrows = more taps (solve time scales with
+    # tap count once per-move hunt cost is maxed out).
+    place(lambda: random.randint(4, 6), 400, min_len=4)
     # Phase C: alternate choking the free arrows (while space still exists for
     # blockers) with density passes. Late arrows can only be blocked by even
     # later ones, so blocking runs again after every fill.
@@ -282,7 +295,7 @@ def solve_width(arrows, playouts=3):
             occ = {p: i for i in alive for p in cells[i]}
             free = [i for i in alive if all(occ.get(p, i) == i for p in lanes[i])]
             if not free:
-                return 99.0, 0.0, 0.0, 1.0   # unsolvable playout (should not happen)
+                return 99.0, 0.0, 0.0, 1.0, 0.0, 1.0   # unsolvable playout (should not happen)
             w.append(len(free))
             fl += [len(lanes[i]) for i in free]
             if len(free) >= 4:
@@ -291,8 +304,30 @@ def solve_width(arrows, playouts=3):
         widths.append(sum(w) / len(w))
         flens.append(sum(fl) / len(fl))
         wides.append(wd / len(w))
+    # LAZY-PLAYER playout: always take the free arrow NEAREST the last tap.
+    # Play-testing showed solves are cascade-dominated — the newly freed arrow
+    # sits next to the cleared one, so the eyes never move (0.2-0.6 s/tap).
+    # jump = avg Manhattan distance the lazy player is FORCED to travel between
+    # consecutive taps; high jump = every move needs a fresh board scan.
+    jumps = []
+    alive = set(range(len(arrows)))
+    pos = None
+    while alive:
+        occ = {p: i for i in alive for p in cells[i]}
+        free = [i for i in alive if all(occ.get(p, i) == i for p in lanes[i])]
+        if not free:
+            return 99.0, 0.0, 0.0, 1.0, 0.0, 1.0
+        if pos is None:
+            ch = random.choice(free)
+        else:
+            ch = min(free, key=lambda i: abs(cells[i][0][0]-pos[0]) + abs(cells[i][0][1]-pos[1]))
+            jumps.append(abs(cells[ch][0][0]-pos[0]) + abs(cells[ch][0][1]-pos[1]))
+        pos = cells[ch][0]
+        alive.discard(ch)
+    jump = sum(jumps) / max(1, len(jumps))
+    local = sum(1 for j in jumps if j <= 2) / max(1, len(jumps))   # cascade steps
     return (sum(widths) / len(widths), sum(blk) / len(blk),
-            sum(flens) / len(flens), sum(wides) / len(wides))
+            sum(flens) / len(flens), sum(wides) / len(wides), jump, local)
 
 
 def board_metrics(arrows):
@@ -314,19 +349,40 @@ def board_metrics(arrows):
     return fill, lane0, init_free, shorts, longs, curve
 
 
-def gen_board(attempts=40):
+# Per-board difficulty GATES: a board ships only if it meets ALL of these.
+# (Scoring on averages let weak outlier boards through — play-test times ranged
+# 18-57 s on the same pool. Gates put a floor under every board.)
+GATE_WIDTH  = 2.9    # max avg legal moves per step (more arrows -> naturally wider;
+                     # jump/local are the real cascade-killers, width is secondary)
+GATE_JUMP   = 5.5    # min avg lazy-player jump (cells)
+GATE_LOCAL  = 0.35   # max fraction of lazy steps that are <=2-cell hops (cascades)
+GATE_FREE   = 6      # max arrows free at the start
+GATE_ARROWS = 23     # min arrows/board (tap count drives total solve time)
+
+
+def gen_board(attempts=40, extra=60):
+    """Best gated board of `attempts` packs; if none passes the gates, keep
+    trying up to `extra` more packs before falling back to the best ungated."""
     best, best_score = None, -1e18
-    for _ in range(attempts):
+    best_gated, best_gated_score = None, -1e18
+    tries = 0
+    while tries < attempts or (best_gated is None and tries < attempts + extra):
+        tries += 1
         arrows = pack_once()
         fill, lane0, init_free, shorts, longs, curve = board_metrics(arrows)
-        width, blockers, free_len, wide = solve_width(arrows)
+        width, blockers, free_len, wide, jump, local = solve_width(arrows)
         score = (fill * 5 + curve * 0.5 + longs * 2
-                 + blockers * 25 + free_len * 10
-                 - width * 60 - wide * 120 - init_free * 15
-                 - lane0 * 12 - shorts * 4)
+                 + blockers * 25 + free_len * 10 + jump * 25
+                 - width * 60 - wide * 120 - init_free * 25
+                 - local * 150 - lane0 * 12 - shorts * 4)
         if score > best_score:
             best, best_score = arrows, score
-    return {"rows": ROWS, "cols": COLS, "arrows": best}
+        if (width <= GATE_WIDTH and jump >= GATE_JUMP and local <= GATE_LOCAL
+                and init_free <= GATE_FREE and len(arrows) >= GATE_ARROWS
+                and score > best_gated_score):
+            best_gated, best_gated_score = arrows, score
+    return {"rows": ROWS, "cols": COLS,
+            "arrows": best_gated if best_gated is not None else best}
 
 
 def greedy_solvable(arrows):
@@ -389,7 +445,9 @@ def main():
     print(f"difficulty: avg available moves {sum(x[0] for x in sw)/len(sw):.1f}  "
           f"avg blockers/lane {sum(x[1] for x in sw)/len(sw):.2f}  "
           f"free-lane len {sum(x[2] for x in sw)/len(sw):.1f}  "
-          f"wide steps {sum(x[3] for x in sw)/len(sw)*100:.0f}%")
+          f"wide steps {sum(x[3] for x in sw)/len(sw)*100:.0f}%  "
+          f"lazy jump {sum(x[4] for x in sw)/len(sw):.1f} cells  "
+          f"local steps {sum(x[5] for x in sw)/len(sw)*100:.0f}%")
     assert all(greedy_solvable(b["arrows"]) for b in pool), "unsolvable board slipped through"
     print("all boards verified solvable (tip-lane rule)")
 
