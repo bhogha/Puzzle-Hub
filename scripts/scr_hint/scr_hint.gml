@@ -17,12 +17,17 @@
 // The apply method MUST reveal exactly one hint and MUST NOT touch coins — the
 // coin spend, "-100" feedback, and save flush for the paid path are handled here.
 
-/// @param _apply  bound method that reveals one hint (no coin handling).
-/// @param _accent colour for the modal close-X / video close-X discs.
-function ph_hint_create(_apply, _accent) {
+/// @param _apply    bound method that reveals one hint (no coin handling).
+/// @param _accent   colour for the modal close-X / video close-X discs.
+/// @param _subtitle one/two-line description of what this puzzle's hint reveals,
+///                  shown under the "Want to use a hint?" title (use "\n" to wrap).
+function ph_hint_create(_apply, _accent, _subtitle = "", _key = "") {
     return {
         apply        : _apply,
         accent       : _accent,
+        subtitle     : _subtitle,
+        key          : _key,     // "<puzzle>_<date>" (== claim_key) for no-hint mission tracking
+
         modal_open   : false,
         modal_t      : 0,        // slide-in progress 0..1
         video_open   : false,
@@ -77,6 +82,7 @@ function ph_hint_input(_h) {
             if (ph_point_in_circle(_mx, _my, _h.vx_cx, _h.vx_cy, _h.vx_r + 14)) {
                 _h.video_open = false;
                 _h.apply();                  // free — no coins removed
+                ph_week_mark_hint_used(global.save, _h.key);
                 return "freed";
             }
         }
@@ -94,6 +100,7 @@ function ph_hint_input(_h) {
                     _h.modal_open   = false;
                     _h.coin_minus_t = 0;      // fire the "-100" HUD feedback
                     _h.apply();
+                    ph_week_mark_hint_used(global.save, _h.key);
                     ph_save_write(global.save);
                     return "paid";
                 } else {
@@ -138,17 +145,30 @@ function ph_hint_draw_modal(_h) {
     draw_rectangle(0, 0, PH_W, PH_H, false);
     draw_set_alpha(1);
 
-    var _panel_top = round(PH_H * 0.46);
+    // ── Bottom-anchored content stack ─────────────────────────────────────────
+    // The GUI canvas height (PH_H) is dynamic, so the modal anchors its whole
+    // stack to the button row near the bottom and builds upward; the sheet top is
+    // then placed just under the bulb. This keeps bulb · title · subtitle · cost ·
+    // buttons all visible even on short (e.g. iPad) canvases.
+    var _cy  = PH_H - 180 - global.safe_bottom_gui;   // button row centre
+    var _bh  = 70;     // half-height → 140px capsule
+    var _gap = 30;
+
+    var _panel_top = _cy - 560;        // sheet top (bulb overflows above it)
     _h.panel_top = _panel_top;
     var _slide = (1 - _ease) * (PH_H - _panel_top + 80);   // fully below at t=0
 
     // Sheet (pale yellow, rounded top; bottom runs off-screen).
     ph_draw_rounded(0, _panel_top + _slide, PH_W, PH_H + 80 + _slide, 56, PH_COL_YELLOW_SOFT);
 
-    // Bulb + title.
-    draw_sprite_ext(global.spr_bulb, 0, PH_W/2, _panel_top + 200 + _slide, 0.62, 0.62, 0, c_white, 1);
-    ph_draw_text(PH_W/2, _panel_top + 440 + _slide, "Want to use a hint?",
+    // Bulb (emerges above the sheet top) + title + per-puzzle subtitle.
+    draw_sprite_ext(global.spr_bulb, 0, PH_W/2, _cy - 640 + _slide, 0.62, 0.62, 0, c_white, 1);
+    ph_draw_text(PH_W/2, _cy - 450 + _slide, "Want to use a hint?",
                  global.fnt_disp_lg, PH_COL_DARK, fa_center, fa_middle);
+    if (_h.subtitle != "") {
+        ph_draw_text(PH_W/2, _cy - 315 + _slide, _h.subtitle,
+                     global.fnt_body_md, PH_COL_INK_SOFT, fa_center, fa_middle);
+    }
 
     // Close X (top-right of the sheet).
     _h.x_cx = PH_W - 90; _h.x_cy = _panel_top + 80; _h.x_r = 46;
@@ -156,20 +176,28 @@ function ph_hint_draw_modal(_h) {
     draw_circle(_h.x_cx, _h.x_cy + _slide, _h.x_r, false);
     ph_draw_text(_h.x_cx, _h.x_cy + _slide, "X", global.fnt_body_md, PH_COL_WHITE, fa_center, fa_middle);
 
+    // Cost amount: "<cost>  🪙" (large Nunito number + gold coin) above the buttons,
+    // per the updated design — the price moves off the BUY button onto its own row.
+    var _amt   = string(PH_HINT_COST);
+    draw_set_font(global.fnt_num_xl);
+    var _anw   = string_width(_amt);
+    var _acoin = 110, _agap = 22;
+    var _ax0   = PH_W/2 - (_anw + _agap + _acoin)/2;
+    var _amt_cy = _cy - 165 + _slide;
+    ph_draw_text(_ax0 + _anw/2, _amt_cy, _amt, global.fnt_num_xl, PH_COL_DARK, fa_center, fa_middle);
+    draw_sprite_ext(global.spr_gold_coin, 0, _ax0 + _anw + _agap + _acoin/2, _amt_cy, _acoin/256, _acoin/256, 0, c_white, 1);
+
     // Two pill buttons across the bottom.
-    var _cy  = PH_H - 230 - global.safe_bottom_gui;
-    var _bh  = 70;     // half-height → 140px capsule
-    var _gap = 30;
     _h.pay_l  = 70;               _h.pay_r  = PH_W/2 - _gap/2;
     _h.free_l = PH_W/2 + _gap/2;  _h.free_r = PH_W - 70;
     _h.pay_t  = _cy - _bh;  _h.pay_b  = _cy + _bh;
     _h.free_t = _cy - _bh;  _h.free_b = _cy + _bh;
     var _dcy = _cy + _slide;
 
-    // Pay: "Buy 100" + gold coin.  Free: "FREE" + retro TV.  Green reward buttons,
-    // uniform with the blue claim buttons (per the updated design).
-    ph_draw_reward_btn(_h.pay_l,  _dcy, _h.pay_r,  _bh, "Buy " + string(PH_HINT_COST), global.spr_gold_coin, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
-    ph_draw_reward_btn(_h.free_l, _dcy, _h.free_r, _bh, "FREE",                        global.spr_tv,        false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+    // BUY (bare word label) | FREE + retro TV.  Green reward buttons, uniform with
+    // the blue claim buttons (per the updated design).
+    ph_draw_reward_btn(_h.pay_l,  _dcy, _h.pay_r,  _bh, "BUY",  noone,         false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+    ph_draw_reward_btn(_h.free_l, _dcy, _h.free_r, _bh, "FREE", global.spr_tv, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
 }
 
 /// Full-screen dark placeholder for the rewarded video. Call LAST in Draw so it

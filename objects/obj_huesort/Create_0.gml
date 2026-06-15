@@ -137,7 +137,7 @@ hs_apply_hint = function() {
 };
 
 // Shared hint-flow controller (modal + placeholder video). Violet accent.
-hint = ph_hint_create(hs_apply_hint, PH_COL_VIOLET);
+hint = ph_hint_create(hs_apply_hint, PH_COL_VIOLET, "This hint will place one tile\nin its correct spot", "huesort_" + global.selected_date_key);
 
 /// Draw a single tile (flat swatch, no shadow; solid dark dot if anchored —
 /// Penpot redesign: corner radius 10, no drop shadow, locked dot = #484644).

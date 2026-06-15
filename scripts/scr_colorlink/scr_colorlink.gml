@@ -22,8 +22,8 @@
 // indices per flow (empty until the player draws it). Solved is checked here.
 
 // ── Vibrant flow palette (reuses the hub game accents per design note) ────────
-/// GameMaker colour for a flow colour index. 10 distinct hues so the larger 12×9
-/// board can carry up to 10 flows without colour reuse (cycled past that).
+/// GameMaker colour for a flow colour index. 10 distinct hues; the 9×7 board uses
+/// 6–7 flows, well within the palette without colour reuse (cycled past that).
 function ph_colorlink_color(_idx) {
     var _pal = [
         PH_COL_PINK, PH_COL_TEAL,   PH_COL_PURPLE,    PH_COL_ORANGE,
@@ -91,20 +91,18 @@ function ph_colorlink_make(_raw) {
     return { rows: _rows, cols: _cols, size: _cols, flows: _flows };
 }
 
-/// Hardcoded fallback (a validated 12×9, 9-flow board) when the data file is missing.
+/// Hardcoded fallback (a validated 9×7, 7-flow board) when the data file is missing.
 function ph_colorlink_fallback() {
     var _raw = {
-        rows: 12, cols: 9,
+        rows: 9, cols: 7,
         flows: [
-            { color: 0, a: [8,2], b: [2,0], path: [[8,2],[7,2],[6,2],[5,2],[5,1],[6,1],[7,1],[7,0],[6,0],[5,0],[4,0],[4,1],[3,1],[3,0],[2,0]] },
-            { color: 1, a: [2,1], b: [3,2], path: [[2,1],[1,1],[1,0],[0,0],[0,1],[0,2],[0,3],[0,4],[1,4],[1,3],[1,2],[2,2],[3,2]] },
-            { color: 2, a: [4,2], b: [9,5], path: [[4,2],[4,3],[3,3],[2,3],[2,4],[3,4],[4,4],[5,4],[5,3],[6,3],[7,3],[8,3],[8,4],[9,4],[9,5]] },
-            { color: 3, a: [8,5], b: [4,5], path: [[8,5],[8,6],[8,7],[7,7],[7,6],[7,5],[7,4],[6,4],[6,5],[5,5],[4,5]] },
-            { color: 4, a: [3,5], b: [0,8], path: [[3,5],[2,5],[1,5],[0,5],[0,6],[0,7],[0,8]] },
-            { color: 5, a: [1,8], b: [5,6], path: [[1,8],[2,8],[3,8],[3,7],[2,7],[1,7],[1,6],[2,6],[3,6],[4,6],[5,6]] },
-            { color: 6, a: [6,6], b: [8,8], path: [[6,6],[6,7],[5,7],[4,7],[4,8],[5,8],[6,8],[7,8],[8,8]] },
-            { color: 7, a: [9,8], b: [9,0], path: [[9,8],[9,7],[9,6],[10,6],[10,5],[10,4],[10,3],[9,3],[9,2],[9,1],[8,1],[8,0],[9,0]] },
-            { color: 8, a: [10,0], b: [10,7], path: [[10,0],[11,0],[11,1],[10,1],[10,2],[11,2],[11,3],[11,4],[11,5],[11,6],[11,7],[11,8],[10,8],[10,7]] },
+            { color: 0, a: [6,0], b: [8,0], path: [[6,0],[6,1],[6,2],[7,2],[7,1],[7,0],[8,0]] },
+            { color: 1, a: [8,1], b: [7,4], path: [[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[7,6],[6,6],[6,5],[7,5],[7,4]] },
+            { color: 2, a: [7,3], b: [5,1], path: [[7,3],[6,3],[6,4],[5,4],[5,3],[5,2],[5,1]] },
+            { color: 3, a: [5,0], b: [3,2], path: [[5,0],[4,0],[4,1],[4,2],[4,3],[3,3],[3,2]] },
+            { color: 4, a: [2,2], b: [0,1], path: [[2,2],[2,1],[3,1],[3,0],[2,0],[1,0],[0,0],[0,1]] },
+            { color: 5, a: [1,1], b: [0,4], path: [[1,1],[1,2],[0,2],[0,3],[1,3],[2,3],[2,4],[3,4],[3,5],[2,5],[1,5],[1,4],[0,4]] },
+            { color: 6, a: [0,5], b: [4,4], path: [[0,5],[0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[5,5],[4,5],[4,4]] },
         ],
     };
     return ph_colorlink_make(_raw);

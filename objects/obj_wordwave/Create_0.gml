@@ -352,4 +352,4 @@ ww_apply_hint = function() {
 };
 
 // Shared hint-flow controller (modal + placeholder video). Teal accent.
-hint = ph_hint_create(ww_apply_hint, PH_COL_TEAL);
+hint = ph_hint_create(ww_apply_hint, PH_COL_TEAL, "This hint will reveal one\ncorrect letter", "wordwave_" + global.selected_date_key);

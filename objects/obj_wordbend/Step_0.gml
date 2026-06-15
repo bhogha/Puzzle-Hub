@@ -38,6 +38,18 @@ if (current_time < global.input_locked_until) exit;
 var _mx = device_mouse_x_to_gui(0);
 var _my = device_mouse_y_to_gui(0);
 
+// Bonus-words modal — eats taps while open (close on X or tap outside the panel).
+if (bonus_modal_open) {
+    if (device_mouse_check_button_pressed(0, mb_left)) {
+        var _px1 = 80, _py1 = 360, _px2 = PH_W - 80, _py2 = 1240;
+        if (ph_point_in_circle(_mx, _my, _px2 - 70, _py1 + 70, 54)
+            || !ph_point_in_rect(_mx, _my, _px1, _py1, _px2, _py2)) {
+            bonus_modal_open = false;
+        }
+    }
+    exit;
+}
+
 // Hint overlay (modal + placeholder video) eats taps while open.
 var _hr = ph_hint_input(hint);
 if (_hr != "none") {
@@ -70,6 +82,12 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
         } else {
             ph_hint_open(hint);
         }
+        exit;
+    }
+
+    // BONUS pill (bottom-left). Bounds set by Draw — opens the bonus-words modal.
+    if (ph_point_in_rect(_mx, _my, BONUS_PILL_L, BONUS_PILL_T, BONUS_PILL_R, BONUS_PILL_B)) {
+        bonus_modal_open = true;
         exit;
     }
 
@@ -120,8 +138,28 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
             wb_check_win();
             if (win_phase == 0) wb_save();
         } else {
-            toast_text = "NOT A WORD"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
-            shake_t = SHAKE_DUR;
+            // Not a hidden word — award a coin bonus if it's a real ≥4-letter
+            // dictionary word we haven't already credited this puzzle.
+            var _word = ph_wordbend_path_word(puzzle, sel_path, N);
+            if (string_length(_word) >= 4
+                && !ph_wordbend_is_hidden_word(puzzle, _word)
+                && ph_wordbend_is_dict_word(_word)) {
+                if (wb_bonus_has(_word)) {
+                    // Already-credited bonus word — no re-award, gentle reminder.
+                    toast_text = "ALREADY FOUND"; toast_col = PH_COL_GRAY; toast_timer = TOAST_DUR;
+                } else {
+                    array_push(bonus_words, _word);
+                    ph_grant_coins(global.save, PH_BONUS_WORD_COINS); ph_week_record_bonus_word(global.save, _word);
+                    wb_flash_cells(sel_path);
+                    coin_pulse_t = 0; coin_overshoot_t = 0;          // pulse the coin balance
+                    toast_text  = "BONUS  +" + string(PH_BONUS_WORD_COINS) + " COINS  -  " + _word;
+                    toast_col   = PH_COL_PURPLE; toast_timer = TOAST_DUR;
+                    wb_save();
+                }
+            } else {
+                toast_text = "NOT IN THE LIST"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
+                shake_t = SHAKE_DUR;
+            }
         }
     }
     sel_path = [];

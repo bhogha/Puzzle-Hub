@@ -1,10 +1,10 @@
 // ── Color Link (Flow Free) — Create ───────────────────────────────────────────
-// 6×6 grid. Connect each pair of matching coloured dots with a continuous line so
-// the lines never cross and every cell is filled. No loss state. Lime accent.
+// 9×7 grid (tall). Connect each pair of matching coloured dots with a continuous
+// line so the lines never cross and every cell is filled. No loss state. Lime accent.
 
 puzzle  = ph_colorlink_for_date(global.selected_date_key);
-ROWS    = puzzle.rows;                  // 12
-COLS    = puzzle.cols;                  // 9
+ROWS    = puzzle.rows;                  // 9
+COLS    = puzzle.cols;                  // 7
 NCELLS  = ROWS * COLS;
 NFLOWS  = array_length(puzzle.flows);
 
@@ -228,7 +228,7 @@ cl_apply_hint = function() {
 };
 
 // Shared hint-flow controller (modal + placeholder rewarded video). Lime accent.
-hint = ph_hint_create(cl_apply_hint, ACCENT);
+hint = ph_hint_create(cl_apply_hint, ACCENT, "This hint will solve the\nlongest remaining line", "colorlink_" + global.selected_date_key);
 
 // ── Win bookkeeping ───────────────────────────────────────────────────────────
 win_phase        = 0;

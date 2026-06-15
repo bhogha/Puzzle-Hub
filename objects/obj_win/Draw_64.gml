@@ -26,17 +26,26 @@ draw_sprite_ext(global.spr_star3d, 0, _cx, _st + 930 + _slide, 0.66, 0.66, 0, c_
 // Settled bounds are written to PAY_*/DBL_* (read by Step); the slide offset is
 // applied to drawing only so taps match the resting layout even mid-animation.
 var _bh     = 70;
-var _btn_cy = PH_H - _sb - 140;
+var _btn_cy = PH_H - _sb - 130;
 PAY_L = 70;            PAY_R = PH_W/2 - 15;
 DBL_L = PH_W/2 + 15;   DBL_R = PH_W - 70;
 PAY_T = _btn_cy - _bh; PAY_B = _btn_cy + _bh;
 DBL_T = _btn_cy - _bh; DBL_B = _btn_cy + _bh;
 var _dcy = _btn_cy + _slide;
 
-ph_draw_text(_cx, _btn_cy - 175 + _slide, "Claim your reward!", global.fnt_body_semi, c_black, fa_center, fa_middle);
-// 100 + gold coin  |  200 + gold coin + TV badge (rewarded video).
-ph_draw_reward_btn(PAY_L, _dcy, PAY_R, _bh, string(base_reward),     global.spr_gold_coin, false);
-ph_draw_reward_btn(DBL_L, _dcy, DBL_R, _bh, string(base_reward * 2), global.spr_gold_coin, true);
+// "Claim your reward!" + reward amount ("100  🪙") above the CLAIM/DOUBLE buttons.
+ph_draw_text(_cx, _btn_cy - 320 + _slide, "Claim your reward!", global.fnt_body_semi, c_black, fa_center, fa_middle);
+var _amt_str = string(base_reward);
+draw_set_font(global.fnt_num_xl);
+var _anw  = string_width(_amt_str);
+var _acoin = 130, _agap = 24;
+var _agrp = _anw + _agap + _acoin;
+var _ax0  = _cx - _agrp/2;
+ph_draw_text(_ax0 + _anw/2, _btn_cy - 190 + _slide, _amt_str, global.fnt_num_xl, c_black, fa_center, fa_middle);
+draw_sprite_ext(global.spr_gold_coin, 0, _ax0 + _anw + _agap + _acoin/2, _btn_cy - 190 + _slide, _acoin/256, _acoin/256, 0, c_white, 1);
+// CLAIM | DOUBLE (rewarded video → doubles the coins) — word labels per the design.
+ph_draw_reward_btn(PAY_L, _dcy, PAY_R, _bh, "CLAIM",  noone, false);
+ph_draw_reward_btn(DBL_L, _dcy, DBL_R, _bh, "DOUBLE", noone, true);
 
 // ── Confetti (drawn on top of the card) ───────────────────────────────────────
 for (var _pi = 0; _pi < array_length(confetti_pieces); _pi++) {

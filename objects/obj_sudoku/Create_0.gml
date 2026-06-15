@@ -224,7 +224,7 @@ sd_apply_hint = function() {
 };
 
 // Shared hint-flow controller (modal + placeholder video). Purple accent.
-hint = ph_hint_create(sd_apply_hint, PH_COL_PURPLE);
+hint = ph_hint_create(sd_apply_hint, PH_COL_PURPLE, "This hint will reveal one\ncorrect number", "sudoku_" + global.selected_date_key);
 
 // ── Enter review/solved mode when re-opening a finished puzzle ─────────────────
 var _review = variable_global_exists("sudoku_review_mode") && global.sudoku_review_mode;

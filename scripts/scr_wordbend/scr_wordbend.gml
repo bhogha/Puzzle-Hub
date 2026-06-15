@@ -4,7 +4,9 @@
 // belongs to exactly one hidden word, and the words' cell-paths tile the whole
 // board with no gaps and no overlaps. To find a word the player taps its first
 // letter and drags across the rest; the path may BEND at right angles but only
-// steps orthogonally (no diagonals). There is no loss state and no bonus word.
+// steps orthogonally (no diagonals). There is no loss state. Tracing a real
+// ≥4-letter word that isn't a hidden word pays a small coin BONUS (dictionary-
+// checked; see ph_wordbend_is_dict_word + datafiles/wordbend_dict.json).
 //
 // Puzzle data (datafiles/puzzles_wordbend.json) is a plain array of entries:
 //
@@ -152,6 +154,76 @@ function ph_wordbend_longest_unfound(_puzzle, _found) {
     return _best;
 }
 
+// ── Bonus words (dictionary) ──────────────────────────────────────────────────
+// A trace that spells a real, ≥4-letter English word which ISN'T one of the
+// board's hidden words pays a small coin bonus (parity with Anygram's bonus
+// words). Validity is checked against datafiles/wordbend_dict.json — a curated,
+// frequency-ranked common-word list (≥4 letters; obscure/Scrabble-only words and
+// proper nouns filtered out) — loaded once into a struct used as a membership set.
+function ph_wordbend_load_dict() {
+    if (variable_global_exists("ph_wordbend_dict")) return global.ph_wordbend_dict;
+    var _map  = {};
+    var _path = working_directory + "wordbend_dict.json";
+    if (file_exists(_path)) {
+        var _buf = buffer_load(_path);
+        var _str = buffer_read(_buf, buffer_string);
+        buffer_delete(_buf);
+        var _list = json_parse(_str);
+        if (is_array(_list)) {
+            for (var _i = 0; _i < array_length(_list); _i++) {
+                variable_struct_set(_map, string_upper(_list[_i]), true);
+            }
+        }
+    }
+    global.ph_wordbend_dict = _map;
+    return _map;
+}
+
+/// True if _word (any case) is a valid bonus-dictionary word.
+function ph_wordbend_is_dict_word(_word) {
+    return variable_struct_exists(ph_wordbend_load_dict(), string_upper(_word));
+}
+
+/// Uppercase word spelled by a traced cell-index list, in trace order. N = size.
+function ph_wordbend_path_word(_puzzle, _seq, _n) {
+    var _s = "";
+    for (var _i = 0; _i < array_length(_seq); _i++) {
+        var _idx = _seq[_i];
+        _s += _puzzle.grid[_idx div _n][_idx mod _n];
+    }
+    return string_upper(_s);
+}
+
+/// True if _word is the text of one of the board's hidden words (so it should be
+/// found via its real path, never awarded as a coincidental bonus).
+function ph_wordbend_is_hidden_word(_puzzle, _word) {
+    _word = string_upper(_word);
+    for (var _w = 0; _w < array_length(_puzzle.words); _w++) {
+        if (_puzzle.words[_w].text == _word) return true;
+    }
+    return false;
+}
+
+/// Join / split a list of bonus words for the comma-packed save field.
+function ph_wordbend_join_words(_arr) {
+    var _s = "";
+    if (!is_array(_arr)) return _s;
+    for (var _i = 0; _i < array_length(_arr); _i++) {
+        if (_i > 0) _s += ",";
+        _s += string(_arr[_i]);
+    }
+    return _s;
+}
+function ph_wordbend_split_words(_s) {
+    var _out = [];
+    if (!is_string(_s) || _s == "") return _out;
+    var _parts = string_split(_s, ",");
+    for (var _i = 0; _i < array_length(_parts); _i++) {
+        if (_parts[_i] != "") array_push(_out, string_upper(_parts[_i]));
+    }
+    return _out;
+}
+
 // ── Save serialise / restore ──────────────────────────────────────────────────
 // found-word indices and hinted-word indices are each stored as a comma string
 // under save.wordbend_state[date] = { found, hints } (lazy, no backfill needed).
@@ -181,11 +253,14 @@ function ph_wordbend_deserialize_indices(_s, _count) {
     return _bools;
 }
 
-function ph_wordbend_save_state(_save, _date_key, _found, _hinted) {
+function ph_wordbend_save_state(_save, _date_key, _found, _hinted, _bonus_words) {
+    // _bonus_words may be omitted (older callers) — ph_wordbend_join_words tolerates
+    // a non-array and yields an empty field in that case.
     if (!variable_struct_exists(_save, "wordbend_state")) _save.wordbend_state = {};
     _save.wordbend_state[$ _date_key] = {
         found: ph_wordbend_serialize_indices(_found),
         hints: ph_wordbend_serialize_indices(_hinted),
+        bonus: ph_wordbend_join_words(_bonus_words),
     };
 }
 
@@ -198,6 +273,8 @@ function ph_wordbend_load_state(_save, _date_key, _count) {
                     variable_struct_exists(_st, "found") ? _st.found : "", _count),
         hinted: ph_wordbend_deserialize_indices(
                     variable_struct_exists(_st, "hints") ? _st.hints : "", _count),
+        bonus:  ph_wordbend_split_words(
+                    variable_struct_exists(_st, "bonus") ? _st.bonus : ""),
     };
 }
 

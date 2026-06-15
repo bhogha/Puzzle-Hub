@@ -70,6 +70,21 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_T = PH_H - 143 - global.safe_bottom_gui;
 HINT_PILL_B = PH_H - 77  - global.safe_bottom_gui;
 
+// ── Bonus words (dictionary) ───────────────────────────────────────────────────
+// Tracing a real ≥4-letter word that isn't one of the hidden words pays
+// PH_BONUS_WORD_COINS (coins only — parity with Anygram). Found bonus words live
+// in the BONUS chest+pill (bottom-left) which opens a list modal when tapped.
+ph_wordbend_load_dict();               // warm the membership set at boot
+bonus_words      = [];                 // uppercase bonus words found this puzzle
+bonus_modal_open = false;
+BONUS_PILL_L = 50;   BONUS_PILL_R = 340;          // bounds rewritten by Draw
+BONUS_PILL_T = PH_H - 143 - global.safe_bottom_gui;
+BONUS_PILL_B = PH_H - 77  - global.safe_bottom_gui;
+wb_bonus_has = function(_word) {
+    for (var _i = 0; _i < array_length(bonus_words); _i++) if (bonus_words[_i] == _word) return true;
+    return false;
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 wb_idx       = function(_r, _c) { return _r * N + _c; };
 wb_manhattan = function(_a, _b) { return abs(_a div N - _b div N) + abs(_a mod N - _b mod N); };
@@ -125,7 +140,7 @@ wb_first_cell = function(_w) {
 
 /// Persist found + hinted words and the finish-time bookkeeping.
 wb_save = function() {
-    ph_wordbend_save_state(global.save, global.selected_date_key, found, hinted);
+    ph_wordbend_save_state(global.save, global.selected_date_key, found, hinted, bonus_words);
     ph_save_write(global.save);
 };
 
@@ -152,7 +167,7 @@ wb_apply_hint = function() {
 };
 
 // Shared hint-flow controller (modal + placeholder rewarded video). Tangerine.
-hint = ph_hint_create(wb_apply_hint, ACCENT);
+hint = ph_hint_create(wb_apply_hint, ACCENT, "This hint will reveal the first\nletter of the longest word", "wordbend_" + global.selected_date_key);
 
 // ── Win bookkeeping ───────────────────────────────────────────────────────────
 win_phase        = 0;
@@ -216,8 +231,9 @@ if (_review) global.wordbend_review_mode = false;
 // Restore in-progress found/hinted state (resume).
 var _st = ph_wordbend_load_state(global.save, global.selected_date_key, NWORDS);
 if (_st != undefined) {
-    found  = _st.found;
-    hinted = _st.hinted;
+    found       = _st.found;
+    hinted      = _st.hinted;
+    bonus_words = _st.bonus;
 }
 var _already_solved = _review || ph_wordbend_is_done(global.save, global.selected_date_key);
 if (_already_solved) {

@@ -13,7 +13,12 @@ if (float_t > 0)          float_t--;
 if (ar_hint_t > 0)        ar_hint_t--;
 if (coin_pulse_t < 1)     coin_pulse_t     = min(1, coin_pulse_t + 1/18);
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
-if (shake_t > 0)          shake_t--;
+
+// Blocked-tap lunge ("go to the blocker and back") — pure visual timer.
+if (bump_idx != -1) {
+    bump_t += 1/bump_frames;
+    if (bump_t >= 1) { bump_idx = -1; blocker_idx = -1; }
+}
 
 // ── Launch (snake slide-out) animation — locks input until the arrow is gone ──
 if (launching != -1) {
@@ -79,8 +84,12 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
                 ar_start_launch(_idx);
                 if (ar_hint_idx == _idx) { ar_hint_idx = -1; ar_hint_t = 0; }
             } else {
-                shake_idx    = _idx;
-                shake_t      = SHAKE_DUR;
+                // Glide the arrow head-first up to whatever blocks it, then back —
+                // the same snake path-follow as a launch (built in ar_start_bump,
+                // drawn in Draw); both it and the blocker flash red.
+                var _bi      = ph_arrows_block_info(puzzle, alive, _idx);
+                blocker_idx  = _bi.blocker;                     // arrow that stops it
+                ar_start_bump(_idx, max(_bi.gap, 0));
                 penalty_secs += PH_ARROWS_PENALTY_SECS;
                 timer_base_secs += PH_ARROWS_PENALTY_SECS;   // fold the penalty into the play timer
                 float_t      = FLOAT_DUR;

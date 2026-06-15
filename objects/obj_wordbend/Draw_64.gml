@@ -133,8 +133,43 @@ ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHIT
 draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
 ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
+// Left — BONUS chest+pill (shared widget): white capsule · chest · "BONUS" · count
+// badge. Tappable to open the bonus-words modal; bounds read by Step_0 as
+// BONUS_PILL_{L,R,T,B} (keep in sync).
+var _bp = ph_draw_bonus_pill(50, _tool_y, array_length(bonus_words));
+BONUS_PILL_L = _bp.l;  BONUS_PILL_R = _bp.r;
+BONUS_PILL_T = _bp.t;  BONUS_PILL_B = _bp.b;
+
 // ── Message Prompt — above the game tip, just below the HUD (Penpot design) ────
 if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
+
+// ── Bonus-words modal (same layout as Anygram, warm tangerine chips) ──────────
+if (bonus_modal_open) {
+    draw_set_alpha(0.6); draw_set_color(c_black); draw_rectangle(0, 0, PH_W, PH_H, false); draw_set_alpha(1);
+
+    var _px1 = 80, _py1 = 360, _px2 = PH_W - 80, _py2 = 1240;
+    ph_draw_chip(_px1, _py1, _px2, _py2, 32, PH_COL_WHITE, make_color_rgb(200,180,170), 6);
+    ph_draw_text((_px1+_px2)/2, _py1+80, "BONUS WORDS", global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
+
+    // Close X (top-right).
+    draw_set_color(make_color_rgb(220,210,205));
+    draw_circle(_px2-70, _py1+70, 40, false);
+    ph_draw_text(_px2-70, _py1+70, "X", global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
+
+    // Found-word chips, wrapped across rows.
+    var _cx_w = _px1 + 50, _cy_w = _py1 + 200, _chip_h = 70, _chip_pad = 24, _chip_gap = 14;
+    for (var _bi = 0; _bi < array_length(bonus_words); _bi++) {
+        var _label = bonus_words[_bi];
+        var _cw = string_length(_label) * 22 + _chip_pad * 2;
+        if (_cx_w + _cw > _px2 - 50) { _cx_w = _px1 + 50; _cy_w += _chip_h + _chip_gap; }
+        ph_draw_chip(_cx_w, _cy_w, _cx_w + _cw, _cy_w + _chip_h, 30, PH_COL_AMBER_SOFT, ACCENT_DEEP, 4);
+        ph_draw_text(_cx_w + _cw/2, _cy_w + _chip_h/2, _label, global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
+        _cx_w += _cw + _chip_gap;
+    }
+    if (array_length(bonus_words) == 0) {
+        ph_draw_text((_px1+_px2)/2, (_py1+_py2)/2, "No bonus words yet", global.fnt_body_md, PH_COL_GRAY, fa_center, fa_middle);
+    }
+}
 
 // ── Hint modal + placeholder rewarded-video (drawn last, cover everything) ─────
 ph_hint_draw_modal(hint);

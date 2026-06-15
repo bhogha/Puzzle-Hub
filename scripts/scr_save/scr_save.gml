@@ -15,12 +15,17 @@ function ph_save_load() {
             if (!variable_struct_exists(_data, "streak")) _data.streak = 0;
             if (!variable_struct_exists(_data, "timers")) _data.timers = {};
             if (!variable_struct_exists(_data, "version")) _data.version = 1;
+            if (!variable_struct_exists(_data, "created")) _data.created = ph_today_key();  // "playing since"
             ph_update_streak(_data);
+            // Missions: ensure a weekly set exists, then flip to "finished" if the
+            // timer expired (or it's all done) while the player was away.
+            ph_week_init(_data);
+            ph_week_check_finish(_data);
             return _data;
         } catch (_e) {}
     }
     // Fresh save — new players begin with the starting XP/coins defined in the GDD.
-    return {
+    var _fresh = {
         version:            1,
         xp:                 PH_INITIAL_XP,
         coins:              PH_INITIAL_COINS,
@@ -29,7 +34,10 @@ function ph_save_load() {
         anygram_bonus:      {},
         streak:             0,
         timers:             {},
+        created:            ph_today_key(),
     };
+    ph_week_init(_fresh);   // seed the hand-authored Week 1 mission set
+    return _fresh;
 }
 
 function ph_save_write(_data) {
@@ -46,7 +54,7 @@ function ph_save_write(_data) {
 function ph_save_reset() {
     var _path = working_directory + PH_SAVE_FILE;
     if (file_exists(_path)) file_delete(_path);
-    return {
+    var _fresh = {
         version:            1,
         xp:                 PH_INITIAL_XP,
         coins:              PH_INITIAL_COINS,
@@ -55,7 +63,10 @@ function ph_save_reset() {
         anygram_bonus:      {},
         streak:             0,
         timers:             {},
+        created:            ph_today_key(),
     };
+    ph_week_init(_fresh);   // fresh Week 1 after a reset
+    return _fresh;
 }
 
 function ph_is_solved(_save, _date_key, _puzzle_name) {

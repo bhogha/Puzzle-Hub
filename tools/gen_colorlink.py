@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Color Link (Flow Free) board generator for Puzzle Hub — 12x9 (rows x cols).
+"""Color Link (Flow Free) board generator for Puzzle Hub — 9x7 (rows x cols).
 
 Method (matches the documented approach, on a non-square ROWS x COLS board): build
 a random Hamiltonian path that visits every one of the ROWS*COLS cells, then cut it
@@ -8,21 +8,21 @@ endpoint dots and its cells are the solution path. Because the segments are
 slices of a single board-filling path they always tile the board with no gaps or
 overlaps, so the puzzle is guaranteed solvable.
 
-The board is taller than it is wide (12 rows x 9 cols) so it fills the portrait
-play area to the top. K is kept at 7-8 (the most "dot pairs" the 8-colour palette
-allows without colour reuse) so the bigger board carries more flows.
+The board is taller than it is wide (9 rows x 7 cols) so it fills the portrait
+play area to the top. K is kept at 6-7 flows — a deliberately easier tuning than
+the old 12x9 / 9-10 flow board (smaller grid, fewer colours).
 
 Output JSON entry shape (matches scr_colorlink.gml):
-  { "date":"YYYY-MM-DD"(optional), "rows":12, "cols":9,
+  { "date":"YYYY-MM-DD"(optional), "rows":9, "cols":7,
     "flows":[ {"color":i,"a":[r,c],"b":[r,c],"path":[[r,c],...]}, ... ] }
 """
 import json, random, datetime, sys
 
-ROWS, COLS = 12, 9
-NCELLS = ROWS * COLS
-FLOWS_MIN, FLOWS_MAX = 9, 10     # more (shorter) flows = more dot pairs, easier solve
+ROWS, COLS = 9, 7
+NCELLS = ROWS * COLS             # 63
+FLOWS_MIN, FLOWS_MAX = 6, 7      # fewer colours than the old 9-10; easier to read/solve
 SEG_MIN = 4                       # min cells per flow (avoid trivial short flows)
-SEG_MAX = 15                      # cap so no single flow snakes across the whole board
+SEG_MAX = 13                      # cap so no single flow snakes across the whole board
 
 sys.setrecursionlimit(10000)
 DIRS = [(-1, 0), (1, 0), (0, -1), (0, 1)]

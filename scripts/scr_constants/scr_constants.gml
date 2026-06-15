@@ -101,6 +101,28 @@
 #macro PH_WORDLE_EXTRA_COST  100  // coins for the extra moves (or free via rewarded video)
 #macro PH_WORDLE_GIVEUP_XP    25  // consolation XP on a missed/given-up puzzle (doubles to 50)
 
+// ── Missions (weekly, personal install-anchored window) ───────────────────────
+// See Docs/MISSIONS_PLAN.md. A "week" is a personal 7-day window: it starts when
+// the previous week's rewards are collected (or on first init), freezes to a
+// "finished" state when all missions are done or the timer expires, and only
+// advances to a fresh week when the player taps COLLECT. Counters are weekly and
+// reset each cycle. Reward XP is granted through ph_grant_xp(...,false) so a
+// level-crossing routes through the Level-Up screen; every reward is < 500 (one
+// level) so a single claim crosses at most one boundary.
+#macro PH_WEEK_LENGTH_DAYS      7
+#macro PH_WEEK_SET_SIZE         20   // missions drawn per week
+#macro PH_WEEK_QUICK_COUNT      6
+#macro PH_WEEK_CORE_COUNT       11
+#macro PH_WEEK_CHALLENGE_COUNT  3
+#macro PH_WEEK_DRAW_COOLDOWN    2    // weeks a used mission id is excluded from redraw
+
+#macro PH_MISSION_XP_QUICK      50
+#macro PH_MISSION_XP_CORE_LOW   150
+#macro PH_MISSION_XP_CORE_HIGH  300
+#macro PH_MISSION_XP_CHALLENGE  450  // kept under 500 (= one level) — see MISSIONS_PLAN §13.1
+#macro PH_WEEK_COMPLETE_BONUS   300
+#macro PH_MISSION_SPEED_SECS    90   // "Speedster" per-solve time threshold
+
 // ── Starting state (per GDD: new players start at 100 XP / 300 coins) ─────────
 #macro PH_INITIAL_XP       100
 #macro PH_INITIAL_COINS    300

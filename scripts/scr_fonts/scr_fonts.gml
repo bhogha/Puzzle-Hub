@@ -26,4 +26,10 @@ function ph_load_fonts() {
     global.fnt_body_sm  = font_add(_nunito+"Nunito-Bold.ttf",      28, false,false,32,127);
     global.fnt_body_xs  = font_add(_nunito+"Nunito-Bold.ttf",      22, false,false,32,127);
     global.fnt_num_md   = font_add(_nunito+"Nunito-Black.ttf",     40, false,false,32,127);
+    // Lighter (non-bold) number — mission-tile reward amounts ("50 ⭐").
+    global.fnt_num_reg  = font_add(_nunito+"Nunito-SemiBold.ttf",  48, false,false,32,127);
+    // Big reward-amount number on the win / lose / level-up claim screens
+    // ("100 ⭐" / "25 ⭐" / "100 🪙"). Penpot design uses a chunky Nunito ~150px on
+    // the ~1.4× board, so ~96px is the faithful scale on the app canvas.
+    global.fnt_num_xl   = font_add(_nunito+"Nunito-ExtraBold.ttf", 96, false,false,32,127);
 }

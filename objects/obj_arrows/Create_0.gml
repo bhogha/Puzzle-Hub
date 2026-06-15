@@ -50,10 +50,20 @@ launch_body_len = 0;      // snake body length along the path (px)
 launch_head_s0  = 0;      // head arc-length at launch start
 launch_head_s1  = 1;      // head arc-length when fully off-board
 
-// Blocked-tap shake.
-shake_idx = -1;
-shake_t   = 0;
-SHAKE_DUR = 18;
+// Blocked-tap feedback: the tapped arrow glides head-first ALONG ITS OWN SNAKE
+// PATH (same motion as a launch) up to the arrow that blocks it, then eases back
+// to its slot — flashing red with the blocker so the cause is obvious. Pure
+// visual — input isn't locked. Path data mirrors the launch_* set.
+bump_idx      = -1;        // arrow being bumped, or -1
+bump_t        = 0;         // 0..1 (out → hold → back)
+bump_frames   = 26;        // total frames (~0.43s @60fps)
+bump_dir      = [0, 0];    // head [dr,dc]
+blocker_idx   = -1;        // the arrow that blocks it (flashes red alongside)
+bump_path     = [];        // smoothed centreline (body + short exit lane to blocker)
+bump_arc      = [];        // cumulative arc-length per bump_path point
+bump_body_len = 0;         // snake body length along the path (px)
+bump_head_s0  = 0;         // head arc-length at rest (= body length)
+bump_reach    = 0;         // extra arc-length the head advances toward the blocker
 
 // Floating "+5s" penalty label.
 float_t   = 0;
@@ -181,23 +191,29 @@ ar_arrowhead = function(_hx, _hy, _dx, _dy, _cell) {
         false);
 };
 
-/// Point at arc-length `_arc` along the current launch path (interpolated;
-/// extrapolated straight past the end along the head direction).
-ar_path_at = function(_arc) {
-    var _n = array_length(launch_path);
-    if (_arc <= 0) return launch_path[0];
-    var _end = launch_arc[_n-1];
-    if (_arc >= _end) {
-        var _p = launch_path[_n-1];
-        var _o = _arc - _end;
-        return { x: _p.x + launch_dir[1]*_o, y: _p.y + launch_dir[0]*_o };
+/// Point at arc-length `_s` along an arbitrary snake path (point list + cumulative
+/// arc-lengths + head dir); interpolated, extrapolated straight past the end along
+/// the head direction. Shared by the launch and the blocked-tap bump.
+ar_path_at_on = function(_path, _arc, _dir, _s) {
+    var _n = array_length(_path);
+    if (_s <= 0) return _path[0];
+    var _end = _arc[_n-1];
+    if (_s >= _end) {
+        var _p = _path[_n-1];
+        var _o = _s - _end;
+        return { x: _p.x + _dir[1]*_o, y: _p.y + _dir[0]*_o };
     }
     var _i = 0;
-    while (_i < _n-1 && launch_arc[_i+1] < _arc) _i++;
-    var _seg = launch_arc[_i+1] - launch_arc[_i];
-    var _f   = (_seg > 0) ? (_arc - launch_arc[_i]) / _seg : 0;
-    var _a = launch_path[_i], _b = launch_path[_i+1];
+    while (_i < _n-1 && _arc[_i+1] < _s) _i++;
+    var _seg = _arc[_i+1] - _arc[_i];
+    var _f   = (_seg > 0) ? (_s - _arc[_i]) / _seg : 0;
+    var _a = _path[_i], _b = _path[_i+1];
     return { x: lerp(_a.x,_b.x,_f), y: lerp(_a.y,_b.y,_f) };
+};
+
+/// Point along the active LAUNCH path (wrapper over ar_path_at_on).
+ar_path_at = function(_arc) {
+    return ar_path_at_on(launch_path, launch_arc, launch_dir, _arc);
 };
 
 /// Begin a snake-style launch of arrow `_idx`: build the smoothed path the body
@@ -246,6 +262,42 @@ ar_start_launch = function(_idx) {
     launch_frames   = round(clamp((launch_head_s1 - launch_head_s0)/CELL * 1.4, 14, 28));
 };
 
+/// Begin a BLOCKED-tap bump: build the same head-first snake path as a launch but
+/// only as far as the blocker, and arm a there-and-back glide along it. `_gap` =
+/// clear cells between the tip and the blocking arrow (0 = adjacent).
+ar_start_bump = function(_idx, _gap) {
+    var _a  = puzzle.arrows[_idx];
+    var _cs = _a.cells;
+    var _d  = ph_arrows_delta(_a.head);
+    var _dr = _d[0], _dc = _d[1];
+    bump_dir = _d;
+
+    var _bn = ar_body_nodes(_idx, grid_x, grid_y, CELL, 0, 0);   // tail … head
+    var _hr = _cs[0].r, _hc = _cs[0].c;
+
+    // Body nodes + a short straight exit lane (only as far as the blocker + 1 cell).
+    var _reach_cells = max(_gap, 1) + 1;
+    var _nodes = [];
+    for (var _i = 0; _i < array_length(_bn); _i++) array_push(_nodes, _bn[_i]);
+    for (var _n = 1; _n <= _reach_cells; _n++) {
+        array_push(_nodes, { x: grid_x + (_hc + _dc*_n)*CELL + CELL/2,
+                             y: grid_y + (_hr + _dr*_n)*CELL + CELL/2 });
+    }
+    var _r = CELL * AR_CORNER;
+    bump_path = ar_round(_nodes, _r);
+    var _np = array_length(bump_path);
+    bump_arc = array_create(_np, 0);
+    for (var _i = 1; _i < _np; _i++) {
+        bump_arc[_i] = bump_arc[_i-1] + point_distance(bump_path[_i-1].x, bump_path[_i-1].y, bump_path[_i].x, bump_path[_i].y);
+    }
+    bump_body_len = ar_pathlen(ar_round(_bn, _r));
+    bump_head_s0  = bump_body_len;
+    bump_reach    = max(_gap, 0.35) * CELL;   // tip advances `gap` cells (tiny nudge if adjacent)
+    bump_idx      = _idx;
+    bump_t        = 0;
+    bump_frames   = round(clamp(18 + _gap * 4, 18, 40));
+};
+
 // ── Persistence ───────────────────────────────────────────────────────────────
 ar_save = function() {
     ph_arrows_save_state(global.save, global.selected_date_key, alive, penalty_secs);
@@ -265,7 +317,7 @@ ar_apply_hint = function() {
     return true;
 };
 
-hint = ph_hint_create(ar_apply_hint, ACCENT);
+hint = ph_hint_create(ar_apply_hint, ACCENT, "This hint will highlight an\narrow that's safe to slide", "arrows_" + global.selected_date_key);
 
 // ── Win bookkeeping ───────────────────────────────────────────────────────────
 win_phase        = 0;

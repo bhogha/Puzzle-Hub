@@ -315,6 +315,15 @@ function ph_draw_nav(_active_tab) {
         ph_draw_text(_tcx, _tcy + 64, _labels[_ti],
                      global.fnt_body_xs, _lbl_col, fa_center, fa_middle);
 
+        // Missions pull-back badge on the Profile tab when a reward is claimable.
+        if (_ti == 2 && variable_global_exists("save") && ph_week_has_claimable(global.save)) {
+            var _bx = _tcx + 46, _by = _tcy - 42;
+            draw_set_color(c_white);     draw_circle(_bx, _by, 20, false);
+            draw_set_color(PH_COL_PINK); draw_circle(_bx, _by, 16, false);
+            ph_draw_text(_bx, _by-1, string(ph_week_claimable_count(global.save)),
+                         global.fnt_body_xs, c_white, fa_center, fa_middle);
+        }
+
         // Pink underline pill — anchored to the bottom of the usable area
         // (not the bottom of the window, which includes the home-indicator zone).
         if (_active) {

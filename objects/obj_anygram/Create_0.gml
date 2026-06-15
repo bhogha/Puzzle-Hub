@@ -397,4 +397,4 @@ ag_apply_hint = function() {
 };
 
 // Shared hint-flow controller (modal + placeholder video). Pink accent.
-hint = ph_hint_create(ag_apply_hint, PH_COL_PINK);
+hint = ph_hint_create(ag_apply_hint, PH_COL_PINK, "This hint will show you the\nfirst letter of a hidden word", "anygram_" + global.selected_date_key);

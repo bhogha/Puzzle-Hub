@@ -157,7 +157,7 @@ sk_apply_hint = function() {
 };
 
 // Shared hint-flow controller (modal + placeholder video). Blue accent.
-hint = ph_hint_create(sk_apply_hint, PH_COL_BLUE);
+hint = ph_hint_create(sk_apply_hint, PH_COL_BLUE, "This hint will reveal one\ncorrect rectangle", "shikaku_" + global.selected_date_key);
 
 // ── Restore in-progress state (resume) ────────────────────────────────────────
 var _saved = ph_shikaku_load_state(global.save, global.selected_date_key);

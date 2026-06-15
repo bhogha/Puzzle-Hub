@@ -117,7 +117,7 @@ ld_apply_hint = function() {
 ld_can_hint = function() {
     return (!solved && hinted < 0);
 };
-hint = ph_hint_create(ld_apply_hint, PH_COL_AMBER);
+hint = ph_hint_create(ld_apply_hint, PH_COL_AMBER, "This hint will highlight the\ntile you need to change", "ladder_" + global.selected_date_key);
 
 // ── Advance / evaluate ────────────────────────────────────────────────────────
 /// The current row letters joined into a word.

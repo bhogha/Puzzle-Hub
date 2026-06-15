@@ -259,6 +259,9 @@ function ph_win_grant(_w, _amount) {
     var _before = ph_xp_in_level(global.save.xp);
     var _res    = ph_grant_xp(global.save, _amount, false);
     ph_mark_xp_claimed(global.save, _w.cfg.claim_key);
+    // Missions: record this genuine solve into the current week's counters.
+    // Runs once per solve (guarded above by _w.granted) and never in review mode.
+    ph_week_record_solve(global.save, _w.cfg.claim_key);
     if (_res.levels_gained > 0) {
         global.pending_levelup = { level: _res.new_level, base_reward: PH_COINS_PER_LEVEL };
         _w.xp_anim_to = PH_XP_PER_LEVEL;           // fill to full; Level-Up screen continues
@@ -395,47 +398,52 @@ function ph_win_draw(_w) {
     draw_set_alpha(1);
 
     // ── Responsive vertical flow ──────────────────────────────────────────────
-    // The Penpot board assumes a tall (~2243 px) canvas; real devices/windows
-    // vary, so the blocks are laid out as a flow that compresses on shorter
-    // screens (recap height + inter-block gaps absorb the slack). Element sizes
-    // still track the design where space allows.
+    // The Penpot board assumes a tall canvas; real devices/windows vary, so the
+    // blocks are laid out as a flow that compresses on shorter screens (recap
+    // height + inter-block gaps absorb the slack). Element sizes still track the
+    // design where space allows. New Penpot flow (top→bottom):
+    //   TITLE · RECAP · "Completed in [time]" · "Claim your reward!" ·
+    //   reward amount ("100 ⭐") · XP bar · CLAIM | DOUBLE buttons.
     var _avail = PH_H - _st - _sb;
-    var _H_TITLE = 180, _H_SOLVED = 165, _H_TIME = 100, _H_BAR = 120, _H_CLAIM = 90, _H_BTN = 150;
+    var _H_TITLE = 180, _H_COMPLETED = 100, _H_CLAIM = 90, _H_AMT = 120, _H_BAR = 120, _H_BTN = 150;
     var _GAP0 = 24, _NGAP = 6;
-    var _fixed   = _H_TITLE + _H_SOLVED + _H_TIME + _H_BAR + _H_CLAIM + _H_BTN;
+    var _fixed   = _H_TITLE + _H_COMPLETED + _H_CLAIM + _H_AMT + _H_BAR + _H_BTN;
     var _recap_h = clamp(_avail - _fixed - _GAP0*_NGAP, 240, 640);
     var _recap_w = min(540, _recap_h);
     var _gap     = _GAP0 + max(0, _avail - _fixed - _recap_h - _GAP0*_NGAP) / _NGAP;
 
     var _cy = _st;
-    var _title_cy  = _cy + _H_TITLE/2;   _cy += _H_TITLE  + _gap;
-    var _recap_top = _cy;                _cy += _recap_h  + _gap;
-    var _solved_top = _cy;               _cy += _H_SOLVED + _gap;
-    var _time_cy   = _cy + _H_TIME/2;    _cy += _H_TIME   + _gap;
-    var _bar_cy    = _cy + 80;           _cy += _H_BAR    + _gap;
-    var _claim_cy  = _cy + _H_CLAIM/2;   _cy += _H_CLAIM  + _gap;
-    var _btn_cy    = _cy + _H_BTN/2;
+    var _title_cy     = _cy + _H_TITLE/2;     _cy += _H_TITLE     + _gap;
+    var _recap_top    = _cy;                  _cy += _recap_h     + _gap;
+    var _completed_cy = _cy + _H_COMPLETED/2; _cy += _H_COMPLETED + _gap;
+    var _claim_cy     = _cy + _H_CLAIM/2;     _cy += _H_CLAIM     + _gap;
+    var _amt_cy       = _cy + _H_AMT/2;       _cy += _H_AMT       + _gap;
+    var _bar_cy       = _cy + 60;             _cy += _H_BAR       + _gap;
+    var _btn_cy       = _cy + _H_BTN/2;
 
-    // Title (updated to the larger Lilita display per the new Win Screen design).
+    // Title (large Lilita display per the Win Screen design).
     ph_draw_text(PH_W/2, _title_cy, "WELL DONE!", global.fnt_disp_xxl, _cfg.title_col, fa_center, fa_middle);
 
     // Puzzle recap (delegated to the puzzle).
     _cfg.draw_recap(PH_W/2, _recap_top, _recap_w, _recap_h);
 
-    // "You solved todays  <PUZZLE>".  (Flavour line → Nunito Regular per design.)
-    ph_draw_text(PH_W/2, _solved_top + 48,  "You solved todays", global.fnt_body_reg, PH_COL_DARK,     fa_center, fa_middle);
-    ph_draw_text(PH_W/2, _solved_top + 122, _cfg.puzzle_name,    global.fnt_disp_lg,  _cfg.title_col,  fa_center, fa_middle);
-
-    // "in  [stopwatch] mm:ss".
-    ph_draw_text(PH_W/2 - 165, _time_cy, "in", global.fnt_body_reg, PH_COL_DARK, fa_center, fa_middle);
-    var _pl = PH_W/2 - 75, _pr = PH_W/2 + 180;
-    ph_draw_chip(_pl, _time_cy-38, _pr, _time_cy+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-    draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _time_cy, 150/512, 150/512, 0, c_white, 1);
-    ph_draw_text(_pl+102, _time_cy, _cfg.time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
+    // "Completed in  [stopwatch] mm:ss" — single centred line (replaces the old
+    // "You solved todays <PUZZLE> / in ..." block).
+    draw_set_font(global.fnt_body_reg);
+    var _clbl  = "Completed in";
+    var _clw   = string_width(_clbl);
+    var _pillw = 250, _lpgap = 28;
+    var _grpw  = _clw + _lpgap + _pillw;
+    var _grpx  = PH_W/2 - _grpw/2;
+    ph_draw_text(_grpx, _completed_cy, _clbl, global.fnt_body_reg, PH_COL_DARK, fa_left, fa_middle);
+    var _pl = _grpx + _clw + _lpgap, _pr = _pl + _pillw;
+    ph_draw_chip(_pl, _completed_cy-38, _pr, _completed_cy+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+    draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _completed_cy, 150/512, 150/512, 0, c_white, 1);
+    ph_draw_text(_pl+96, _completed_cy, _cfg.time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
 
     // ── Level progress bar + animated number + level star badge ───────────────
     // Hidden once we reach the "done" state — that lower band becomes the
-    // SHARE / HOME / NEXT GAME / YESTERDAY button stack instead (per the new design).
+    // SHARE / HOME / NEXT GAME / YESTERDAY button stack instead (per the design).
     var _bh3 = 55;   // reward/nav button half-height (design ~110 px tall)
     if (_w.state != "done") {
         var _bl = 150, _br = PH_W - 110, _bh = 70;
@@ -455,22 +463,32 @@ function ph_win_draw(_w) {
         _w.bar_star_y = _bar_cy;
     }
 
-    // ── Action area: claim buttons (new blue reward-button design) ─────────────
+    // ── Action area: "Claim your reward!" + amount + CLAIM/DOUBLE buttons ──────
     if (_w.state == "choose" || _w.state == "after_video") {
-        ph_draw_text(PH_W/2, _claim_cy, "Claim your reward", global.fnt_body_semi, PH_COL_DARK, fa_center, fa_middle);
+        ph_draw_text(PH_W/2, _claim_cy, "Claim your reward!", global.fnt_body_semi, PH_COL_DARK, fa_center, fa_middle);
+
+        // Reward amount: "<amount>  ⭐"  (large Nunito number + 3D star icon).
+        var _amt_str = string(_w.xp_amount);
+        draw_set_font(global.fnt_num_xl);
+        var _anw   = string_width(_amt_str);
+        var _astar = 130, _agap = 24;
+        var _agrp  = _anw + _agap + _astar;
+        var _ax0   = PH_W/2 - _agrp/2;
+        ph_draw_text(_ax0 + _anw/2, _amt_cy, _amt_str, global.fnt_num_xl, PH_COL_DARK, fa_center, fa_middle);
+        draw_sprite_ext(global.spr_star3d, 0, _ax0 + _anw + _agap + _astar/2, _amt_cy, _astar/256, _astar/256, 0, c_white, 1);
+
         if (_w.state == "choose") {
             var _xl = 70,            _xr = PH_W/2 - 15;
             var _dl = PH_W/2 + 15,   _dr = PH_W - 70;
-            // base claim: "<base>" + star
-            ph_draw_reward_btn(_xl, _btn_cy, _xr, _bh3, string(_w.xp_base), global.spr_star, false);
+            ph_draw_reward_btn(_xl, _btn_cy, _xr, _bh3, "CLAIM",  noone, false);
             _w.XP_L=_xl; _w.XP_R=_xr; _w.XP_T=_btn_cy-_bh3; _w.XP_B=_btn_cy+_bh3;
             _w.claim_src_x=(_xl+_xr)/2; _w.claim_src_y=_btn_cy;
-            // DOUBLE via video: doubled amount + star + TV badge
-            ph_draw_reward_btn(_dl, _btn_cy, _dr, _bh3, string(_w.xp_base*2), global.spr_star, true);
+            // DOUBLE via rewarded video (TV badge).
+            ph_draw_reward_btn(_dl, _btn_cy, _dr, _bh3, "DOUBLE", noone, true);
             _w.DBL_L=_dl; _w.DBL_R=_dr; _w.DBL_T=_btn_cy-_bh3; _w.DBL_B=_btn_cy+_bh3;
-        } else { // after_video — single centred claim of the doubled amount
+        } else { // after_video — single centred CLAIM of the doubled amount
             var _cxl = PH_W/2 - 235, _cxr = PH_W/2 + 235;
-            ph_draw_reward_btn(_cxl, _btn_cy, _cxr, _bh3, string(_w.xp_amount), global.spr_star, false);
+            ph_draw_reward_btn(_cxl, _btn_cy, _cxr, _bh3, "CLAIM", noone, false);
             _w.XP_L=_cxl; _w.XP_R=_cxr; _w.XP_T=_btn_cy-_bh3; _w.XP_B=_btn_cy+_bh3;
             _w.claim_src_x=PH_W/2; _w.claim_src_y=_btn_cy;
         }
@@ -495,9 +513,11 @@ function ph_win_draw(_w) {
     if (_w.state == "done") {
         var _slide   = (1 - ph_ease_back(min(_w.outro_t, 1))) * 240;
         var _row_h   = 132;                         // spacing between row centres
-        var _r1cy    = _bar_cy - 30;                // settled row centres
-        var _r2cy    = _r1cy + _row_h;
-        var _r3cy    = _r1cy + _row_h * 2;
+        // Bottom-anchored stack (YESTERDAY just above the home indicator), so it's
+        // independent of the claim/amount blocks that only show pre-claim.
+        var _r3cy    = PH_H - _sb - 90;             // YESTERDAY (bottom row)
+        var _r2cy    = _r3cy - _row_h;              // NEXT GAME
+        var _r1cy    = _r3cy - _row_h * 2;          // SHARE | HOME
         var _half    = PH_W/2;
 
         // Row 1 — SHARE (pink, left half)

@@ -197,6 +197,39 @@ function ph_arrows_first_clear(_puzzle, _alive) {
     return _best;
 }
 
+/// For a BLOCKED arrow `_idx`, describe what stops it: the number of clear cells
+/// its tip can advance before it would enter an occupied cell (`gap`), and the
+/// index of the OTHER alive arrow sitting in that first blocking cell (`blocker`).
+/// Used by the blocked-tap feedback (lunge the arrow up to the blocker, flash both
+/// red). Returns { gap:-1, blocker:-1 } if the lane is actually clear.
+function ph_arrows_block_info(_puzzle, _alive, _idx) {
+    var _rows = _puzzle.rows, _cols = _puzzle.cols;
+    var _arr  = _puzzle.arrows[_idx];
+    var _d    = ph_arrows_delta(_arr.head);
+    var _dr   = _d[0], _dc = _d[1];
+
+    // Cell → owning alive-arrow index (-1 if empty), for every OTHER alive arrow.
+    var _owner = array_create(_rows * _cols, -1);
+    for (var _a = 0; _a < array_length(_puzzle.arrows); _a++) {
+        if (_a == _idx || !_alive[_a]) continue;
+        var _cs = _puzzle.arrows[_a].cells;
+        for (var _k = 0; _k < array_length(_cs); _k++) {
+            _owner[_cs[_k].r * _cols + _cs[_k].c] = _a;
+        }
+    }
+
+    var _tip = _arr.cells[0];
+    var _r = _tip.r + _dr, _c = _tip.c + _dc;
+    var _gap = 0;
+    while (_r >= 0 && _r < _rows && _c >= 0 && _c < _cols) {
+        var _o = _owner[_r * _cols + _c];
+        if (_o != -1) return { gap: _gap, blocker: _o };
+        _gap++;
+        _r += _dr; _c += _dc;
+    }
+    return { gap: -1, blocker: -1 };
+}
+
 /// Index of the arrow whose body covers cell (r,c) among alive arrows, or -1.
 function ph_arrows_at(_puzzle, _alive, _r, _c) {
     for (var _i = 0; _i < array_length(_puzzle.arrows); _i++) {

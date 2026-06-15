@@ -59,25 +59,22 @@ draw_set_alpha(1);
 // ── Arrows (clipped to the board so a launch slides cleanly off the edge) ─────
 ph_scissor_gui(grid_x, grid_y, BOARD_W, BOARD_H);
 
-for (var _i = 0; _i < NARROWS; _i++) {
-    if (!alive[_i] || _i == launching) continue;
+var _block_red = make_color_rgb(232, 72, 60);
 
-    // Per-arrow offset: blocked-tap shake nudges along the head direction.
-    var _offx = 0, _offy = 0;
-    if (_i == shake_idx && shake_t > 0) {
-        var _d   = ph_arrows_delta(puzzle.arrows[_i].head);
-        var _amt = sin((SHAKE_DUR - shake_t) / SHAKE_DUR * pi * 3) * CELL * 0.14 * (shake_t / SHAKE_DUR);
-        _offx = _d[1] * _amt;   // [dr,dc] → screen x uses dc
-        _offy = _d[0] * _amt;   // screen y uses dr
-    }
+for (var _i = 0; _i < NARROWS; _i++) {
+    // The bumped arrow is drawn as a snake below (so it follows its path); skip here.
+    if (!alive[_i] || _i == launching || _i == bump_idx) continue;
+
+    // The blocker flashes red while the blocked arrow glides at it.
+    var _ov = (bump_idx != -1 && _i == blocker_idx) ? _block_red : -1;
 
     // Hint glow — pulsing white halo behind the highlighted safe arrow.
     if (_i == ar_hint_idx && ar_hint_t > 0) {
         var _pulse = 0.55 + 0.45 * sin(current_time / 110);
-        ar_draw_one(_i, grid_x, grid_y, CELL, RIBBON_W * 1.7, _offx, _offy, 0.5 * _pulse, c_white);
+        ar_draw_one(_i, grid_x, grid_y, CELL, RIBBON_W * 1.7, 0, 0, 0.5 * _pulse, c_white);
     }
 
-    ar_draw_one(_i, grid_x, grid_y, CELL, RIBBON_W, _offx, _offy, 1, -1);
+    ar_draw_one(_i, grid_x, grid_y, CELL, RIBBON_W, 0, 0, 1, _ov);
 }
 
 // Launching arrow — body glides head-first along its smoothed trail, off-board.
@@ -91,6 +88,24 @@ if (launching != -1) {
     draw_set_color(arrow_col[launching]);
     ar_stroke(_pts, RIBBON_W);
     ar_arrowhead(_pts[0].x, _pts[0].y, launch_dir[1], launch_dir[0], CELL);
+}
+
+// Blocked arrow — slithers head-first up to its blocker along its own path, then
+// eases back, drawn red (the launch-style snake motion, partial + reversible).
+if (bump_idx != -1) {
+    var _bamt;
+    if      (bump_t < 0.45) _bamt = ph_ease_out(bump_t / 0.45);              // glide out
+    else if (bump_t < 0.60) _bamt = 1;                                       // hold at blocker
+    else                    _bamt = 1 - ph_ease_out((bump_t - 0.60) / 0.40); // ease back
+    var _bhs  = bump_head_s0 + bump_reach * _bamt;
+    var _bcnt = max(2, ceil(bump_body_len / (CELL * 0.16)));
+    var _bpts = array_create(_bcnt + 1);
+    for (var _j = 0; _j <= _bcnt; _j++) {
+        _bpts[_j] = ar_path_at_on(bump_path, bump_arc, bump_dir, _bhs - bump_body_len * (_j / _bcnt));
+    }
+    draw_set_color(_block_red);
+    ar_stroke(_bpts, RIBBON_W);
+    ar_arrowhead(_bpts[0].x, _bpts[0].y, bump_dir[1], bump_dir[0], CELL);
 }
 
 ph_scissor_reset();

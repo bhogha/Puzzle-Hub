@@ -34,7 +34,7 @@ for (var _i = 0; _i < array_length(_sprites); _i++) {
 // Free dynamically loaded fonts
 var _fonts = [
     "fnt_disp_xxl", "fnt_disp_xl", "fnt_disp_lg", "fnt_disp_md", "fnt_disp_sm", "fnt_disp_xs",
-    "fnt_body_lg", "fnt_body_md", "fnt_body_sm", "fnt_body_xs", "fnt_num_md"
+    "fnt_body_lg", "fnt_body_md", "fnt_body_sm", "fnt_body_xs", "fnt_num_md", "fnt_num_xl"
 ];
 for (var _i = 0; _i < array_length(_fonts); _i++) {
     var _name = _fonts[_i];

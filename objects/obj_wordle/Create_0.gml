@@ -169,7 +169,7 @@ wd_can_hint = function() {
     for (var _i = 0; _i < COLS; _i++) if (!row_lock[_i]) return true;
     return false;
 };
-hint = ph_hint_create(wd_apply_hint, PH_COL_GREEN);
+hint = ph_hint_create(wd_apply_hint, PH_COL_GREEN, "This hint will reveal the\nnext correct letter", "wordle_" + global.selected_date_key);
 
 // ── Win bookkeeping — fires once when the answer is guessed ────────────────────
 wd_check_win = function() {
@@ -272,7 +272,7 @@ wd_finalize_loss = function() {
     var _s = ph_timer_now(timer_base_secs, session_start_ms);
     lose_time_str = string(_s div 60) + ":" + (((_s mod 60) < 10) ? "0" : "") + string(_s mod 60);
     global.save[$ "wordle_time_" + global.selected_date_key] = lose_time_str;
-    ph_wordle_mark_missed(global.save, global.selected_date_key);
+    ph_wordle_mark_missed(global.save, global.selected_date_key); ph_week_record_wordle_miss(global.save);
     wd_save_state();
     lose_phase = "screen"; lose_anim_t = 0;
 };
@@ -410,21 +410,44 @@ wd_lose_draw = function() {
 
     if (lose_phase == "screen") {
         draw_set_color(LOSE_RED); draw_rectangle(0, 0, PH_W, PH_H, false);
-        ph_draw_text(PH_W/2, 200 + _st, "UNLUCKY!", global.fnt_disp_xxl, LOSE_DARK, fa_center, fa_middle);
-        win_draw_recap(PH_W/2, 300 + _st, 520, 520);                       // mini guess grid
-        ph_draw_text(PH_W/2, 980 + _st, "You finished todays", global.fnt_body_reg, PH_COL_DARK, fa_center, fa_middle);
-        ph_draw_text(PH_W/2, 1042 + _st, "WORDLE",            global.fnt_disp_md, c_white,     fa_center, fa_middle);
-        // "in  [stopwatch] mm:ss" — same time pill as the win screen (with the "in").
-        var _ty = 1140 + _st;
-        ph_draw_text(PH_W/2 - 165, _ty, "in", global.fnt_body_reg, PH_COL_DARK, fa_center, fa_middle);
-        var _pl = PH_W/2 - 75, _pr = PH_W/2 + 180;
-        ph_draw_chip(_pl, _ty-38, _pr, _ty+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-        draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _ty, 150/512, 150/512, 0, c_white, 1);
-        ph_draw_text(_pl+102, _ty, lose_time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
-        // Level progress bar — full win-screen style: grey track, purple fill, the
-        // "xp / 500" count above-right, and the oversized star level badge. The fill
-        // animates from the pre-claim snapshot once the player claims.
-        var _by = 1300 + _st, _bl = 150, _br = PH_W - 140, _bh = 70;
+
+        // Responsive vertical flow (mirrors the shared win screen):
+        //   TITLE · RECAP · "Completed in [time]" · "Claim your reward!" ·
+        //   amount ("25 ⭐") · XP bar · CLAIM | DOUBLE (or HOME once claimed).
+        var _avail = PH_H - _st - _sb;
+        var _H_TITLE = 180, _H_COMPLETED = 100, _H_CLAIM = 90, _H_AMT = 120, _H_BAR = 120, _H_BTN = 150;
+        var _GAP0 = 20, _NGAP = 6;
+        var _fixed   = _H_TITLE + _H_COMPLETED + _H_CLAIM + _H_AMT + _H_BAR + _H_BTN;
+        var _recap_h = clamp(_avail - _fixed - _GAP0*_NGAP, 220, 560);
+        var _recap_w = min(520, _recap_h);
+        var _gap     = _GAP0 + max(0, _avail - _fixed - _recap_h - _GAP0*_NGAP) / _NGAP;
+
+        var _fy = _st;
+        var _title_cy     = _fy + _H_TITLE/2;     _fy += _H_TITLE     + _gap;
+        var _recap_top    = _fy;                  _fy += _recap_h     + _gap;
+        var _completed_cy = _fy + _H_COMPLETED/2; _fy += _H_COMPLETED + _gap;
+        var _claim_cy     = _fy + _H_CLAIM/2;     _fy += _H_CLAIM     + _gap;
+        var _amt_cy       = _fy + _H_AMT/2;       _fy += _H_AMT       + _gap;
+        var _by           = _fy + 60;             _fy += _H_BAR       + _gap;
+        var _ay           = _fy + _H_BTN/2;
+
+        ph_draw_text(PH_W/2, _title_cy, "UNLUCKY!", global.fnt_disp_xxl, LOSE_DARK, fa_center, fa_middle);
+        win_draw_recap(PH_W/2, _recap_top, _recap_w, _recap_h);            // mini guess grid
+
+        // "Completed in  [stopwatch] mm:ss" — single centred line.
+        draw_set_font(global.fnt_body_reg);
+        var _clbl = "Completed in", _clw = string_width(_clbl);
+        var _pillw = 250, _lpgap = 28;
+        var _grpx = PH_W/2 - (_clw + _lpgap + _pillw)/2;
+        ph_draw_text(_grpx, _completed_cy, _clbl, global.fnt_body_reg, PH_COL_DARK, fa_left, fa_middle);
+        var _pl = _grpx + _clw + _lpgap, _pr = _pl + _pillw;
+        ph_draw_chip(_pl, _completed_cy-38, _pr, _completed_cy+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
+        draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _completed_cy, 150/512, 150/512, 0, c_white, 1);
+        ph_draw_text(_pl+96, _completed_cy, lose_time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
+
+        // Level progress bar — grey track, purple fill, "xp / 500" count above-right,
+        // oversized star level badge. The fill animates from the pre-claim snapshot.
+        var _bl = 150, _br = PH_W - 140, _bh = 70;
         var _disp;
         if      (lose_claiming) _disp = lerp(lose_xp_from, lose_xp_to, ph_ease_out(lose_xp_anim_t));
         else if (lose_claimed)  _disp = lose_xp_to;
@@ -442,15 +465,22 @@ wd_lose_draw = function() {
         lose_bar_star_x = _badge_x;  lose_bar_star_y = _by;   // star-flight target
 
         // ── Reward area ────────────────────────────────────────────────────────
-        var _ay = PH_H - 240 - _sb;
         lose_claim_src_x = PH_W/2;  lose_claim_src_y = _ay;   // star-flight origin
         if (!lose_claimed && !lose_claiming) {
-            ph_draw_text(PH_W/2, _ay-92, "Claim your reward", global.fnt_body_semi, LOSE_DARK, fa_center, fa_middle);
-            // New blue reward-button design (shared with the win / level-up screens).
-            ls_claim  = {l:120,      t:_ay-50, r:PH_W/2-25, b:_ay+50};
-            ph_draw_reward_btn(ls_claim.l, _ay, ls_claim.r, 50, string(PH_WORDLE_GIVEUP_XP), global.spr_star, false);
-            ls_double = {l:PH_W/2+25, t:_ay-50, r:PH_W-120, b:_ay+50};
-            ph_draw_reward_btn(ls_double.l, _ay, ls_double.r, 50, string(PH_WORDLE_GIVEUP_XP*2), global.spr_star, true);
+            ph_draw_text(PH_W/2, _claim_cy, "Claim your reward!", global.fnt_body_semi, LOSE_DARK, fa_center, fa_middle);
+            // Reward amount: "<amount>  ⭐"  (large Nunito number + 3D star icon).
+            var _amt_str = string(PH_WORDLE_GIVEUP_XP);
+            draw_set_font(global.fnt_num_xl);
+            var _anw = string_width(_amt_str);
+            var _astar = 130, _agap = 24;
+            var _ax0 = PH_W/2 - (_anw + _agap + _astar)/2;
+            ph_draw_text(_ax0 + _anw/2, _amt_cy, _amt_str, global.fnt_num_xl, PH_COL_DARK, fa_center, fa_middle);
+            draw_sprite_ext(global.spr_star3d, 0, _ax0 + _anw + _agap + _astar/2, _amt_cy, _astar/256, _astar/256, 0, c_white, 1);
+            // CLAIM | DOUBLE (rewarded video → doubles the consolation XP).
+            ls_claim  = {l:70,        t:_ay-55, r:PH_W/2-15, b:_ay+55};
+            ph_draw_reward_btn(ls_claim.l, _ay, ls_claim.r, 55, "CLAIM",  noone, false);
+            ls_double = {l:PH_W/2+15,  t:_ay-55, r:PH_W-70,   b:_ay+55};
+            ph_draw_reward_btn(ls_double.l, _ay, ls_double.r, 55, "DOUBLE", noone, true);
         } else if (lose_claiming) {
             // Flying stars from the reward button up to the bar's star badge.
             for (var _si = 0; _si < array_length(lose_stars); _si++) {
@@ -464,8 +494,8 @@ wd_lose_draw = function() {
             }
         } else {
             // Claimed → blue HOME button (matches the win screen).
-            ls_back = {l:PH_W/2-280, t:_ay-50, r:PH_W/2+280, b:_ay+50};
-            ph_draw_nav_btn(ls_back.l, _ay, ls_back.r, 50, "HOME", global.spr_home, noone, noone);
+            ls_back = {l:PH_W/2-280, t:_ay-55, r:PH_W/2+280, b:_ay+55};
+            ph_draw_nav_btn(ls_back.l, _ay, ls_back.r, 55, "HOME", global.spr_home, noone, noone);
         }
         if (lose_vid_open) ph_video_overlay(lose_vid_timer, LOSE_VIDEO_X_DELAY, PH_COL_GREEN);
         return;
@@ -492,16 +522,27 @@ wd_lose_draw = function() {
         draw_set_color(PH_COL_PINK); draw_circle(_xc, _xy, 46, false);
         ph_draw_text(_xc, _xy, "X", global.fnt_body_md, PH_COL_WHITE, fa_center, fa_middle);
 
-        ph_draw_text(PH_W/2, _sb_top + 230 + _dy, "You can still win!", global.fnt_disp_lg, PH_COL_DARK, fa_center, fa_middle);
-        ph_draw_text(PH_W/2, _sb_top + 320 + _dy, "Get " + string(PH_WORDLE_EXTRA_MOVES) + " more moves to solve the puzzle",
+        ph_draw_text(PH_W/2, _sb_top + 225 + _dy, "You can still win!", global.fnt_disp_lg, PH_COL_DARK, fa_center, fa_middle);
+        ph_draw_text(PH_W/2, _sb_top + 315 + _dy, "Get " + string(PH_WORDLE_EXTRA_MOVES) + " more moves to solve the puzzle",
                      global.fnt_body_md, PH_COL_INK_SOFT, fa_center, fa_middle);
 
-        var _by = _sb_top + 480 + _dy;
+        // Cost amount: "<cost>  🪙" (large Nunito number + gold coin) above the buttons.
+        var _amt_cy = _sb_top + 430 + _dy;
+        var _amt    = string(PH_WORDLE_EXTRA_COST);
+        draw_set_font(global.fnt_num_xl);
+        var _anw    = string_width(_amt);
+        var _acoin  = 110, _agap = 22;
+        var _ax0    = PH_W/2 - (_anw + _agap + _acoin)/2;
+        ph_draw_text(_ax0 + _anw/2, _amt_cy, _amt, global.fnt_num_xl, PH_COL_DARK, fa_center, fa_middle);
+        draw_sprite_ext(global.spr_gold_coin, 0, _ax0 + _anw + _agap + _acoin/2, _amt_cy, _acoin/256, _acoin/256, 0, c_white, 1);
+
+        var _by = _sb_top + 560 + _dy;
         lb_buy  = {l:90,        t:_by-58, r:PH_W/2-20, b:_by+58};
         lb_free = {l:PH_W/2+20, t:_by-58, r:PH_W-90,   b:_by+58};
-        // Green reward buttons (uniform with the blue claim buttons), per the design.
-        ph_draw_reward_btn(lb_buy.l,  _by, lb_buy.r,  58, "Buy " + string(PH_WORDLE_EXTRA_COST), global.spr_gold_coin, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
-        ph_draw_reward_btn(lb_free.l, _by, lb_free.r, 58, "FREE",                                global.spr_tv,        false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+        // Green reward buttons (uniform with the blue claim buttons), per the design —
+        // bare BUY label (price moved to its own row) | FREE + retro TV.
+        ph_draw_reward_btn(lb_buy.l,  _by, lb_buy.r,  58, "BUY",  noone,         false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+        ph_draw_reward_btn(lb_free.l, _by, lb_free.r, 58, "FREE", global.spr_tv, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
 
         var _gy = _sb_bot + _dy - 40;
         lb_giveup = {l:PH_W/2-130, t:_gy-40, r:PH_W/2+130, b:_gy+40};
