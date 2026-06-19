@@ -266,3 +266,9 @@ global.trans_col    = c_white;    // cover colour (the tapped card's accent)
 global.trans_room   = -1;         // target room index, swapped to under full cover
 global.TRANS_COVER_FR  = 16;      // cover beat — iris ACCELERATES out to fill (ph_ease_in)
 global.TRANS_REVEAL_FR = 22;      // reveal beat — iris DECELERATES back to a point (ph_ease_out)
+
+// ── Idle anchor (for the HINT-pill nudge) ─────────────────────────────────────
+// Reset to current_time on any tap anywhere (see Step); the shared
+// ph_hint_pill_nudge pulses the HINT pill once (current_time - this) exceeds
+// PH_HINT_IDLE_SECS so a stuck player is reminded help is available.
+global.ph_idle_anchor = current_time;

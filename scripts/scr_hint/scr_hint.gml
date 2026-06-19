@@ -35,6 +35,25 @@ function ph_hint_create(_apply, _accent, _subtitle = "", _key = "") {
         coin_minus_t : 1.0,      // "-100" feedback (1.0 == idle)
         VIDEO_X_DELAY: 300,      // ~5s @60fps before the close X appears
 
+        // ── Reveal animation (the "circle smalling down to the hinted area") ─────
+        // After BUY/FREE, instead of returning "paid"/"freed" immediately we play a
+        // reveal onto the hinted cell, hold input, and emit the result ONLY when it
+        // finishes — so the win-check (run by the controller on paid/freed) lands
+        // AFTER the reveal. The apply method returns the target so we know where to
+        // aim; a puzzle can opt out of the default iris (reveal_iris=false) and draw
+        // its own reveal (e.g. Color Link's snake) off ph_hint_reveal_p().
+        result_pending : "",      // "" idle, else "paid"/"freed" awaiting reveal end
+        reveal_active  : false,
+        reveal_t       : 0,       // frames elapsed in the current reveal
+        reveal_frames  : 30,      // this call's duration (apply may override)
+        reveal_iris    : true,    // draw the default iris? (false = puzzle-custom)
+        reveal_x       : PH_W/2,  // iris target centre (GUI space)
+        reveal_y       : PH_H/2,
+        reveal_r       : 95,      // iris landing radius (≈ a cell; apply may override)
+        REVEAL_FR_DEF  : 30,      // default reveal duration (frames)
+        REVEAL_R0      : 560,     // iris start radius (large, sweeps inward)
+        REVEAL_WIND    : 0.14,    // wind-up fraction: brief expand before contracting
+
         // "-100" / coin-fly target — the caller refreshes this each Draw.
         coin_x : PH_W - 160,
         coin_y : 95,
@@ -55,9 +74,21 @@ function ph_hint_open(_h) {
     _h.modal_t    = 0;
 }
 
-/// True while either overlay is showing (handy for gating other UI/input).
+/// True while any hint overlay/animation is showing (gating other UI/input).
 function ph_hint_is_open(_h) {
-    return _h.modal_open || _h.video_open;
+    return _h.modal_open || _h.video_open || _h.reveal_active || _h.result_pending != "";
+}
+
+/// True while the post-buy reveal animation is playing (controllers can drive a
+/// custom reveal off this + ph_hint_reveal_p).
+function ph_hint_revealing(_h) {
+    return _h.reveal_active;
+}
+
+/// Reveal progress 0..1 (for puzzle-custom reveals, e.g. Color Link's snake).
+function ph_hint_reveal_p(_h) {
+    if (_h.reveal_frames <= 0) return 1;
+    return clamp(_h.reveal_t / _h.reveal_frames, 0, 1);
 }
 
 /// Advance animation timers. Call exactly once per Step, before the input gate.
@@ -65,6 +96,31 @@ function ph_hint_tick(_h) {
     if (_h.modal_open && _h.modal_t < 1) _h.modal_t = min(1, _h.modal_t + 1/12);
     if (_h.coin_minus_t < 1)             _h.coin_minus_t = min(1, _h.coin_minus_t + 1/45);
     if (_h.video_open)                   _h.video_timer++;
+    if (_h.reveal_active) {
+        _h.reveal_t++;
+        if (_h.reveal_t >= _h.reveal_frames) _h.reveal_active = false;
+    }
+}
+
+/// Kick off the reveal after a successful BUY/FREE. Calls apply() (which reveals
+/// the hint + returns its target) and arms the reveal animation. The deferred
+/// result (_kind) is emitted by ph_hint_input once the reveal finishes.
+function ph_hint__begin_reveal(_h, _kind) {
+    _h.result_pending = _kind;
+    _h.reveal_t       = 0;
+    _h.reveal_frames  = _h.REVEAL_FR_DEF;
+    _h.reveal_iris    = true;
+    var _tgt = _h.apply();             // reveals the hint; returns target {x,y,r,frames,iris}
+    if (is_struct(_tgt)) {
+        if (variable_struct_exists(_tgt, "x"))      _h.reveal_x      = _tgt.x;
+        if (variable_struct_exists(_tgt, "y"))      _h.reveal_y      = _tgt.y;
+        if (variable_struct_exists(_tgt, "r"))      _h.reveal_r      = _tgt.r;
+        if (variable_struct_exists(_tgt, "frames")) _h.reveal_frames = _tgt.frames;
+        if (variable_struct_exists(_tgt, "iris"))   _h.reveal_iris   = _tgt.iris;
+        _h.reveal_active = (_h.reveal_frames > 0);
+    } else {
+        _h.reveal_active = false;      // legacy apply (no target) → emit result next step
+    }
 }
 
 /// Process a tap while an overlay is open. Returns:
@@ -75,15 +131,24 @@ function ph_hint_tick(_h) {
 ///   "poor"     — tried to pay but couldn't afford it (caller may toast).
 /// Coin spend, "-100" feedback, hint reveal, and save are all done here.
 function ph_hint_input(_h) {
+    // Reveal in progress: eat input, then emit the deferred result ONCE it ends so
+    // the controller's win-check (run on paid/freed) lands AFTER the reveal.
+    if (_h.result_pending != "") {
+        if (_h.reveal_active) return "consumed";
+        var _k = _h.result_pending;
+        _h.result_pending = "";
+        return _k;                       // "paid" or "freed"
+    }
+
     if (_h.video_open) {
         if (device_mouse_check_button_pressed(0, mb_left) && _h.video_timer >= _h.VIDEO_X_DELAY) {
             var _mx = device_mouse_x_to_gui(0);
             var _my = device_mouse_y_to_gui(0);
             if (ph_point_in_circle(_mx, _my, _h.vx_cx, _h.vx_cy, _h.vx_r + 14)) {
-                _h.video_open = false;
-                _h.apply();                  // free — no coins removed
+                _h.video_open = false;       // free — no coins removed
                 ph_week_mark_hint_used(global.save, _h.key);
-                return "freed";
+                ph_hint__begin_reveal(_h, "freed");
+                return "consumed";
             }
         }
         return "consumed";
@@ -93,20 +158,18 @@ function ph_hint_input(_h) {
         if (device_mouse_check_button_pressed(0, mb_left)) {
             var _mx = device_mouse_x_to_gui(0);
             var _my = device_mouse_y_to_gui(0);
+            var _afford = (global.save.coins >= PH_HINT_COST);
             if (ph_point_in_circle(_mx, _my, _h.x_cx, _h.x_cy, _h.x_r + 14)) {
                 _h.modal_open = false;        // close X
-            } else if (ph_point_in_rect(_mx, _my, _h.pay_l, _h.pay_t, _h.pay_r, _h.pay_b)) {
-                if (ph_spend_coins(global.save, PH_HINT_COST)) {
-                    _h.modal_open   = false;
-                    _h.coin_minus_t = 0;      // fire the "-100" HUD feedback
-                    _h.apply();
-                    ph_week_mark_hint_used(global.save, _h.key);
-                    ph_save_write(global.save);
-                    return "paid";
-                } else {
-                    _h.modal_open = false;
-                    return "poor";
-                }
+            } else if (_afford && ph_point_in_rect(_mx, _my, _h.pay_l, _h.pay_t, _h.pay_r, _h.pay_b)) {
+                // BUY — only reachable when affordable (else the button is disabled).
+                ph_spend_coins(global.save, PH_HINT_COST);
+                _h.modal_open   = false;
+                _h.coin_minus_t = 0;          // fire the "-100" HUD feedback
+                ph_week_mark_hint_used(global.save, _h.key);
+                ph_save_write(global.save);
+                ph_hint__begin_reveal(_h, "paid");
+                return "consumed";
             } else if (ph_point_in_rect(_mx, _my, _h.free_l, _h.free_t, _h.free_r, _h.free_b)) {
                 _h.modal_open  = false;       // open the placeholder video
                 _h.video_open  = true;
@@ -195,9 +258,101 @@ function ph_hint_draw_modal(_h) {
     var _dcy = _cy + _slide;
 
     // BUY (bare word label) | FREE + retro TV.  Green reward buttons, uniform with
-    // the blue claim buttons (per the updated design).
-    ph_draw_reward_btn(_h.pay_l,  _dcy, _h.pay_r,  _bh, "BUY",  noone,         false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+    // the blue claim buttons (per the updated design). BUY is DISABLED (greyed,
+    // non-tappable — see ph_hint_input) when the player can't afford the hint; FREE
+    // (rewarded video) always stays available.
+    var _afford = (global.save.coins >= PH_HINT_COST);
+    if (_afford) {
+        ph_draw_reward_btn(_h.pay_l, _dcy, _h.pay_r, _bh, "BUY", noone, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+    } else {
+        var _dis = make_color_rgb(176, 170, 162);   // muted grey (no sprite mapping → primitive chip)
+        ph_draw_reward_btn(_h.pay_l, _dcy, _h.pay_r, _bh, "BUY", noone, false, _dis, make_color_rgb(150, 144, 137));
+    }
     ph_draw_reward_btn(_h.free_l, _dcy, _h.free_r, _bh, "FREE", global.spr_tv, false, PH_COL_GREEN, PH_COL_GREEN_DEEP);
+
+    // ── Coin balance — kept readable ON TOP of the dim so the player can see how
+    // much they have (and whether BUY is affordable) without closing the modal.
+    var _bal_r = PH_W - 50;
+    var _bal_l = _bal_r - 220;
+    var _bal_y = 95 + global.safe_top_gui;
+    ph_draw_chip(_bal_l, _bal_y - 33, _bal_r, _bal_y + 33, 33, PH_COL_WHITE, make_color_rgb(150, 134, 120), 6);
+    draw_sprite_ext(global.spr_gold_coin, 0, _bal_l + 23, _bal_y, 112/512, 112/512, 0, c_white, 1);
+    ph_draw_text(_bal_l + 74, _bal_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+}
+
+/// ── Post-buy hint reveal (the "circle smalling down to the hinted area") ───────
+/// Draws the default iris: a translucent accent spotlight that briefly winds up,
+/// then CONTRACTS onto the hinted cell (ease-in-out), fading its fill as it lands
+/// so the revealed element shows through, punctuated by an additive landing flash.
+/// Puzzles that set reveal_iris=false draw their own reveal instead (off
+/// ph_hint_reveal_p) — this is a no-op for them. Call near the end of Draw, after
+/// the board/HUD and before the modal/video helpers.
+function ph_hint_draw_reveal(_h) {
+    if (!_h.reveal_active || !_h.reveal_iris) return;
+    var _p  = ph_hint_reveal_p(_h);
+    var _cx = _h.reveal_x, _cy = _h.reveal_y;
+    var _r0 = _h.REVEAL_R0, _rt = _h.reveal_r, _w = _h.REVEAL_WIND;
+
+    var _r, _fillA;
+    if (_p < _w) {                                   // 1) anticipation — expand a touch
+        var _u = _p / _w;
+        _r     = _r0 * (1 + 0.05 * ph_ease_out(_u));
+        _fillA = 0.30;
+    } else {                                         // 2) action — contract onto target
+        var _u = (_p - _w) / (1 - _w);
+        _r     = lerp(_r0, _rt, ph_ease_in_out(_u));
+        _fillA = lerp(0.30, 0.0, ph_ease_in(_u));    // fade fill as it lands → reveals element
+    }
+
+    // Soft accent spotlight fill.
+    draw_set_color(_h.accent);
+    draw_set_alpha(_fillA);
+    draw_circle(_cx, _cy, _r, false);
+    draw_set_alpha(1);
+
+    // Crisp accent ring (a few stacked outlines for weight).
+    draw_set_color(_h.accent);
+    for (var _k = 0; _k < 7; _k++) draw_circle(_cx, _cy, max(1, _r - _k), true);
+
+    // 3) reaction — additive landing flash as the ring reaches the cell.
+    if (_p > 0.80) {
+        var _f = (_p - 0.80) / 0.20;                 // 0..1
+        gpu_set_blendmode(bm_add);
+        draw_set_color(c_white);
+        draw_set_alpha((1 - _f) * 0.85);
+        draw_circle(_cx, _cy, _rt * (0.55 + 1.0 * _f), false);
+        draw_set_alpha(1);
+        gpu_set_blendmode(bm_normal);
+    }
+}
+
+/// ── Idle nudge for the HINT pill ──────────────────────────────────────────────
+/// After PH_HINT_IDLE_SECS of no taps anywhere, draws a gentle pulsing attention
+/// ring around the HINT pill (looping) to remind the player help is available.
+/// Call right before drawing the pill, passing the pill's bounds + accent. Reads
+/// the global idle anchor maintained in obj_persistent.
+function ph_hint_pill_nudge(_l, _t, _r, _b, _accent) {
+    if (!variable_global_exists("ph_idle_anchor")) return;
+    var _idle = (current_time - global.ph_idle_anchor) / 1000;
+    if (_idle < PH_HINT_IDLE_SECS) return;
+
+    var _cx = (_l + _r) / 2, _cy = (_t + _b) / 2;
+    var _hw = (_r - _l) / 2 + 14, _hh = (_b - _t) / 2 + 14;
+
+    // One pulse every ~1.1s: a rounded ring that grows + fades out, looping.
+    var _period = 1100;
+    var _ph   = ((current_time - global.ph_idle_anchor) mod _period) / _period;  // 0..1
+    var _grow = 1 + 0.26 * ph_ease_out(_ph);
+    var _ow   = _hw * _grow, _oh = _hh * _grow;
+    gpu_set_blendmode(bm_add);
+    draw_set_color(_accent);
+    draw_set_alpha((1 - _ph) * 0.50);
+    for (var _k = 0; _k < 5; _k++) {
+        draw_roundrect_ext(_cx - _ow + _k, _cy - _oh + _k, _cx + _ow - _k, _cy + _oh - _k,
+                           _oh, _oh, true);
+    }
+    draw_set_alpha(1);
+    gpu_set_blendmode(bm_normal);
 }
 
 /// Full-screen dark placeholder for the rewarded video. Call LAST in Draw so it

@@ -41,6 +41,14 @@ sel_idx     = -1;                         // selected cell index (0..80), -1 = n
 cell_flash  = array_create(81, 0.0);      // green "unit solved" pulse, frames remaining
 cell_scale  = array_create(81, 1.0);      // per-cell pop scale
 
+// ── Hint reveal/number-pop state (shared iris via ph_hint_draw_reveal) ────────
+// The revealed number is hidden under the closing iris, then pops in (positive
+// green cell — see Draw) once the reveal lands.
+sd_last_hint_idx   = -1;
+sd_hint_reveal_idx = -1;                  // cell whose number is hidden during the iris
+sd_hint_pop_idx    = -1;                  // cell whose number is popping in
+sd_hint_pop_t      = 1;                   // 0..1 pop progress (1 == idle)
+
 // Per-unit solved tracking — used to detect the *transition* into solved so the
 // positive feedback flash fires exactly once per row/column/box.
 row_solved = array_create(9, false);
@@ -215,12 +223,16 @@ sd_apply_hint = function() {
     if (_target < 0) return false;
     puzzle.grid[_target]   = puzzle.solution[_target];
     puzzle.hinted[_target] = true;
-    cell_flash[_target]    = 18;
     sd_check_units();
     ph_sudoku_save_grid(global.save, global.selected_date_key, ph_sudoku_grid_to_str(puzzle));
     ph_save_write(global.save);
-    sd_check_win();
-    return true;
+
+    // Defer the win-check to the controller (after the reveal). Hide the number
+    // under the closing iris; return the cell centre so the iris aims at it.
+    sd_last_hint_idx   = _target;
+    sd_hint_reveal_idx = _target;
+    var _row = _target div 9, _col = _target mod 9;
+    return { x: grid_x + _col * CELL + CELL/2, y: grid_y + _row * CELL + CELL/2, r: CELL * 0.60 };
 };
 
 // Shared hint-flow controller (modal + placeholder video). Purple accent.

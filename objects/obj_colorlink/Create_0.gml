@@ -223,8 +223,67 @@ cl_apply_hint = function() {
     hint_locked[_idx] = true;
 
     cl_save();
-    cl_check_win();
-    return true;
+
+    // Reveal the line as a SNAKE drawing from dot A → B (own animation, not the
+    // shared iris). The win-check is deferred to the controller (after the snake).
+    cl_snake_idx    = _idx;
+    cl_snake_active = true;
+    var _fr = clamp(10 + array_length(_cells) * 3, 16, 52);   // longer line → longer crawl
+    return { iris: false, frames: _fr };
+};
+
+// ── Snake-reveal state (the hint draws its own crawl; shared iris disabled) ────
+cl_snake_idx    = -1;      // flow index currently being snake-revealed
+cl_snake_active = false;
+
+/// Draw a flow's route as a snake crawling in along its arc length (_p = 0..1).
+/// A bright head leads; a coloured flash pops at endpoint B as it lands.
+cl_draw_snake = function(_cells, _col, _p) {
+    var _n = array_length(_cells);
+    if (_n == 0) return;
+    var _pts = array_create(_n);
+    for (var _i = 0; _i < _n; _i++) _pts[_i] = cl_center(_cells[_i]);
+
+    var _total = 0;
+    var _seg   = array_create(max(1, _n - 1), 0);
+    for (var _i = 1; _i < _n; _i++) {
+        var _d = point_distance(_pts[_i-1].x, _pts[_i-1].y, _pts[_i].x, _pts[_i].y);
+        _seg[_i-1] = _d; _total += _d;
+    }
+    var _reveal = _total * ph_ease_in_out(_p);   // travel accelerates then settles
+
+    draw_set_color(_col);
+    draw_circle(_pts[0].x, _pts[0].y, LINE_W/2, false);
+    var _acc = 0, _hx = _pts[0].x, _hy = _pts[0].y;
+    for (var _i = 1; _i < _n; _i++) {
+        var _d = _seg[_i-1];
+        if (_acc + _d <= _reveal) {
+            draw_line_width(_pts[_i-1].x, _pts[_i-1].y, _pts[_i].x, _pts[_i].y, LINE_W);
+            draw_circle(_pts[_i].x, _pts[_i].y, LINE_W/2, false);
+            _acc += _d; _hx = _pts[_i].x; _hy = _pts[_i].y;
+        } else {
+            var _frac = (_reveal - _acc) / max(1, _d);
+            _hx = lerp(_pts[_i-1].x, _pts[_i].x, _frac);
+            _hy = lerp(_pts[_i-1].y, _pts[_i].y, _frac);
+            draw_line_width(_pts[_i-1].x, _pts[_i-1].y, _hx, _hy, LINE_W);
+            draw_circle(_hx, _hy, LINE_W/2, false);
+            break;
+        }
+    }
+    // Bright crawling head.
+    draw_set_color(PH_COL_WHITE);
+    draw_circle(_hx, _hy, LINE_W * 0.30, false);
+    // Landing flash at endpoint B.
+    if (_p > 0.82) {
+        var _f = (_p - 0.82) / 0.18;
+        var _b = _pts[_n-1];
+        gpu_set_blendmode(bm_add);
+        draw_set_color(_col);
+        draw_set_alpha((1 - _f) * 0.80);
+        draw_circle(_b.x, _b.y, DOT_R * (1.2 + 1.6 * _f), false);
+        draw_set_alpha(1);
+        gpu_set_blendmode(bm_normal);
+    }
 };
 
 // Shared hint-flow controller (modal + placeholder rewarded video). Lime accent.

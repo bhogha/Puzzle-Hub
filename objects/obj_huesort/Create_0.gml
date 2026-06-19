@@ -24,6 +24,14 @@ tiles = ph_huesort_scramble(puzzle, global.selected_date_key);
 // Hint-locked positions — revealed by a hint (already correct → can't be moved).
 hint_locked = array_create(NCELLS, false);
 
+// ── Hint reveal/pin-pop state (shared iris draws via ph_hint_draw_reveal) ─────
+// During the iris the pin is hidden (hs_hint_reveal_idx); when the reveal lands
+// (paid/freed) the pin pops in (hs_hint_pop_idx/_t) so it "comes animated".
+hs_last_hint_idx   = -1;     // tile chosen by the most recent apply
+hs_hint_reveal_idx = -1;     // tile whose pin is hidden while the iris closes in
+hs_hint_pop_idx    = -1;     // tile whose pin is currently popping in
+hs_hint_pop_t      = 1;      // 0..1 pin-pop progress (1 == idle)
+
 // ── Drag-and-drop state ───────────────────────────────────────────────────────
 dragging  = false;
 drag_from = -1;
@@ -132,8 +140,15 @@ hs_apply_hint = function() {
     var _t = tiles[_p]; tiles[_p] = tiles[_src]; tiles[_src] = _t;
     hint_locked[_p] = true;                // now correct + anchored
     hs_save();
-    hs_check_win();
-    return true;
+
+    // Defer the win-check to the controller (after the reveal). Hide the pin until
+    // the iris lands, then return the tile centre so the shared iris aims at it.
+    hs_last_hint_idx   = _p;
+    hs_hint_reveal_idx = _p;
+    var _row = _p div N, _col = _p mod N;
+    var _cx  = grid_x + _col * CELL + CELL / 2;
+    var _cy  = grid_y + _row * CELL + CELL / 2;
+    return { x: _cx, y: _cy, r: CELL * 0.62 };
 };
 
 // Shared hint-flow controller (modal + placeholder video). Violet accent.
@@ -148,9 +163,15 @@ hs_draw_tile = function(_r, _c, _rgb, _anchored) {
     var _y1 = grid_y + (_r + 1) * CELL - TILE_GAP;
     ph_draw_rounded(_x0, _y0, _x1, _y1, 10, ph_huesort_col(_rgb));   // fill only
     if (_anchored) {
-        var _cx = (_x0 + _x1) / 2, _cy = (_y0 + _y1) / 2;
-        draw_set_color(PH_COL_HUE_LOCK);
-        draw_circle(_cx, _cy, 19, false);
+        var _i  = _r * N + _c;
+        var _sc = 1;
+        if (_i == hs_hint_reveal_idx)                              _sc = 0;   // hidden under the closing iris
+        else if (_i == hs_hint_pop_idx && hs_hint_pop_t < 1)       _sc = ph_ease_out_back(hs_hint_pop_t, 2.4);   // pop in on landing
+        if (_sc > 0.01) {
+            var _cx = (_x0 + _x1) / 2, _cy = (_y0 + _y1) / 2;
+            draw_set_color(PH_COL_HUE_LOCK);
+            draw_circle(_cx, _cy, 19 * _sc, false);
+        }
     }
 };
 

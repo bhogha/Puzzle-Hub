@@ -15,8 +15,9 @@ if (toast_timer > 0) toast_timer--;
 if (coin_pulse_t < 1)     coin_pulse_t     = min(1, coin_pulse_t + 1/18);
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
-// Advance the shared hint-flow timers (modal slide / "-100" / video).
+// Advance the shared hint-flow timers (modal slide / "-100" / video / reveal).
 ph_hint_tick(hint);
+if (sk_hint_pop_t < 1) sk_hint_pop_t = min(1, sk_hint_pop_t + 1/12);
 
 // Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
 if (win_phase == 0) ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
@@ -93,11 +94,14 @@ var _my = device_mouse_y_to_gui(0);
 // Hint overlay (modal + placeholder video) eats taps while open.
 var _hr = ph_hint_input(hint);
 if (_hr != "none") {
-    if (_hr == "paid") {
-        toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
-        toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
-    } else if (_hr == "freed") {
-        toast_text = "HINT REVEALED"; toast_col = PH_COL_TEAL; toast_timer = TOAST_DUR;
+    if (_hr == "paid" || _hr == "freed") {
+        // Reveal finished — pop the glyph in (revealing a glyph can't win).
+        sk_hint_pop_idx    = sk_last_hint_idx;
+        sk_hint_pop_t      = 0;
+        sk_hint_reveal_idx = -1;
+        if (_hr == "paid") { toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins"; toast_col = PH_COL_YELLOW; }
+        else               { toast_text = "HINT REVEALED"; toast_col = PH_COL_TEAL; }
+        toast_timer = TOAST_DUR;
     } else if (_hr == "poor") {
         toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
     }

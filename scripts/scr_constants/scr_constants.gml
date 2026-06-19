@@ -102,6 +102,8 @@
 #macro PH_COINS_PER_LEVEL   100
 #macro PH_COINS_FOR_4TH     100
 #macro PH_HINT_COST         100
+#macro PH_HINT_IDLE_SECS      5     // idle seconds before the HINT pill pulses a reminder
+#macro PH_COLORDOKU_HINT_XS   3     // locked "ruled-out" X's placed per Colordoku hint
 #macro PH_BONUS_WORD_XP      25
 #macro PH_BONUS_WORD_COINS   10
 

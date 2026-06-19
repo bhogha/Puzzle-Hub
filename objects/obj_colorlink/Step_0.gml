@@ -24,11 +24,17 @@ drag_my = _my;
 // Hint overlay (modal + placeholder video) eats taps while open.
 var _hr = ph_hint_input(hint);
 if (_hr != "none") {
-    if (_hr == "paid") {
-        toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
-        toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
-    } else if (_hr == "freed") {
-        toast_text = "LINE REVEALED"; toast_col = ACCENT; toast_timer = TOAST_DUR;
+    if (_hr == "paid" || _hr == "freed") {
+        // Snake finished — clear the reveal state, then run the deferred win-check.
+        cl_snake_active = false;
+        cl_snake_idx    = -1;
+        if (_hr == "paid") {
+            toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
+            toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
+        } else {
+            toast_text = "LINE REVEALED"; toast_col = ACCENT; toast_timer = TOAST_DUR;
+        }
+        cl_check_win();
     } else if (_hr == "poor") {
         toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
     }

@@ -113,9 +113,13 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;
 HINT_PILL_T = _tool_y - 33;
 HINT_PILL_B = _tool_y + 33;
+ph_hint_pill_nudge(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, PH_COL_AMBER);   // 5s idle reminder
 ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
 ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+
+// ── Post-buy reveal (iris contracts onto the hinted tile / keyboard key) ──────
+ph_hint_draw_reveal(hint);
 
 // ── Hint modal + placeholder video (drawn last so they cover the board) ───────
 ph_hint_draw_modal(hint);

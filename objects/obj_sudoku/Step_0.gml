@@ -25,11 +25,31 @@ if (toast_timer > 0) toast_timer--;
 if (coin_pulse_t < 1)     coin_pulse_t     = min(1, coin_pulse_t + 1/18);
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
-// Advance the shared hint-flow timers (modal slide / "-100" / video).
+// Advance the shared hint-flow timers (modal slide / "-100" / video / reveal).
 ph_hint_tick(hint);
+if (sd_hint_pop_t < 1) sd_hint_pop_t = min(1, sd_hint_pop_t + 1/12);
 
 // Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
 if (win_phase == 0) ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
+
+// Hint overlay/reveal — polled EVERY frame (not just on a tap) so the deferred
+// paid/freed result, emitted after the reveal animation, is always caught.
+var _hr = ph_hint_input(hint);
+if (_hr != "none") {
+    if (_hr == "paid" || _hr == "freed") {
+        // Reveal finished — pop the number in, then run the (deferred) win-check.
+        sd_hint_pop_idx    = sd_last_hint_idx;
+        sd_hint_pop_t      = 0;
+        sd_hint_reveal_idx = -1;
+        if (_hr == "paid") { toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins"; toast_col = PH_COL_YELLOW; }
+        else               { toast_text = "HINT REVEALED"; toast_col = PH_COL_TEAL; }
+        toast_timer = TOAST_DUR;
+        sd_check_win();
+    } else if (_hr == "poor") {
+        toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
+    }
+    exit;
+}
 
 // Win animation + confetti
 if (win_phase == 1) {
@@ -101,19 +121,7 @@ if (!device_mouse_check_button_pressed(0, mb_left)) exit;
 var _mx = device_mouse_x_to_gui(0);
 var _my = device_mouse_y_to_gui(0);
 
-// Hint overlay (modal + placeholder video) eats taps while open.
-var _hr = ph_hint_input(hint);
-if (_hr != "none") {
-    if (_hr == "paid") {
-        toast_text = "HINT USED  -" + string(PH_HINT_COST) + " coins";
-        toast_col = PH_COL_YELLOW; toast_timer = TOAST_DUR;
-    } else if (_hr == "freed") {
-        toast_text = "HINT REVEALED"; toast_col = PH_COL_TEAL; toast_timer = TOAST_DUR;
-    } else if (_hr == "poor") {
-        toast_text = "NOT ENOUGH COINS"; toast_col = PH_COL_PINK; toast_timer = TOAST_DUR;
-    }
-    exit;
-}
+// (Hint overlay/reveal is handled every frame near the top of Step.)
 
 // Back arrow (top-left of HUD strip)
 if (ph_point_in_rect(_mx, _my, 0, 40 + global.safe_top_gui, 130, 150 + global.safe_top_gui)) {

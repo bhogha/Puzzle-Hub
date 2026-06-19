@@ -202,6 +202,7 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;
 HINT_PILL_T = _tool_y - 33;
 HINT_PILL_B = _tool_y + 33;
+ph_hint_pill_nudge(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, PH_COL_PINK);   // 5s idle reminder
 ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33,
              PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 // Bulb: vertically centred, pinned to the left cap so it spills past the edges.

@@ -1,6 +1,11 @@
 // ── Screen transition (iris) — advance cover → swap room → reveal ─────────────
 // Owned here (persistent) so it survives the room_goto and keeps drawing in the
 // new room. Kicked off by ph_trans_begin (e.g. a hub tile tap).
+
+// Idle anchor: any tap anywhere resets the inactivity clock used by the HINT-pill
+// nudge (ph_hint_pill_nudge). Tracked here because this object lives in every room.
+if (device_mouse_check_button_pressed(0, mb_left)) global.ph_idle_anchor = current_time;
+
 if (!global.trans_active) exit;
 
 if (global.trans_phase == 1) {                          // COVER (iris closes in)

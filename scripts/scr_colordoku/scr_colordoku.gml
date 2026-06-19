@@ -221,10 +221,21 @@ function ph_colordoku_str_to_state(_s, _n2) {
     return _out;
 }
 
-/// Persist the live board for resume.
-function ph_colordoku_save_state(_save, _date_key, _state) {
+/// Persist the live board, plus (optionally) which cells hold a hint-placed
+/// LOCKED X — stored as a parallel "0"/"1" string so the no-remove rule survives
+/// a resume. _xlock is a bool array (NCELLS) or undefined to keep the existing one.
+function ph_colordoku_save_state(_save, _date_key, _state, _xlock = undefined) {
     if (!variable_struct_exists(_save, "colordoku_state")) _save.colordoku_state = {};
-    _save.colordoku_state[$ _date_key] = { cells: ph_colordoku_state_to_str(_state) };
+    var _rec = { cells: ph_colordoku_state_to_str(_state) };
+    if (!is_undefined(_xlock)) {
+        var _s = "";
+        for (var _i = 0; _i < array_length(_xlock); _i++) _s += _xlock[_i] ? "1" : "0";
+        _rec.xlock = _s;
+    } else if (variable_struct_exists(_save.colordoku_state, _date_key)
+            && variable_struct_exists(_save.colordoku_state[$ _date_key], "xlock")) {
+        _rec.xlock = _save.colordoku_state[$ _date_key].xlock;   // preserve existing
+    }
+    _save.colordoku_state[$ _date_key] = _rec;
 }
 
 /// Read the saved live board for a date as an int array, or undefined.
@@ -234,6 +245,18 @@ function ph_colordoku_load_state(_save, _date_key, _n2) {
     var _st = _save.colordoku_state[$ _date_key];
     if (!variable_struct_exists(_st, "cells")) return undefined;
     return ph_colordoku_str_to_state(_st.cells, _n2);
+}
+
+/// Read the saved hint-locked-X mask for a date as a bool array, or undefined.
+function ph_colordoku_load_xlock(_save, _date_key, _n2) {
+    if (!variable_struct_exists(_save, "colordoku_state")) return undefined;
+    if (!variable_struct_exists(_save.colordoku_state, _date_key)) return undefined;
+    var _st = _save.colordoku_state[$ _date_key];
+    if (!variable_struct_exists(_st, "xlock") || !is_string(_st.xlock)) return undefined;
+    var _out = array_create(_n2, false);
+    var _len = min(string_length(_st.xlock), _n2);
+    for (var _i = 1; _i <= _len; _i++) _out[_i - 1] = (string_char_at(_st.xlock, _i) == "1");
+    return _out;
 }
 
 // ── Completion tracking ───────────────────────────────────────────────────────

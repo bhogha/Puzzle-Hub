@@ -137,11 +137,25 @@ ld_apply_hint = function() {
     if (hint_lvl <= 0) {
         hinted   = _pos;                                    // tile highlight
         hint_lvl = 1;
+        ld_save_state();
+        // Aim the shared iris at the highlighted tile.
+        var _tx = row_x + _pos * (TILE + TILE_GAP) + TILE/2;
+        var _ty = row_y + TILE/2;
+        return { x: _tx, y: _ty, r: TILE * 0.62 };
     } else {
         hint_key = (_pos >= 0) ? string_char_at(_target, _pos + 1) : "";  // keyboard letter
         hint_lvl = 2;
+        ld_save_state();
+        // Aim the iris at the matching keyboard key.
+        var _keys = ld_build_keys();
+        for (var _i = 0; _i < array_length(_keys); _i++) {
+            if (_keys[_i].ch == hint_key) {
+                var _k = _keys[_i];
+                return { x: (_k.x1 + _k.x2)/2, y: (_k.y1 + _k.y2)/2, r: (_k.y2 - _k.y1) * 0.75 };
+            }
+        }
+        return { x: PH_W/2, y: row_y + TILE/2, r: TILE * 0.62 };
     }
-    ld_save_state();
 };
 ld_can_hint = function() {
     return (!solved && hint_lvl < 2);

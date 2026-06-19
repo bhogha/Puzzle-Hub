@@ -73,23 +73,32 @@ for (var _i = 0; _i < 81; _i++) {
     var _peer = (sel_idx >= 0)
                 && (_r == _sel_r || _c == _sel_c
                     || (_r div 3 == _sel_r div 3 && _c div 3 == _sel_c div 3));
-    if      (cell_flash[_i] > 0) _fill = merge_color(PH_COL_BOARD_BG, PH_COL_TEAL_SOFT, min(1, cell_flash[_i]/18));
-    else if (_i == sel_idx)      _fill = PH_COL_PURPLE_SOFT;
-    else if (_peer)              _fill = make_color_rgb(235,228,240);
+    if      (cell_flash[_i] > 0)   _fill = merge_color(PH_COL_BOARD_BG, PH_COL_TEAL_SOFT, min(1, cell_flash[_i]/18));
+    else if (_i == sel_idx)        _fill = PH_COL_PURPLE_SOFT;
+    else if (puzzle.hinted[_i])    _fill = PH_COL_GREEN_SOFT;                        // positive "revealed" cell
+    else if (_peer)                _fill = make_color_rgb(235,228,240);
 
     if (_fill != -1) {
         draw_set_color(_fill);
         draw_rectangle(_x0+1, _y0+1, _x0+CELL-1, _y0+CELL-1, false);
     }
 
-    // Number
-    if (_v != 0) {
+    // Number — a hint-revealed number hides under the closing iris, then pops in.
+    if (_v != 0 && _i != sd_hint_reveal_idx) {
         var _col;
         if      (ph_sudoku_cell_conflicts(puzzle, _i)) _col = PH_COL_PINK_DEEP;     // wrong / clashes
         else if (ph_sudoku_is_given(puzzle, _i))        _col = PH_COL_DARK;          // locked clue
-        else if (puzzle.hinted[_i])                     _col = PH_COL_YELLOW_DEEP;   // revealed by hint
+        else if (puzzle.hinted[_i])                     _col = PH_COL_GREEN_DEEP;    // revealed by hint (positive)
         else                                            _col = PH_COL_PURPLE;        // player entry
-        ph_draw_text(_x0 + CELL/2, _y0 + CELL/2, string(_v), global.fnt_disp_lg, _col, fa_center, fa_middle);
+        if (_i == sd_hint_pop_idx && sd_hint_pop_t < 1) {
+            var _ps = ph_ease_out_back(sd_hint_pop_t, 2.4);
+            draw_set_font(global.fnt_disp_lg);
+            draw_set_color(_col);
+            draw_set_halign(fa_center); draw_set_valign(fa_middle);
+            draw_text_transformed(_x0 + CELL/2, _y0 + CELL/2, string(_v), _ps, _ps, 0);
+        } else {
+            ph_draw_text(_x0 + CELL/2, _y0 + CELL/2, string(_v), global.fnt_disp_lg, _col, fa_center, fa_middle);
+        }
     }
 }
 
@@ -137,12 +146,16 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;
 HINT_PILL_T = _tool_y - 33;
 HINT_PILL_B = _tool_y + 33;
+ph_hint_pill_nudge(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, PH_COL_PURPLE);   // 5s idle reminder
 ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
 ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 
 // ── Message Prompt — above the game tip, just below the HUD (Penpot design) ────
 if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
+
+// ── Post-buy reveal (iris contracts onto the revealed number) ─────────────────
+ph_hint_draw_reveal(hint);
 
 // ── Hint modal — slide-up bottom sheet (pay coins OR watch a placeholder video).
 ph_hint_draw_modal(hint);
@@ -188,7 +201,7 @@ if (win_phase == 1) {
         var _mcy = _mini_y + _mr * _cell_m + _cell_m/2;
         var _mcol;
         if      (ph_sudoku_is_given(puzzle, _mi)) _mcol = PH_COL_DARK;
-        else if (puzzle.hinted[_mi])              _mcol = PH_COL_YELLOW_DEEP;
+        else if (puzzle.hinted[_mi])              _mcol = PH_COL_GREEN_DEEP;
         else                                      _mcol = PH_COL_PURPLE_DEEP;
         ph_draw_text(_mcx, _mcy, string(puzzle.solution[_mi]), global.fnt_body_sm, _mcol, fa_center, fa_middle);
     }

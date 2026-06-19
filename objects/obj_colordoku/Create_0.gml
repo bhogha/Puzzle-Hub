@@ -23,6 +23,21 @@ ACCENT_DEEP = PH_COL_BRTEAL_DEEP;   // readable deep teal for titles / text
 // ── Live board: 0 empty · 1 X · 2 queen ──────────────────────────────────────
 state = array_create(NCELLS, 0);
 
+// Hint-placed LOCKED X's — these are correct rule-outs and can't be removed by
+// tapping (persisted in save so the rule survives a resume).
+hint_x_locked = array_create(NCELLS, false);
+
+// ── Hint reveal/pop state ─────────────────────────────────────────────────────
+// A hint places PH_COLORDOKU_HINT_XS forced X's. The shared iris
+// (ph_hint_draw_reveal) targets the placed cluster; the X's stay HIDDEN under it
+// (cd_hint_reveal), then pop in ONE BY ONE (cd_pop_f, staggered) once it lands.
+cd_x_order     = array_create(NCELLS, -1);   // per-cell pop index (or -1)
+cd_hint_cells  = [];                         // cells placed by the most recent hint
+cd_hint_reveal = false;                      // hide placed X's while the iris closes in
+cd_pop_f       = -1;                         // pop frame counter (<0 = idle)
+CD_POP_STAG    = 5;                          // frames between each X popping in
+CD_POP_DUR     = 12;                         // frames for one X's overshoot pop
+
 // Input model: a single tap cycles a cell empty → X → queen → empty (see Step).
 // No double-tap / timing — simplest and most reliable on touch.
 
@@ -52,9 +67,9 @@ session_start_ms = current_time;
 
 // ── Instance methods ──────────────────────────────────────────────────────────
 
-/// Persist the live board.
+/// Persist the live board + the hint-locked-X mask.
 cd_save = function() {
-    ph_colordoku_save_state(global.save, global.selected_date_key, state);
+    ph_colordoku_save_state(global.save, global.selected_date_key, state, hint_x_locked);
     ph_save_write(global.save);
 };
 
@@ -92,19 +107,43 @@ cd_can_hint = function() {
     return ph_colordoku_has_forced_x(state, N, regions);
 };
 
-/// Mark every blank cell that is logically ruled out by a placed queen as X.
+/// Place up to PH_COLORDOKU_HINT_XS logically-safe X's (cells the current queens
+/// already rule out) and LOCK them (can't be removed). Returns the iris target
+/// (cluster centre + radius); the placed X's pop in after the reveal lands.
 /// Does NOT touch coins (the shared hint flow handles the spend).
 cd_apply_hint = function() {
     var _forced = ph_colordoku_forced_x(state, N, regions);
     if (array_length(_forced) == 0) return false;
-    for (var _i = 0; _i < array_length(_forced); _i++) state[_forced[_i]] = 1;
+    var _take = min(PH_COLORDOKU_HINT_XS, array_length(_forced));
+
+    for (var _i = 0; _i < NCELLS; _i++) cd_x_order[_i] = -1;   // reset pop ordering
+    cd_hint_cells = [];
+    var _sx = 0, _sy = 0;
+    for (var _i = 0; _i < _take; _i++) {
+        var _ci = _forced[_i];
+        state[_ci]         = 1;
+        hint_x_locked[_ci] = true;
+        cd_x_order[_ci]    = _i;
+        array_push(cd_hint_cells, _ci);
+        _sx += grid_x + (_ci mod N) * CELL + CELL/2;
+        _sy += grid_y + (_ci div N) * CELL + CELL/2;
+    }
     cd_save();
-    cd_check_win();
-    return true;
+
+    cd_hint_reveal = true;   // hide the new X's until the iris lands
+    cd_pop_f       = -1;
+    var _cx = _sx / _take, _cy = _sy / _take, _rad = 0;
+    for (var _i = 0; _i < _take; _i++) {
+        var _ci = cd_hint_cells[_i];
+        var _px = grid_x + (_ci mod N) * CELL + CELL/2;
+        var _py = grid_y + (_ci div N) * CELL + CELL/2;
+        _rad = max(_rad, point_distance(_cx, _cy, _px, _py));
+    }
+    return { x: _cx, y: _cy, r: _rad + CELL * 0.55 };
 };
 
 // Shared hint-flow controller (modal + placeholder video). Bright-teal accent.
-hint = ph_hint_create(cd_apply_hint, ACCENT, "This hint marks every square\nyour queens already rule out", "colordoku_" + global.selected_date_key);
+hint = ph_hint_create(cd_apply_hint, ACCENT, "This hint locks in " + string(PH_COLORDOKU_HINT_XS) + " squares\nyour queens already rule out", "colordoku_" + global.selected_date_key);
 
 // ── Drawing helpers ───────────────────────────────────────────────────────────
 
@@ -150,7 +189,19 @@ cd_draw_cell = function(_r, _c, _conflict) {
     var _fill = (_conflict && state[_i] == 2) ? PH_COL_ORANGE : ph_colordoku_region_color(regions[_i]);
     ph_draw_rounded(_x0, _y0, _x1, _y1, 14, _fill);
     if (state[_i] == 1) {
-        cd_draw_x(_cx, _cy, CELL * 0.24);
+        // Hint X's hide under the closing iris, then pop in one-by-one.
+        var _xs  = 1;
+        var _ord = cd_x_order[_i];
+        if (_ord >= 0) {
+            if (cd_hint_reveal) {
+                _xs = 0;
+            } else if (cd_pop_f >= 0) {
+                var _local = cd_pop_f - _ord * CD_POP_STAG;
+                _xs = (_local <= 0) ? 0
+                    : ((_local >= CD_POP_DUR) ? 1 : ph_ease_out_back(_local / CD_POP_DUR, 2.4));
+            }
+        }
+        if (_xs > 0.01) cd_draw_x(_cx, _cy, CELL * 0.24 * _xs);
     } else if (state[_i] == 2) {
         cd_draw_gem(_cx, _cy, CELL * 0.30, (_conflict ? PH_COL_DARK : ACCENT));
     }
@@ -159,6 +210,8 @@ cd_draw_cell = function(_r, _c, _conflict) {
 // ── Restore in-progress board (resume) ────────────────────────────────────────
 var _saved = ph_colordoku_load_state(global.save, global.selected_date_key, NCELLS);
 if (!is_undefined(_saved) && array_length(_saved) == NCELLS) state = _saved;
+var _xl = ph_colordoku_load_xlock(global.save, global.selected_date_key, NCELLS);
+if (!is_undefined(_xl) && array_length(_xl) == NCELLS) hint_x_locked = _xl;
 
 // ── Enter review/solved mode when re-opening a finished puzzle ─────────────────
 var _review = variable_global_exists("colordoku_review_mode") && global.colordoku_review_mode;

@@ -25,6 +25,14 @@ player_rects = [];
 n_clues    = array_length(puzzle.clues);
 hint_shown = array_create(n_clues, false);
 
+// ── Hint reveal/glyph-pop state (shared iris via ph_hint_draw_reveal) ─────────
+// The glyph hides under the closing iris (sk_hint_reveal_idx), then pops in
+// (sk_hint_pop_idx/_t) once the reveal lands on the clue cell.
+sk_last_hint_idx   = -1;
+sk_hint_reveal_idx = -1;
+sk_hint_pop_idx    = -1;
+sk_hint_pop_t      = 1;     // 0..1 (1 == idle)
+
 // ── Drag-to-draw state ────────────────────────────────────────────────────────
 dragging    = false;
 drag_sr     = 0;   // start cell row/col
@@ -153,7 +161,11 @@ sk_apply_hint = function() {
     if (_target < 0) return false;
     hint_shown[_target] = true;
     sk_save();
-    return true;
+    // Aim the iris at the clue cell; the glyph stays hidden until it lands.
+    sk_last_hint_idx   = _target;
+    sk_hint_reveal_idx = _target;
+    var _cl = puzzle.clues[_target];
+    return { x: grid_x + _cl.c * CELL + CELL/2, y: grid_y + _cl.r * CELL + CELL/2, r: CELL * 0.62 };
 };
 
 // Shared hint-flow controller (modal + placeholder video). Blue accent.

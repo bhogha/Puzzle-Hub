@@ -100,6 +100,9 @@ if (dragging) {
 }
 
 // ── Clue numbers + hint glyphs ────────────────────────────────────────────────
+// Draw the glyph FIRST, then the clue number on top, so the glyph can never
+// cover the number (the reported bug). The glyph also hides under the closing
+// iris and pops in once the reveal lands.
 for (var _i = 0; _i < n_clues; _i++) {
     var _cl  = puzzle.clues[_i];
     var _x0  = grid_x + _cl.c * CELL;
@@ -107,25 +110,29 @@ for (var _i = 0; _i < n_clues; _i++) {
     var _ccx = _x0 + CELL/2;
     var _ccy = _y0 + CELL/2;
 
-    // Clue number drawn directly on the cream board (no white backing disc), in
-    // black @ 70% to match the Penpot design.
+    // Hint glyph — a small rounded rectangle pinned into the cell's top-right
+    // corner whose proportions match the correct rectangle's w×h (orientation
+    // cue). Kept tight to the corner so it sits clear of the centred number.
+    if (hint_shown[_i] && _i != sk_hint_reveal_idx) {
+        var _gs = 1;
+        if (_i == sk_hint_pop_idx && sk_hint_pop_t < 1) _gs = ph_ease_out_back(sk_hint_pop_t, 2.4);
+        if (_gs > 0.01) {
+            var _s   = puzzle.sol_rects[_i];
+            var _mx  = max(_s.w, _s.h);
+            var _u   = (30 / _mx) * _gs;        // longest side ≈ 30px, scaled by the pop
+            var _gw  = _s.w * _u;
+            var _gh  = _s.h * _u;
+            var _gx  = _x0 + CELL - 28;          // tucked into the top-right corner
+            var _gy  = _y0 + 28;
+            ph_draw_rounded(_gx-_gw/2-3, _gy-_gh/2-3, _gx+_gw/2+3, _gy+_gh/2+3, 3, PH_COL_BLUE_DEEP);
+            ph_draw_rounded(_gx-_gw/2,   _gy-_gh/2,   _gx+_gw/2,   _gy+_gh/2,   2, PH_COL_BLUE_SOFT);
+        }
+    }
+
+    // Clue number — drawn last so it always stays on top of the glyph.
     draw_set_alpha(0.7);
     ph_draw_text(_ccx, _ccy, string(_cl.val), global.fnt_disp_md, c_black, fa_center, fa_middle);
     draw_set_alpha(1);
-
-    // Hint glyph — a small rounded rectangle in the cell's top-right corner whose
-    // proportions match the correct rectangle's w×h (orientation cue, kept small).
-    if (hint_shown[_i]) {
-        var _s   = puzzle.sol_rects[_i];
-        var _mx  = max(_s.w, _s.h);
-        var _u   = 36 / _mx;            // longest side ≈ 36px (~20% larger)
-        var _gw  = _s.w * _u;
-        var _gh  = _s.h * _u;
-        var _gx  = _x0 + CELL - 38;
-        var _gy  = _y0 + 38;
-        ph_draw_rounded(_gx-_gw/2-3, _gy-_gh/2-3, _gx+_gw/2+3, _gy+_gh/2+3, 3, PH_COL_BLUE_DEEP);
-        ph_draw_rounded(_gx-_gw/2,   _gy-_gh/2,   _gx+_gw/2,   _gy+_gh/2,   2, PH_COL_BLUE_SOFT);
-    }
 }
 
 // ── Bottom toolbar: timer pill (centre) · HINT pill (right) ───────────────────
@@ -145,6 +152,7 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;
 HINT_PILL_T = _tool_y - 33;
 HINT_PILL_B = _tool_y + 33;
+ph_hint_pill_nudge(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, PH_COL_BLUE);   // 5s idle reminder
 ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHITE, _chip_sh, 6);
 draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
 ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);

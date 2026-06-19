@@ -396,5 +396,37 @@ ag_apply_hint = function() {
     return false;
 };
 
+/// Ordinal (within its word) of the letter the NEXT hint would reveal, or 0.
+/// Mirrors ag_apply_hint's scan so the modal tip can name the right letter
+/// (it's often the 2nd/3rd letter once earlier ones are already found).
+ag_next_hint_ord = function() {
+    for (var _i = 0; _i < array_length(puzzle.cells); _i++) {
+        var _c = puzzle.cells[_i];
+        if (!_c.filled && !_c.hint) {
+            if (array_length(_c.word_indices) > 0) {
+                var _w = puzzle.words[_c.word_indices[0]];
+                return ((_w.dir == "H") ? (_c.c - _w.col) : (_c.r - _w.row)) + 1;
+            }
+            return 1;
+        }
+    }
+    return 0;
+};
+
+ag_ordinal_word = function(_n) {
+    switch (_n) {
+        case 1: return "first";   case 2: return "second"; case 3: return "third";
+        case 4: return "fourth";  case 5: return "fifth";  case 6: return "sixth";
+        default: return string(_n) + "th";
+    }
+};
+
+/// Modal subtitle naming the exact letter the next hint reveals.
+ag_hint_subtitle = function() {
+    var _ord = ag_next_hint_ord();
+    if (_ord <= 0) return "This hint will reveal the next\nletter of a hidden word";
+    return "This hint will reveal the " + ag_ordinal_word(_ord) + "\nletter of a hidden word";
+};
+
 // Shared hint-flow controller (modal + placeholder video). Pink accent.
-hint = ph_hint_create(ag_apply_hint, PH_COL_PINK, "This hint will show you the\nfirst letter of a hidden word", "anygram_" + global.selected_date_key);
+hint = ph_hint_create(ag_apply_hint, PH_COL_PINK, ag_hint_subtitle(), "anygram_" + global.selected_date_key);

@@ -243,6 +243,7 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
             toast_col   = PH_COL_GRAY;
             toast_timer = TOAST_DUR;
         } else {
+            hint.subtitle = ag_hint_subtitle();   // name the exact letter (1st/2nd/3rd…)
             ph_hint_open(hint);
             exit;
         }
