@@ -19,13 +19,31 @@ if (lose_phase != "none") {
 if (toast_timer > 0)  toast_timer--;
 if (key_press_t > 0)  key_press_t--;
 
-// Advance the shared hint-flow timers (modal slide / "-100" / video).
+// Advance the shared hint-flow timers (modal slide / "-100" / video / reveal).
 ph_hint_tick(hint);
+if (wd_hint_pop_t < 1) wd_hint_pop_t = min(1, wd_hint_pop_t + 1/12);
 
 // Persist the play timer (≤ once/sec) while the puzzle is still live, so leaving
 // or an app kill resumes here. Won/lost states freeze the clock.
 if (puzzle.status == "in_progress")
     ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
+
+// Hint overlay/reveal — polled EVERY frame (not just on a tap) so the deferred
+// paid/freed result, emitted after the reveal animation, is always caught.
+var _hr = ph_hint_input(hint);
+if (_hr != "none") {
+    if (_hr == "paid" || _hr == "freed") {
+        // Reveal finished — pop the locked letter in (a Wordle hint can't win).
+        wd_hint_pop_pos    = wd_last_hint_pos;
+        wd_hint_pop_t      = 0;
+        wd_hint_reveal_pos = -1;
+        if (_hr == "paid") wd_toast("HINT USED  -" + string(PH_HINT_COST) + " COINS", PH_COL_YELLOW);
+        else               wd_toast("HINT REVEALED", PH_COL_GREEN);
+    } else if (_hr == "poor") {
+        wd_toast("NOT ENOUGH COINS", PH_COL_PINK);
+    }
+    exit;
+}
 
 // ── Reveal animation: advance, then commit the row when it finishes ───────────
 if (revealing) {
@@ -52,14 +70,7 @@ if (!device_mouse_check_button_pressed(0, mb_left)) exit;
 var _mx = device_mouse_x_to_gui(0);
 var _my = device_mouse_y_to_gui(0);
 
-// Hint overlay (modal + placeholder video) eats taps while open.
-var _hr = ph_hint_input(hint);
-if (_hr != "none") {
-    if      (_hr == "paid")  wd_toast("HINT USED  -" + string(PH_HINT_COST) + " COINS", PH_COL_YELLOW);
-    else if (_hr == "freed") wd_toast("HINT REVEALED", PH_COL_GREEN);
-    else if (_hr == "poor")  wd_toast("NOT ENOUGH COINS", PH_COL_PINK);
-    exit;
-}
+// (Hint overlay/reveal is handled every frame near the top of Step.)
 
 // Back arrow (top-left) -> hub
 if (ph_point_in_rect(_mx, _my, 0, HUD_Y - 60, 160, HUD_Y + 60)) {

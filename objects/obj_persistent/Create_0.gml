@@ -269,6 +269,6 @@ global.TRANS_REVEAL_FR = 22;      // reveal beat — iris DECELERATES back to a 
 
 // ── Idle anchor (for the HINT-pill nudge) ─────────────────────────────────────
 // Reset to current_time on any tap anywhere (see Step); the shared
-// ph_hint_pill_nudge pulses the HINT pill once (current_time - this) exceeds
+// ph_hint_pill_draw bounces the HINT pill once (current_time - this) exceeds
 // PH_HINT_IDLE_SECS so a stuck player is reminded help is available.
 global.ph_idle_anchor = current_time;

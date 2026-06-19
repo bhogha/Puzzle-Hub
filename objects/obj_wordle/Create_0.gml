@@ -155,25 +155,57 @@ wd_row_string = function() {
     return _s;
 };
 
+// ── Hint reveal/tile-pop state (shared iris via ph_hint_draw_reveal) ──────────
+wd_last_hint_pos   = -1;
+wd_hint_reveal_pos = -1;     // active-row slot hidden under the closing iris
+wd_hint_pop_pos    = -1;     // active-row slot popping in
+wd_hint_pop_t      = 1;      // 0..1 (1 == idle)
+
 // ── Hint reveal + availability (shared hint flow, scr_hint) ───────────────────
-/// Reveal the correct letter at the leftmost not-yet-revealed position, locking
-/// it into the active row. Persists. Does NOT touch coins (the modal handles that).
-wd_apply_hint = function() {
-    for (var _i = 0; _i < COLS; _i++) {
-        if (!row_lock[_i]) {
-            array_push(puzzle.hints, _i);
-            row_slots[_i] = string_char_at(puzzle.answer, _i + 1);
-            row_lock[_i]  = true;
-            wd_save_state();
-            return;
-        }
+/// True if column _i is ALREADY known-green from a previous guess (the player
+/// has placed the correct letter there) — those positions are skipped so a hint
+/// is never wasted on a letter the player already solved.
+wd_pos_known_green = function(_i) {
+    for (var _g = 0; _g < array_length(puzzle.guesses); _g++) {
+        if (string_char_at(puzzle.guesses[_g], _i + 1) == string_char_at(puzzle.answer, _i + 1)) return true;
     }
+    return false;
 };
-/// True if a reveal is still possible (puzzle live and a position is unrevealed).
+
+/// Leftmost position eligible for a hint: not already locked this row AND not
+/// already known-green from a prior guess. Returns -1 if none.
+wd_next_hint_pos = function() {
+    for (var _i = 0; _i < COLS; _i++) {
+        if (!row_lock[_i] && !wd_pos_known_green(_i)) return _i;
+    }
+    return -1;
+};
+
+/// Reveal the correct letter at the next eligible position, locking it into the
+/// active row. Returns the iris target. Does NOT touch coins (modal handles that).
+wd_apply_hint = function() {
+    var _pos = wd_next_hint_pos();
+    if (_pos < 0) return false;
+    array_push(puzzle.hints, _pos);
+    row_slots[_pos] = string_char_at(puzzle.answer, _pos + 1);
+    row_lock[_pos]  = true;
+    wd_save_state();
+
+    // Aim the iris at the active-row tile; keep it hidden until the reveal lands.
+    wd_last_hint_pos   = _pos;
+    wd_hint_reveal_pos = _pos;
+    var _rows  = puzzle.max_guesses;
+    var _cell  = (GRID_H - (_rows - 1) * GAP) / _rows;
+    var _gx    = (PH_W - (COLS * _cell + (COLS - 1) * GAP)) div 2;
+    var _irow  = array_length(puzzle.guesses);
+    var _x0    = _gx + _pos * (_cell + GAP);
+    var _y0    = grid_y + _irow * (_cell + GAP);
+    return { x: _x0 + _cell/2, y: _y0 + _cell/2, r: _cell * 0.60 };
+};
+/// True if a reveal is still possible (puzzle live and an eligible position remains).
 wd_can_hint = function() {
     if (puzzle.status != "in_progress") return false;
-    for (var _i = 0; _i < COLS; _i++) if (!row_lock[_i]) return true;
-    return false;
+    return wd_next_hint_pos() >= 0;
 };
 hint = ph_hint_create(wd_apply_hint, PH_COL_GREEN, "This hint will reveal the\nnext correct letter", "wordle_" + global.selected_date_key);
 

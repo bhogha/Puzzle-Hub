@@ -146,10 +146,7 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;
 HINT_PILL_T = _tool_y - 33;
 HINT_PILL_B = _tool_y + 33;
-ph_hint_pill_nudge(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, PH_COL_PURPLE);   // 5s idle reminder
-ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
-ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_hint_pill_draw(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, make_color_rgb(190,170,155));   // bounces after 5s idle
 
 // ── Message Prompt — above the game tip, just below the HUD (Penpot design) ────
 if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);

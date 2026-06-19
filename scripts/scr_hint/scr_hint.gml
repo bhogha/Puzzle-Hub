@@ -326,33 +326,34 @@ function ph_hint_draw_reveal(_h) {
     }
 }
 
-/// ── Idle nudge for the HINT pill ──────────────────────────────────────────────
-/// After PH_HINT_IDLE_SECS of no taps anywhere, draws a gentle pulsing attention
-/// ring around the HINT pill (looping) to remind the player help is available.
-/// Call right before drawing the pill, passing the pill's bounds + accent. Reads
-/// the global idle anchor maintained in obj_persistent.
-function ph_hint_pill_nudge(_l, _t, _r, _b, _accent) {
-    if (!variable_global_exists("ph_idle_anchor")) return;
-    var _idle = (current_time - global.ph_idle_anchor) / 1000;
-    if (_idle < PH_HINT_IDLE_SECS) return;
+/// ── HINT pill (with idle bounce) ──────────────────────────────────────────────
+/// Draws the standard HINT pill — white chip · bulb · "HINT" — and, after
+/// PH_HINT_IDLE_SECS of no taps anywhere, makes the whole pill BOUNCE (a couple of
+/// quick decaying hops, then a rest) to remind the player help is available. Reads
+/// the global idle anchor maintained in obj_persistent. The hit bounds (_t/_b) are
+/// the resting position and don't move, so taps stay accurate. Replaces the old
+/// per-puzzle chip+bulb+text draw lines + the pulsing-ring nudge.
+function ph_hint_pill_draw(_l, _t, _r, _b, _shadow) {
+    var _cy = (_t + _b) / 2;
 
-    var _cx = (_l + _r) / 2, _cy = (_t + _b) / 2;
-    var _hw = (_r - _l) / 2 + 14, _hh = (_b - _t) / 2 + 14;
-
-    // One pulse every ~1.1s: a rounded ring that grows + fades out, looping.
-    var _period = 1100;
-    var _ph   = ((current_time - global.ph_idle_anchor) mod _period) / _period;  // 0..1
-    var _grow = 1 + 0.26 * ph_ease_out(_ph);
-    var _ow   = _hw * _grow, _oh = _hh * _grow;
-    gpu_set_blendmode(bm_add);
-    draw_set_color(_accent);
-    draw_set_alpha((1 - _ph) * 0.50);
-    for (var _k = 0; _k < 5; _k++) {
-        draw_roundrect_ext(_cx - _ow + _k, _cy - _oh + _k, _cx + _ow - _k, _cy + _oh - _k,
-                           _oh, _oh, true);
+    // Idle bounce offset (0 while the player is active).
+    var _dy = 0;
+    if (variable_global_exists("ph_idle_anchor")) {
+        var _idle = (current_time - global.ph_idle_anchor) / 1000;
+        if (_idle >= PH_HINT_IDLE_SECS) {
+            var _period = 1400;     // one bounce cadence
+            var _amp    = 18;       // hop height (px)
+            var _phase  = ((current_time - global.ph_idle_anchor) mod _period) / _period;
+            if (_phase < 0.45) {                 // bounce window, then rest
+                var _u = _phase / 0.45;          // 0..1
+                _dy = -_amp * abs(sin(_u * pi * 2)) * (1 - _u);   // two decaying hops up
+            }
+        }
     }
-    draw_set_alpha(1);
-    gpu_set_blendmode(bm_normal);
+
+    ph_draw_chip(_l, _t + _dy, _r, _b + _dy, 33, PH_COL_WHITE, _shadow, 6);
+    draw_sprite_ext(global.spr_bulb, 0, _l + 12, _cy + _dy, 101/512, 101/512, 0, c_white, 1);
+    ph_draw_text(_l + 51, _cy + _dy, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
 }
 
 /// Full-screen dark placeholder for the rewarded video. Call LAST in Draw so it

@@ -100,7 +100,13 @@ for (var _r = 0; _r < _rows; _r++) {
             }
         } else if (_is_input) {
             if (row_lock[_c]) {
-                _fill = PH_COL_GREEN;       // hint-revealed, locked correct letter
+                if (_c == wd_hint_reveal_pos) {
+                    _fill = _EMPTY;          // hidden under the closing iris
+                    _outline = true;
+                } else {
+                    _fill = PH_COL_GREEN;    // hint-revealed, locked correct letter
+                    if (_c == wd_hint_pop_pos && wd_hint_pop_t < 1) _pop = ph_ease_out_back(wd_hint_pop_t, 2.2);
+                }
             } else if (_letter) {
                 _fill = PH_COL_WHITE;       // typed
                 _outline = true;
@@ -116,8 +122,16 @@ for (var _r = 0; _r < _rows; _r++) {
             draw_set_color(_BORDER);
             draw_roundrect_ext(_mx0, _my0, _mx1, _my1, _rad, _rad, true);
         }
-        if (_letter) {
-            ph_draw_text(_x0 + _cell/2, _y0 + _cell/2, _ch, _gfnt, PH_COL_DARK, fa_center, fa_middle);
+        // Hide the hinted letter while the iris closes in; pop it in afterward.
+        if (_letter && !(_is_input && _c == wd_hint_reveal_pos)) {
+            if (_is_input && _c == wd_hint_pop_pos && wd_hint_pop_t < 1) {
+                var _lsc = ph_ease_out_back(wd_hint_pop_t, 2.2);
+                draw_set_font(_gfnt); draw_set_color(PH_COL_DARK);
+                draw_set_halign(fa_center); draw_set_valign(fa_middle);
+                draw_text_transformed(_x0 + _cell/2, _y0 + _cell/2, _ch, _lsc, _lsc, 0);
+            } else {
+                ph_draw_text(_x0 + _cell/2, _y0 + _cell/2, _ch, _gfnt, PH_COL_DARK, fa_center, fa_middle);
+            }
         }
     }
 }
@@ -172,9 +186,10 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;
 HINT_PILL_T = _tool_y - 33;
 HINT_PILL_B = _tool_y + 33;
-ph_draw_chip(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
-draw_sprite_ext(global.spr_bulb, 0, HINT_PILL_L+12, _tool_y, 101/512, 101/512, 0, c_white, 1);
-ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_hint_pill_draw(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, make_color_rgb(190,170,155));   // bounces after 5s idle
+
+// ── Post-buy reveal (iris contracts onto the revealed letter tile) ────────────
+ph_hint_draw_reveal(hint);
 
 // ── Hint modal + placeholder video (drawn last so they cover the board) ───────
 ph_hint_draw_modal(hint);
