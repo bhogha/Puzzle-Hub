@@ -26,7 +26,7 @@ function ph_load_huesorts() {
     if (variable_global_exists("ph_huesort_cache")) {
         return global.ph_huesort_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_huesort.json";
+    var _path = PH_ASSETS_PATH + "puzzles_huesort.json";
     if (!file_exists(_path)) {
         global.ph_huesort_cache = undefined;
         return undefined;

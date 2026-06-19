@@ -146,6 +146,12 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
         _ktext  = PH_COL_WHITE;
     }
 
+    // Press feedback: the last-tapped key darkens briefly (any state).
+    var _tag = (_k.type == "letter") ? _k.ch : _k.type;
+    if (key_press_t > 0 && _tag == key_press_tag) {
+        _kfill = merge_color(_kfill, c_black, 0.22);
+    }
+
     draw_set_color(_kfill);
     draw_roundrect_ext(_k.x1, _k.y1, _k.x2, _k.y2, 16, 16, false);
     var _kfnt = (_k.type == "letter") ? global.fnt_disp_md : global.fnt_body_md;

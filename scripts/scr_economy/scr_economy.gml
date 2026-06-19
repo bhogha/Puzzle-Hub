@@ -114,6 +114,11 @@ function ph_puzzle_is_solved(_room_name, _date_key) {
         case "rm_wordle":   return ph_wordle_is_done(global.save, _date_key)
                                  || ph_wordle_is_missed(global.save, _date_key);
         case "rm_huesort":  return ph_huesort_is_done(global.save, _date_key);
+        case "rm_colorlink":return ph_colorlink_is_done(global.save, _date_key);
+        case "rm_wordbend": return ph_wordbend_is_done(global.save, _date_key);
+        case "rm_arrows":   return ph_arrows_is_done(global.save, _date_key);
+        case "rm_ladder":   return ph_ladder_is_done(global.save, _date_key);
+        case "rm_colordoku":return ph_colordoku_is_done(global.save, _date_key);
     }
     return false;
 }
@@ -271,6 +276,9 @@ function ph_win_grant(_w, _amount) {
     _w.xp_anim_from = _before;
     _w.xp_anim_t    = 0;
     ph_save_write(global.save);
+    // First genuine solve → ask for notification permission + schedule the daily
+    // reminder (iOS only; runs once, guarded inside). Never fires in review mode.
+    ph_notify_request_after_first_solve();
 }
 
 /// Begin the claim animation: grant XP, spawn the star flight, enter "claiming".
@@ -524,7 +532,10 @@ function ph_win_draw(_w) {
         var _sl = 70, _sr = _half - 15;
         _w.SHARE_L=_sl; _w.SHARE_R=_sr; _w.SHARE_T=_r1cy-_bh3; _w.SHARE_B=_r1cy+_bh3;
         ph_draw_nav_btn(_sl, _r1cy + _slide, _sr, _bh3, "SHARE", noone, PH_COL_PINK, PH_COL_PINK_DEEP);
-        ph_draw_share_glyph(_sl + 92, _r1cy + _slide, 44, PH_COL_WHITE);
+        if (variable_global_exists("spr_share_icon") && global.spr_share_icon >= 0)
+            draw_sprite_ext(global.spr_share_icon, 0, _sl + 92, _r1cy + _slide, 0.9, 0.9, 0, PH_COL_WHITE, 1);
+        else
+            ph_draw_share_glyph(_sl + 92, _r1cy + _slide, 44, PH_COL_WHITE);
         if (_w.share_msg_t > 0) {
             draw_set_alpha(min(1, _w.share_msg_t/20));
             ph_draw_text((_sl+_sr)/2, _r1cy + _slide - 88, "LINK COPIED", global.fnt_body_sm, PH_COL_DARK, fa_center, fa_middle);

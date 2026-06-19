@@ -20,6 +20,8 @@ LAYOUT = {
     radius:         28,
     cal_grid_off:   62,   // y-offset of month grid below calbar — bigger gap above the SMTWTFS header
     cal_cell_h:     60,   // 6 rows × 60 + grid_off 62 + calbar_h 110 = 532 (fits inside calexpand_h 560)
+    cal_monthnav_gap: 24, // gap between the last date row and the month-nav slider bar
+    cal_monthnav_h:   86, // height of the prev/next month slider bar (Penpot "Month Slider")
 };
 // Push top-anchored elements below the Dynamic Island / status bar, and extend
 // the nav bar to cover the home indicator. Applied after construction to avoid
@@ -33,6 +35,18 @@ MONTH_NAMES = ["January","February","March","April","May","June",
                "July","August","September","October","November","December"];
 
 cards = ph_game_cards();
+
+// ── Tile press feedback (press-in nudge while held → spring-pop on release) ────
+// A tapped card sinks a few px while the finger is down, then springs back past
+// rest on release. Drives the tactile "button" feel; the iris transition launches
+// from the tap on a valid card open. Knobs:
+card_press_idx = -1;   // card index the finger is currently pressing, or -1
+card_press_t   = 0;    // 0..1 eased press-in while held
+card_pop_idx   = -1;   // card index playing the release spring-pop, or -1
+card_pop_t     = 0;    // 0..1 pop progress
+CARD_PRESS_DY  = 12;   // press-in depth (px the tile sinks while held)
+CARD_PRESS_FR  = 6;    // frames to reach full press-in
+CARD_POP_FR    = 14;   // frames of the release spring-pop
 
 // ── Date state ────────────────────────────────────────────────────────────────
 
@@ -54,10 +68,57 @@ hub_center_strip_on = function(_center_dt) {
     }
 };
 
+// ── Viewed month (calendar month-selector) ──────────────────────────────────────
+// cur_year/cur_month always track TODAY (used for the "no future months" cap and
+// the today highlight). cal_view_year/cal_view_month are the month currently
+// SHOWN by the expanded calendar — the player moves these with the prev/next
+// month slider without changing today or their selected day.
+cal_view_year  = date_get_year(date_current_datetime());
+cal_view_month = date_get_month(date_current_datetime());
+
+// Rebuilds month_days for the currently viewed month (cal_view_year/month).
+hub_build_month_grid = function() {
+    month_days = [];
+    var _first_dow = ph_day_of_week(date_create_datetime(cal_view_year,cal_view_month,1,0,0,0));
+    var _dim       = ph_days_in_month(cal_view_year, cal_view_month);
+    for (var _i = 0; _i < _first_dow; _i++) array_push(month_days, undefined);
+    for (var _d = 1; _d <= _dim; _d++) {
+        var _dt = date_create_datetime(cal_view_year,cal_view_month,_d,0,0,0);
+        array_push(month_days, { dt:_dt, key:ph_date_key(_dt), day:_d });
+    }
+    month_grid_rows = ceil(array_length(month_days) / 7);
+};
+
+// Anchors the viewed month to the currently selected day's month, then rebuilds
+// the grid. Called whenever the calendar is toggled so the closed bar label and
+// the month it reopens to always match the day the player is on.
+hub_view_to_selected = function() {
+    var _k = global.selected_date_key;
+    cal_view_year  = real(string_copy(_k, 1, 4));
+    cal_view_month = real(string_copy(_k, 6, 2));
+    hub_build_month_grid();
+};
+
+// Steps the viewed month by ±1 (with year rollover). Capped at today's month —
+// entirely-future months hold no playable days, so the next arrow stops there.
+hub_month_step = function(_delta) {
+    var _m = cal_view_month + _delta;
+    var _y = cal_view_year;
+    while (_m < 1)  { _m += 12; _y--; }
+    while (_m > 12) { _m -= 12; _y++; }
+    if (_y > cur_year || (_y == cur_year && _m > cur_month)) return;   // no future months
+    cal_view_year  = _y;
+    cal_view_month = _m;
+    hub_build_month_grid();
+};
+
 // Rebuilds today_dt/today_key/cur_year/cur_month, then re-centres the strip on
 // today and refreshes the month grid. Called from Create_0 and again from Step_0
 // if the date rolls over while the hub is left open past midnight.
 hub_refresh_dates = function() {
+    var _prev_cur_y = variable_instance_exists(id, "cur_year")  ? cur_year  : -1;
+    var _prev_cur_m = variable_instance_exists(id, "cur_month") ? cur_month : -1;
+
     var _now = date_current_datetime();
     today_dt   = _now;
     today_key  = ph_date_key(_now);
@@ -67,16 +128,14 @@ hub_refresh_dates = function() {
     // 7-day strip centred on today
     hub_center_strip_on(_now);
 
-    // Month grid for expanded calendar
-    month_days = [];
-    var _first_dow = ph_day_of_week(date_create_datetime(cur_year,cur_month,1,0,0,0));
-    var _dim       = ph_days_in_month(cur_year, cur_month);
-    for (var _i = 0; _i < _first_dow; _i++) array_push(month_days, undefined);
-    for (var _d = 1; _d <= _dim; _d++) {
-        var _dt = date_create_datetime(cur_year,cur_month,_d,0,0,0);
-        array_push(month_days, { dt:_dt, key:ph_date_key(_dt), day:_d });
+    // If a midnight rollover advanced today while the player was parked on the
+    // old "today" month, follow it forward; otherwise leave the viewed month put.
+    if (cal_view_year == _prev_cur_y && cal_view_month == _prev_cur_m) {
+        cal_view_year  = cur_year;
+        cal_view_month = cur_month;
     }
-    month_grid_rows = ceil(array_length(month_days) / 7);
+
+    hub_build_month_grid();
 };
 hub_refresh_dates();
 
@@ -111,10 +170,16 @@ coinflow_t       = 0;      // master frame counter
 coinflow_label_t = -1;     // <0 = label not started; else 0..1 rise/fade
 coinflow_pop     = 0;      // 0..1 pill-coin pulse when a coin lands
 
-if (variable_global_exists("coin_flow_amount") && global.coin_flow_amount > 0) {
-    coinflow_amount  = global.coin_flow_amount;
-    global.coin_flow_amount = 0;          // consume — don't replay on re-entry
+// Starts the coins-into-the-pill animation for _amount coins. Reused by the
+// Level-Up entry path (global.coin_flow_amount, below) and the Daily Spin claim.
+hub_start_coinflow = function(_amount) {
+    if (_amount <= 0) return;
+    coinflow_amount  = _amount;
     coinflow_active  = true;
+    coinflow_t       = 0;
+    coinflow_label_t = -1;
+    coinflow_pop     = 0;
+    coinflow_coins   = [];
 
     // Target = the gold-coin sprite inside the top-right coin pill. Mirrors the
     // geometry in Draw_64 §2 (_coin_cx = (PH_W-24-310)+12 ; _crow_cy).
@@ -137,4 +202,40 @@ if (variable_global_exists("coin_flow_amount") && global.coin_flow_amount > 0) {
         _c.cy = min(_c.sy0, _tcy) - random_range(60, 160);
         coinflow_coins[_i] = _c;
     }
+};
+
+// Level-Up entry: a queued coin reward plays its flow once on hub entry.
+if (variable_global_exists("coin_flow_amount") && global.coin_flow_amount > 0) {
+    var _amt = global.coin_flow_amount;
+    global.coin_flow_amount = 0;          // consume — don't replay on re-entry
+    hub_start_coinflow(_amt);
 }
+
+// ── First-run soft onboarding (no overlay / text / dimming) ──────────────────
+// Playtest feedback: the old caption+dots coachmark tour confused players (they
+// tried to swipe between steps, felt they "got it wrong"). Replaced with pure
+// soft guidance that never blocks the screen: on the very first app open (or
+// after a progress reset; ph_save_reset clears save.tutorial_done) the card list
+// AUTO-SCROLLS from the last game (bottom) up to the first game (top) — as if the
+// player flicked up through the whole list — then ~1s after it settles a finger
+// (scr_tutorial) fades in pointing at the TOP tile's PLAY button. The hub stays
+// fully interactive throughout — the player can scroll/tap/explore at will. The
+// hint clears for good the first time the player opens any puzzle.
+finger = ph_finger_create();
+
+intro_active   = !global.save.tutorial_done;   // run the auto-scroll + finger once
+intro_t        = 0;                             // 0..1 auto-scroll progress
+intro_settle_t = -1;                            // frames since the scroll settled (-1 = not yet)
+INTRO_SLIDE_FR        = 96;                      // ~1.6s auto-scroll sweep
+INTRO_FINGER_DELAY_FR = 60;                      // ~1s pause after settle before the finger appears
+// Start parked at the bottom of the list (showing the LAST game) so the intro
+// sweep climbs up to the first. (scroll_max was computed just above.)
+if (intro_active) scroll_y = scroll_max;
+
+// ── Daily Spin ────────────────────────────────────────────────────────────────
+// Free once-per-day prize wheel (see scr_spin). Opens immediately if the player
+// has reached the unlock session and hasn't claimed today's spin yet — but never
+// during the first-run intro (a brand-new / just-reset player gets the soft
+// finger hint instead; the spin can appear on a later session anyway).
+spin = ph_spin_create();
+if (!intro_active && ph_spin_eligible(global.save)) ph_spin_open(spin);

@@ -31,7 +31,7 @@ function ph_load_arrows() {
     if (variable_global_exists("ph_arrows_cache")) {
         return global.ph_arrows_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_arrows.json";
+    var _path = PH_ASSETS_PATH + "puzzles_arrows.json";
     if (!file_exists(_path)) {
         global.ph_arrows_cache = undefined;
         return undefined;
@@ -271,13 +271,17 @@ function ph_arrows_deserialize_indices(_s, _count) {
     return _bools;
 }
 
-function ph_arrows_save_state(_save, _date_key, _alive, _penalty) {
+function ph_arrows_save_state(_save, _date_key, _alive, _penalty, _hinted = undefined) {
     if (!variable_struct_exists(_save, "arrows_state")) _save.arrows_state = {};
     var _cleared = array_create(array_length(_alive), false);
     for (var _i = 0; _i < array_length(_alive); _i++) _cleared[_i] = !_alive[_i];
+    // _hinted (a bool array, one per arrow) is optional for older callers — a hint
+    // recolours an arrow green permanently, so it must survive a resume.
+    var _hint_str = is_array(_hinted) ? ph_arrows_serialize_indices(_hinted) : "";
     _save.arrows_state[$ _date_key] = {
         cleared: ph_arrows_serialize_indices(_cleared),
         penalty: _penalty,
+        hinted:  _hint_str,
     };
 }
 
@@ -292,6 +296,8 @@ function ph_arrows_load_state(_save, _date_key, _count) {
     return {
         alive:   _alive,
         penalty: variable_struct_exists(_st, "penalty") ? _st.penalty : 0,
+        hinted:  ph_arrows_deserialize_indices(
+                     variable_struct_exists(_st, "hinted") ? _st.hinted : "", _count),
     };
 }
 

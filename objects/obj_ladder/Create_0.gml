@@ -12,16 +12,19 @@ timer_base_secs  = ph_timer_get(global.save, timer_key);
 session_start_ms = current_time;
 
 // ── Play state ────────────────────────────────────────────────────────────────
-step    = 0;                 // words found so far (0..count); progress = step+1
-sel     = -1;                // selected tile index (-1 none)
-hinted  = -1;                // tile index with an active hint highlight (-1 none)
-solved  = false;             // all `count` words found
+step     = 0;                // words found so far (0..count); progress = step+1
+sel      = -1;               // selected tile index (-1 none)
+hinted   = -1;               // tile index with an active hint highlight (-1 none)
+hint_lvl = 0;                // hints used on the current rung: 0 none, 1 tile, 2 +letter
+hint_key = "";               // keyboard letter revealed by the 2nd hint ("" = none)
+solved   = false;            // all `count` words found
 
 // Restore in-progress state (resume mid-puzzle).
 var _lst = ph_ladder_load_state(global.save, global.selected_date_key);
 if (_lst != undefined) {
-    step   = clamp(_lst.step, 0, puzzle.count);
-    hinted = variable_struct_exists(_lst, "hinted") ? _lst.hinted : -1;
+    step     = clamp(_lst.step, 0, puzzle.count);
+    hinted   = variable_struct_exists(_lst, "hinted")   ? _lst.hinted   : -1;
+    hint_lvl = variable_struct_exists(_lst, "hint_lvl") ? _lst.hint_lvl : ((hinted >= 0) ? 1 : 0);
 }
 if (step >= puzzle.count) solved = true;
 
@@ -34,10 +37,26 @@ ld_load_word = function() {
 letters = array_create(puzzle.length, "");
 ld_load_word();
 
+// On resume, re-derive the 2nd-hint keyboard letter from the current rung.
+if (hint_lvl >= 2 && step < puzzle.count) {
+    var _t = puzzle.words[step];
+    var _p = ph_ladder_diff_pos(ph_ladder_current_word(puzzle, step), _t);
+    hint_key = (_p >= 0) ? string_char_at(_t, _p + 1) : "";
+}
+
 // Feedback flash: "none" | "correct" | "wrong" with a frame timer.
 feedback   = "none";
 fb_timer   = 0;
 FB_DUR     = 32;
+
+// Wrong-guess time penalty feedback: floating "+5s" near the timer + red flash.
+pen_t        = 0;
+PEN_DUR      = 55;
+
+// Keyboard press feedback: the last-tapped key darkens for a few frames.
+key_press_ch = "";
+key_press_t  = 0;
+KEY_PRESS_DUR = 9;
 
 // Toast / message prompt (shared style).
 toast_text  = "";
@@ -102,22 +121,38 @@ HINT_PILL_L = 0; HINT_PILL_R = 0; HINT_PILL_T = 0; HINT_PILL_B = 0;
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 ld_save_state = function() {
-    ph_ladder_save_state(global.save, global.selected_date_key, step, hinted);
+    ph_ladder_save_state(global.save, global.selected_date_key, step, hinted, hint_lvl);
     ph_save_write(global.save);
 };
 
-// ── Hint: highlight the tile that must change (the differing position) ─────────
+// ── Hint (two levels per rung) ────────────────────────────────────────────────
+// 1st hint: highlight the TILE that must change (the differing position).
+// 2nd hint: also highlight the CORRECT LETTER on the keyboard, so a stuck player
+//           gets a stronger nudge. Each level is a separate paid hint.
 ld_apply_hint = function() {
     if (solved) return;
     var _target = puzzle.words[step];
     var _cur    = ph_ladder_current_word(puzzle, step);
-    hinted = ph_ladder_diff_pos(_cur, _target);
+    var _pos    = ph_ladder_diff_pos(_cur, _target);
+    if (hint_lvl <= 0) {
+        hinted   = _pos;                                    // tile highlight
+        hint_lvl = 1;
+    } else {
+        hint_key = (_pos >= 0) ? string_char_at(_target, _pos + 1) : "";  // keyboard letter
+        hint_lvl = 2;
+    }
     ld_save_state();
 };
 ld_can_hint = function() {
-    return (!solved && hinted < 0);
+    return (!solved && hint_lvl < 2);
 };
-hint = ph_hint_create(ld_apply_hint, PH_COL_AMBER, "This hint will highlight the\ntile you need to change", "ladder_" + global.selected_date_key);
+// Subtitle for the next hint level (refreshed before opening the modal in Step).
+ld_hint_subtitle = function() {
+    return (hint_lvl <= 0)
+        ? "This hint will highlight the\ntile you need to change"
+        : "This hint will highlight the\ncorrect letter on the keyboard";
+};
+hint = ph_hint_create(ld_apply_hint, PH_COL_AMBER, ld_hint_subtitle(), "ladder_" + global.selected_date_key);
 
 // ── Advance / evaluate ────────────────────────────────────────────────────────
 /// The current row letters joined into a word.
@@ -130,8 +165,10 @@ ld_row_string = function() {
 /// rung (or win), reset the row to the new current word.
 ld_advance = function() {
     step += 1;
-    sel    = -1;
-    hinted = -1;
+    sel      = -1;
+    hinted   = -1;
+    hint_lvl = 0;
+    hint_key = "";
     if (step >= puzzle.count) {
         solved = true;
         ld_save_state();

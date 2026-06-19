@@ -8,7 +8,9 @@ if (win_phase == 1) {
     exit;
 }
 
-if (toast_timer > 0) toast_timer--;
+if (toast_timer > 0)   toast_timer--;
+if (pen_t > 0)         pen_t--;
+if (key_press_t > 0)   key_press_t--;
 
 // Advance the shared hint-flow timers (modal slide / "-100" / video).
 ph_hint_tick(hint);
@@ -68,6 +70,7 @@ if (ph_point_in_rect(_mx, _my, HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_
     if (!ld_can_hint()) {
         ld_toast("HINT ALREADY SHOWN", PH_COL_GRAY);
     } else {
+        hint.subtitle = ld_hint_subtitle();   // tile (1st) vs keyboard-letter (2nd)
         ph_hint_open(hint);
     }
     exit;
@@ -88,6 +91,10 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
     var _k = _keys[_i];
     if (!ph_point_in_rect(_mx, _my, _k.x1, _k.y1, _k.x2, _k.y2)) continue;
 
+    // Press feedback: the tapped key darkens briefly (drawn in Draw_64).
+    key_press_ch = _k.ch;
+    key_press_t  = KEY_PRESS_DUR;
+
     if (sel < 0) {
         ld_toast("TAP A LETTER FIRST", PH_COL_GRAY);
         exit;
@@ -100,6 +107,12 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
         feedback = "correct"; fb_timer = FB_DUR;   // green flash → advance in feedback block
     } else {
         feedback = "wrong";   fb_timer = FB_DUR;   // red flash → revert in feedback block
+        // Wrong guess → +5 s time penalty (folded into the play timer, like Arrows),
+        // with a floating "+5s" + red timer flash so the cost is clear.
+        timer_base_secs += PH_LADDER_PENALTY_SECS;
+        pen_t = PEN_DUR;
+        ph_timer_commit(global.save, timer_key, timer_base_secs, session_start_ms);
+        ph_save_write(global.save);
     }
     exit;
 }

@@ -1,6 +1,6 @@
 // ── Word Bend — pure logic ────────────────────────────────────────────────────
 //
-// Word Bend: the board (4×4 … 6×6) is completely filled with letters. Every letter
+// Word Bend: the board (5×5) is completely filled with letters. Every letter
 // belongs to exactly one hidden word, and the words' cell-paths tile the whole
 // board with no gaps and no overlaps. To find a word the player taps its first
 // letter and drags across the rest; the path may BEND at right angles but only
@@ -11,7 +11,7 @@
 // Puzzle data (datafiles/puzzles_wordbend.json) is a plain array of entries:
 //
 //   { "date": "YYYY-MM-DD"  (optional — exact-date authoring),
-//     "size": 6,
+//     "size": 5,
 //     "words": [ { "text":"WORD", "path":[[r,c],[r,c], ...] }, ... ] }
 //
 // `path` lists the cells the word occupies, in spelling order (path[k] holds
@@ -29,7 +29,7 @@ function ph_load_wordbends() {
     if (variable_global_exists("ph_wordbend_cache")) {
         return global.ph_wordbend_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_wordbend.json";
+    var _path = PH_ASSETS_PATH + "puzzles_wordbend.json";
     if (!file_exists(_path)) {
         global.ph_wordbend_cache = undefined;
         return undefined;
@@ -58,7 +58,7 @@ function ph_wordbend_for_date(_date_key) {
 /// Normalise a raw JSON entry → runtime struct. Builds the letter grid by placing
 /// each word's characters along its path.
 function ph_wordbend_make(_raw) {
-    var _n = variable_struct_exists(_raw, "size") ? _raw.size : 6;
+    var _n = variable_struct_exists(_raw, "size") ? _raw.size : 5;
 
     var _grid = array_create(_n);
     for (var _r = 0; _r < _n; _r++) {
@@ -89,20 +89,17 @@ function ph_wordbend_make(_raw) {
     return { size: _n, grid: _grid, words: _words };
 }
 
-/// Hardcoded fallback (a validated 6×6 board, words tile every cell) when the data
+/// Hardcoded fallback (a validated 5×5 board, words tile every cell) when the data
 /// file is missing.
 function ph_wordbend_fallback() {
     var _raw = {
-        size: 6,
+        size: 5,
         words: [
-            { text: "GRASS", path: [[1,3],[1,4],[2,4],[2,3],[2,2]] },
-            { text: "MILK",  path: [[1,2],[1,1],[2,1],[3,1]] },
-            { text: "FINAL", path: [[3,0],[2,0],[1,0],[0,0],[0,1]] },
-            { text: "FANCY", path: [[0,2],[0,3],[0,4],[0,5],[1,5]] },
-            { text: "TORE",  path: [[2,5],[3,5],[3,4],[4,4]] },
-            { text: "EXILE", path: [[4,3],[3,3],[3,2],[4,2],[4,1]] },
-            { text: "SWAP",  path: [[4,0],[5,0],[5,1],[5,2]] },
-            { text: "TRUE",  path: [[5,3],[5,4],[5,5],[4,5]] },
+            { text: "CLUB",   path: [[1,3],[1,2],[1,1],[2,1]] },
+            { text: "SWEAT",  path: [[2,2],[2,3],[3,3],[3,4],[4,4]] },
+            { text: "LEGION", path: [[4,3],[4,2],[3,2],[3,1],[4,1],[4,0]] },
+            { text: "SCOUT",  path: [[3,0],[2,0],[1,0],[0,0],[0,1]] },
+            { text: "SALAD",  path: [[0,2],[0,3],[0,4],[1,4],[2,4]] },
         ],
     };
     return ph_wordbend_make(_raw);
@@ -163,7 +160,7 @@ function ph_wordbend_longest_unfound(_puzzle, _found) {
 function ph_wordbend_load_dict() {
     if (variable_global_exists("ph_wordbend_dict")) return global.ph_wordbend_dict;
     var _map  = {};
-    var _path = working_directory + "wordbend_dict.json";
+    var _path = PH_ASSETS_PATH + "wordbend_dict.json";
     if (file_exists(_path)) {
         var _buf = buffer_load(_path);
         var _str = buffer_read(_buf, buffer_string);

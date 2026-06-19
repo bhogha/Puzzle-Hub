@@ -319,6 +319,21 @@ function ph_week_expired(_save) {
     return (date_current_datetime() - _save.week.start_dt) >= PH_WEEK_LENGTH_DAYS;
 }
 
+/// Compact countdown to the weekly reset, e.g. "2d 12h" (≥1 day),
+/// "12h 30m" (<1 day) or "5m" (<1 hour). "0m" once expired. Used by the
+/// Event Hub header timer pill.
+function ph_week_time_left_str(_save) {
+    var _rem_days = PH_WEEK_LENGTH_DAYS - (date_current_datetime() - _save.week.start_dt);
+    if (_rem_days <= 0) return "0m";
+    var _total_min = floor(_rem_days * 24 * 60);
+    var _d = _total_min div (24 * 60);
+    var _h = (_total_min div 60) mod 24;
+    var _m = _total_min mod 60;
+    if (_d > 0) return string(_d) + "d " + string(_h) + "h";
+    if (_h > 0) return string(_h) + "h " + string(_m) + "m";
+    return string(_m) + "m";
+}
+
 // ── Draw ──────────────────────────────────────────────────────────────────────
 /// Pick `_count` ids from a band, preferring ids not used within the last
 /// PH_WEEK_DRAW_COOLDOWN weeks (save.week.recent: id -> week index last used).

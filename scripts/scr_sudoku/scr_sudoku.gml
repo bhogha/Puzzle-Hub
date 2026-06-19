@@ -24,7 +24,7 @@ function ph_load_sudokus() {
     if (variable_global_exists("ph_sudoku_cache")) {
         return global.ph_sudoku_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_sudoku.json";
+    var _path = PH_ASSETS_PATH + "puzzles_sudoku.json";
     if (!file_exists(_path)) {
         global.ph_sudoku_cache = undefined;
         return undefined;

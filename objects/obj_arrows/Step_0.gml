@@ -10,7 +10,6 @@ if (win_phase == 1) {
 // Timers / fades.
 if (toast_timer > 0)      toast_timer--;
 if (float_t > 0)          float_t--;
-if (ar_hint_t > 0)        ar_hint_t--;
 if (coin_pulse_t < 1)     coin_pulse_t     = min(1, coin_pulse_t + 1/18);
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
@@ -82,7 +81,6 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
         if (_idx != -1) {
             if (ph_arrows_sweep_clear(puzzle, alive, _idx)) {
                 ar_start_launch(_idx);
-                if (ar_hint_idx == _idx) { ar_hint_idx = -1; ar_hint_t = 0; }
             } else {
                 // Glide the arrow head-first up to whatever blocks it, then back —
                 // the same snake path-follow as a launch (built in ar_start_bump,

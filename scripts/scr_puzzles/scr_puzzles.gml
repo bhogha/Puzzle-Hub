@@ -31,7 +31,7 @@ function ph_load_anygrams() {
     if (variable_global_exists("ph_anygram_cache")) {
         return global.ph_anygram_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_anygram.json";
+    var _path = PH_ASSETS_PATH + "puzzles_anygram.json";
     if (!file_exists(_path)) {
         global.ph_anygram_cache = undefined;
         return undefined;
@@ -320,7 +320,7 @@ function ph_load_wordwaves() {
     if (variable_global_exists("ph_wordwave_cache")) {
         return global.ph_wordwave_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_wordwave.json";
+    var _path = PH_ASSETS_PATH + "puzzles_wordwave.json";
     if (!file_exists(_path)) {
         global.ph_wordwave_cache = undefined;
         return undefined;

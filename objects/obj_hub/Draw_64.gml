@@ -17,7 +17,11 @@ var _eff_strip_h = LAYOUT.strip_h * lerp(1.0, 0.50, cal_anim_t);
 // the numbers. Blended by cal_anim_t and kept in sync with Step_0.
 var _grid_rows   = ceil(array_length(month_days) / 7);
 var _grid_bottom = LAYOUT.calbar_y + LAYOUT.calbar_h + LAYOUT.cal_grid_off + _grid_rows * LAYOUT.cal_cell_h;
-var _post_cal    = lerp(LAYOUT.calbar_y + _cal_h + _eff_strip_h, _grid_bottom + 40, cal_anim_t);
+// Open layout reserves room for the month-nav slider bar below the grid (kept in
+// sync with Step_0). _mn_top/_mn_bot also drive the slider render in §3b.
+var _mn_top      = _grid_bottom + LAYOUT.cal_monthnav_gap;
+var _mn_bot      = _mn_top + LAYOUT.cal_monthnav_h;
+var _post_cal    = lerp(LAYOUT.calbar_y + _cal_h + _eff_strip_h, _mn_bot + 28, cal_anim_t);
 var _body_top    = _post_cal + LAYOUT.section_h;
 var _body_bot    = PH_H - LAYOUT.nav_h;
 
@@ -94,7 +98,7 @@ var _cal_cy  = _cal_y1 + LAYOUT.calbar_h/2;
 //  • Open — the progress tube is hidden, so the teal only needs to reach just
 //    below the last row of date numbers (the grid sits ~28px inside _cal_h),
 //    leaving a clear gap above the "TODAY'S GAMES" title.
-var _teal_bottom = lerp(_cal_y1 + _cal_h + _eff_strip_h * 0.82 + 88, _grid_bottom + 16, cal_anim_t);
+var _teal_bottom = lerp(_cal_y1 + _cal_h + _eff_strip_h * 0.82 + 88, _mn_top, cal_anim_t);
 
 // The Month Banner block (slightly darker light-teal)
 draw_set_color(PH_COL_TEAL_SOFT);
@@ -113,9 +117,10 @@ draw_sprite_ext(global.spr_cal, 0,
                 LAYOUT.card_pad_x + 58, _cal_y1 + 16,
                 _cal_icon_s, _cal_icon_s, 0, c_white, 1);
 
-// Month + year label
+// Month + year label — reflects the VIEWED month (cal_view_*), which the player
+// moves with the month-nav slider; defaults to today's month.
 ph_draw_text(PH_W/2, _cal_cy,
-             MONTH_NAMES[cur_month-1] + " " + string(cur_year),
+             MONTH_NAMES[cal_view_month-1] + " " + string(cal_view_year),
              global.fnt_body_md, PH_COL_TEAL_DEEP, fa_center, fa_middle);
 
 // Expanded month grid
@@ -162,6 +167,37 @@ if (cal_anim_t > 0.05) {
     }
 }
 ph_scissor_reset();
+
+// ═══════════════════════════════════════════════════════════
+// 3b. MONTH-NAV SLIDER  — prev / next month, below the date grid (Penpot
+//     "Month Slider"). Appears with the expanded grid; drawn after the grid
+//     scissor reset so it sits below the last date row, unclipped.
+// ═══════════════════════════════════════════════════════════
+if (cal_anim_t > 0.05) {
+    var _mn_cy = (_mn_top + _mn_bot) * 0.5;
+    draw_set_alpha(cal_anim_t);
+
+    // Mint slider bar (Penpot #adfff1).
+    draw_set_color(make_color_rgb(173, 255, 241));
+    draw_rectangle(0, _mn_top, PH_W, _mn_bot, false);
+
+    // Prev month (left) — always available; past days are playable.
+    var _pm_m = cal_view_month - 1; var _pm_y = cal_view_year;
+    if (_pm_m < 1) { _pm_m = 12; _pm_y--; }
+    ph_draw_text(LAYOUT.card_pad_x + 20, _mn_cy,
+                 "< " + MONTH_NAMES[_pm_m-1],
+                 global.fnt_body_md, PH_COL_TEAL_DEEP, fa_left, fa_middle);
+
+    // Next month (right) — hidden at today's month (no future-only months).
+    if (!(cal_view_year == cur_year && cal_view_month == cur_month)) {
+        var _nm_m = cal_view_month + 1; var _nm_y = cal_view_year;
+        if (_nm_m > 12) { _nm_m = 1; _nm_y++; }
+        ph_draw_text(PH_W - LAYOUT.card_pad_x - 20, _mn_cy,
+                     MONTH_NAMES[_nm_m-1] + " >",
+                     global.fnt_body_md, PH_COL_TEAL_DEEP, fa_right, fa_middle);
+    }
+    draw_set_alpha(1);
+}
 
 // ═══════════════════════════════════════════════════════════
 // 4. 7-DAY STRIP — fades out as the calendar opens (the month grid above
@@ -214,7 +250,10 @@ if (_strip_alpha > 0.02) {
 // ── Progress tube ─────────────────────────────────────────────────────────────
 // Hidden while the calendar is open — the expanded month grid is allowed to
 // cover this band. Fades out together with the 7-day strip (_strip_alpha).
-var _solved_today = ph_solved_count_on(_save, _sel);
+// The daily goal is "any PH_PUZZLES_PER_DAY solves" out of all available puzzles
+// (currently 11 incl. Colordoku). Cap the displayed count at the goal so solving
+// more than the goal still reads "10/10" rather than "11/10".
+var _solved_today = min(ph_solved_count_on(_save, _sel), PH_PUZZLES_PER_DAY);
 
 if (_strip_alpha > 0.02) {
     var _ptube_top = _strip_top + _eff_strip_h * 0.82;
@@ -302,6 +341,13 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     var _card = cards[_i];
     var _cy1  = _body_top + _i*(LAYOUT.card_h + LAYOUT.card_gap) - scroll_y;
     var _ccy  = _cy1 + LAYOUT.card_h/2;
+
+    // Tile press feedback — sink while held; spring-pop (overshoot) on release. The
+    // whole card composite is built off _cy1/_ccy, so offsetting both shifts it all.
+    var _press = 0;
+    if      (_i == card_press_idx) _press = CARD_PRESS_DY * ph_ease_out(card_press_t);
+    else if (_i == card_pop_idx)   _press = CARD_PRESS_DY * (1 - ph_ease_out_back(card_pop_t, 2.2));
+    _cy1 += _press; _ccy += _press;
 
     if (_cy1 + LAYOUT.card_h < _body_top - 20 || _cy1 > _body_bot + 20) continue;
 
@@ -494,3 +540,9 @@ if (coinflow_active || coinflow_label_t >= 0) {
         draw_set_alpha(1);
     }
 }
+
+// ── Daily Spin modal (drawn on top of everything) ─────────────────────────────
+ph_spin_draw(spin);
+
+// ── First-run soft finger hint (drawn last; no overlay, just the pointer) ─────
+ph_finger_draw(finger);

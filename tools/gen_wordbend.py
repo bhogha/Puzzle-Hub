@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Word Bend board generator for Puzzle Hub — 6x6, fully tiled, S-shaped bias.
+"""Word Bend board generator for Puzzle Hub — 5x5, fully tiled, S-shaped bias.
 
 Word Bend covers the whole board with hidden words whose orthogonal (bending)
 cell-paths tile the grid exactly once. The player finds a word by tracing its
@@ -7,7 +7,7 @@ exact cell-path (the match is geometric, not letter-based — see ph_wordbend_ma
 in scr_wordbend.gml), so ANY real word of the right length can fill a given path.
 
 Generation, per board:
-  1. Build a random Hamiltonian path over the 6x6 (backbite) and cut it into
+  1. Build a random Hamiltonian path over the 5x5 (backbite) and cut it into
      contiguous snake segments (each is a valid Word Bend word path). The segments
      tile the board → always fully solvable.
   2. Score the geometry for "snakiness" and keep the best of several candidates,
@@ -23,7 +23,7 @@ SNAKINESS (why it looks S-like, not square):
   are also weighted up in the cut, since length 3 can bend at most once.
 
 Output JSON entry shape (matches scr_wordbend.gml):
-  { "date":"YYYY-MM-DD"(optional), "size":6,
+  { "date":"YYYY-MM-DD"(optional), "size":5,
     "words":[ {"text":"WORD","path":[[r,c],...]}, ... ] }
 
 USAGE:
@@ -41,7 +41,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(HERE)                       # .../Puzzle Hub
 OUT_PATH = os.path.join(PROJECT, "datafiles", "puzzles_wordbend.json")
 
-N = 6
+N = 5
 NCELLS = N * N
 LEN_MIN, LEN_MAX = 3, 6
 DIRS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -278,7 +278,7 @@ def main():
     print(f"  words/board: min {min(wc)} max {max(wc)} avg {sum(wc)/len(wc):.1f}")
     print(f"  word-length mix: {dict(sorted(collections.Counter(ln).items()))}")
     print(f"  snakiness/board: avg {sum(snk)/len(snk):.1f} (higher = more S-like)")
-    print("  all boards verified: tile the 6x6 + valid real words")
+    print("  all boards verified: tile the 5x5 + valid real words")
     for b in boards[:args.preview]:
         print(f"\n  {b.get('date','(fallback)')}  "
               f"{[wd['text'] for wd in b['words']]}")

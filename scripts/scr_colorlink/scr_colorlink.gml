@@ -38,7 +38,7 @@ function ph_load_colorlinks() {
     if (variable_global_exists("ph_colorlink_cache")) {
         return global.ph_colorlink_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_colorlink.json";
+    var _path = PH_ASSETS_PATH + "puzzles_colorlink.json";
     if (!file_exists(_path)) {
         global.ph_colorlink_cache = undefined;
         return undefined;

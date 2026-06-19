@@ -1,6 +1,31 @@
 function ph_load_fonts() {
-    var _lilita = working_directory + "fonts/Lilita_One/";
-    var _nunito = working_directory + "fonts/Nunito/static/";
+    if (os_browser != browser_not_a_browser) {
+        // HTML5: use standard clean sans-serif system fonts directly. This avoids GameMaker's
+        // dynamic font_add polling engine which causes infinite loops and freezes in browsers.
+        global.fnt_disp_xxl = -1;
+        global.fnt_disp_xl  = -1;
+        global.fnt_disp_xlg = -1;
+        global.fnt_disp_lg  = -1;
+        global.fnt_disp_md  = -1;
+        global.fnt_disp_sm  = -1;
+        global.fnt_disp_xs  = -1;
+
+        global.fnt_body_reg  = -1;
+        global.fnt_body_semi = -1;
+        global.fnt_tip       = -1;
+        global.fnt_btn       = -1;
+        global.fnt_body_lg  = -1;
+        global.fnt_body_md  = -1;
+        global.fnt_body_sm  = -1;
+        global.fnt_body_xs  = -1;
+        global.fnt_num_md   = -1;
+        global.fnt_num_reg  = -1;
+        global.fnt_num_xl   = -1;
+        return;
+    }
+
+    var _lilita = PH_ASSETS_PATH + "fonts/Lilita_One/";
+    var _nunito = PH_ASSETS_PATH + "fonts/Nunito/static/";
 
     // Lilita One — display headings
     global.fnt_disp_xxl = font_add(_lilita+"LilitaOne-Regular.ttf", 156, false,false,32,127);

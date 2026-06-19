@@ -2,7 +2,7 @@
 // Wordle puzzle logic (pure functions, ph_wordle_ prefix). No UI, no save struct
 // access here — the controller (Phase 2) and save layer (Phase 3) call into this.
 //
-// Data files (datafiles/, copied to working_directory at runtime):
+// Data files (datafiles/, copied to PH_ASSETS_PATH at runtime):
 //   puzzles_wordle.json : array of { "date"?: "YYYY-MM-DD", "answer": "<6 letters>" }
 //   wordle_allowed.json : flat array of valid uppercase 6-letter guess strings
 //
@@ -25,7 +25,7 @@ function ph_load_wordles() {
     if (variable_global_exists("ph_wordle_cache")) {
         return global.ph_wordle_cache;   // may be undefined sentinel (file missing)
     }
-    var _path = working_directory + "puzzles_wordle.json";
+    var _path = PH_ASSETS_PATH + "puzzles_wordle.json";
     if (!file_exists(_path)) {
         global.ph_wordle_cache = undefined;
         return undefined;
@@ -44,7 +44,7 @@ function ph_load_wordle_allowed() {
         return global.ph_wordle_allowed;
     }
     var _map = {};
-    var _path = working_directory + "wordle_allowed.json";
+    var _path = PH_ASSETS_PATH + "wordle_allowed.json";
     if (file_exists(_path)) {
         var _buf = buffer_load(_path);
         var _str = buffer_read(_buf, buffer_string);

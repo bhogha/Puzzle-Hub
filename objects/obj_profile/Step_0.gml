@@ -1,8 +1,26 @@
-// ── Profile — Step (input + scroll) ───────────────────────────────────────────
+// ── Event Hub — Step (input + scroll) ─────────────────────────────────────────
+// Hit-tests read prof_metrics() (topbar_cy / list_top / list_bot) + the geometry
+// constants in Create, so they stay aligned with the redesigned Draw.
 
 // Per-frame timers (tick regardless of input lock).
 if (toast_timer > 0) toast_timer--;
-if (starfly_active) { starfly_t++; if (starfly_t >= STARFLY_DUR) starfly_active = false; }
+
+// ── Claim celebration state machine — phases run back-to-back ──────────────────
+// Each phase advances claim_t; when it elapses we step to the next phase. The
+// level-star "absorb" wobble (levelstar_t) is triggered as the flying stars land.
+if (claim_phase == 1) {                                  // STARFLY → collision → checkmark
+    claim_t++;
+    // The first copy arrives at SF_GATHER+SF_ORBIT+SF_TRAVEL; the level ★ opens its
+    // arms LEAD frames before that, then holds through the stream + settles after the
+    // last. The tile's checkmark takes the spot when the last copy peels off (Draw).
+    if (claim_t == SF_GATHER + SF_ORBIT + SF_TRAVEL - LEVELSTAR_LEAD) levelstar_t = 0;
+    // Phase ends after the LAST copy has landed and the ★ has settled → REORDER.
+    if (claim_t >= SF_GATHER + SF_ORBIT + (STARFLY_N-1)*SF_RELGAP + SF_TRAVEL + LEVELSTAR_TAIL + 4) { claim_phase = 2; claim_t = 0; }
+} else if (claim_phase == 2) {                            // REORDER (bounce + slide)
+    claim_t++;
+    if (claim_t >= REORDER_DUR) { claim_phase = 0; claim_t = 0; claim_mi = -1; }
+}
+if (levelstar_t >= 0) { levelstar_t++; if (levelstar_t >= LEVELSTAR_LEAD + (STARFLY_N-1)*SF_RELGAP + LEVELSTAR_TAIL) levelstar_t = -1; }
 if (pending_hub_timer > 0) {
     pending_hub_timer--;
     if (pending_hub_timer == 0) { global.input_locked_until = current_time + 300; room_goto(rm_hub); exit; }
@@ -76,7 +94,8 @@ if (device_mouse_check_button_released(0, mb_left)) {
         }
 
         // 4) CLAIM on a claimable card (iterate the same sorted order as Draw).
-        if (_ty > M.list_top && _ty < M.list_bot) {
+        // Ignore taps while a claim celebration is playing so it finishes cleanly.
+        if (claim_phase == 0 && _ty > M.list_top && _ty < M.list_bot) {
             var _order = prof_sorted_indices();
             for (var _p = 0; _p < array_length(_order); _p++) {
                 var _t = prof_card_top(_p, M.list_top);
@@ -88,9 +107,15 @@ if (device_mouse_check_button_released(0, mb_left)) {
                         var _r = ph_mission_claim(global.save, _m);
                         if (_r.ok) {
                             if (_r.levels_gained > 0) { ph_win_route(rm_profile, global.selected_date_key); exit; }
-                            // Stars fly from this tile's reward ★ up to the level ★.
-                            starfly_active = true; starfly_t = 0;
-                            starfly_src_x  = REW_CX; starfly_src_y = _t + CARD_H/2;
+                            // Freeze every card's pre-claim slot so the list holds
+                            // still through STARFLY/CHECKPOP; REORDER lerps from here.
+                            slot_old = array_create(array_length(_ms), 0);
+                            for (var _q = 0; _q < array_length(_order); _q++) slot_old[_order[_q]] = _q;
+                            // Kick off the sequenced celebration at phase 1 (STARFLY).
+                            claim_mi      = _order[_p];
+                            claim_phase   = 1;
+                            claim_t       = 0;
+                            levelstar_t   = -1;
                         }
                         exit;
                     }

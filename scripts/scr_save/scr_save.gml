@@ -1,5 +1,5 @@
 function ph_save_load() {
-    var _path = working_directory + PH_SAVE_FILE;
+    var _path = PH_ASSETS_PATH + PH_SAVE_FILE;
     if (file_exists(_path)) {
         var _buf = buffer_load(_path);
         var _str = buffer_read(_buf, buffer_string);
@@ -16,6 +16,11 @@ function ph_save_load() {
             if (!variable_struct_exists(_data, "timers")) _data.timers = {};
             if (!variable_struct_exists(_data, "version")) _data.version = 1;
             if (!variable_struct_exists(_data, "created")) _data.created = ph_today_key();  // "playing since"
+            if (!variable_struct_exists(_data, "notif_requested")) _data.notif_requested = false;  // asked for notif permission yet?
+            if (!variable_struct_exists(_data, "session_count")) _data.session_count = 0;          // app launches so far (Daily Spin unlock gate)
+            if (!variable_struct_exists(_data, "spin_claimed_date")) _data.spin_claimed_date = ""; // last date_key the Daily Spin was claimed
+            if (!variable_struct_exists(_data, "spin_claimed_dt")) _data.spin_claimed_dt = 0;       // last claim wall-clock datetime (for PH_SPIN_TEST_COOLDOWN_MINS)
+            if (!variable_struct_exists(_data, "tutorial_done")) _data.tutorial_done = false;      // first-run soft onboarding (tile slide-in + finger) seen? set true on first puzzle open; cleared by reset
             ph_update_streak(_data);
             // Missions: ensure a weekly set exists, then flip to "finished" if the
             // timer expired (or it's all done) while the player was away.
@@ -35,6 +40,11 @@ function ph_save_load() {
         streak:             0,
         timers:             {},
         created:            ph_today_key(),
+        notif_requested:    false,
+        session_count:      0,
+        spin_claimed_date:  "",
+        spin_claimed_dt:    0,
+        tutorial_done:      false,
     };
     ph_week_init(_fresh);   // seed the hand-authored Week 1 mission set
     return _fresh;
@@ -44,7 +54,7 @@ function ph_save_write(_data) {
     var _str = json_stringify(_data);
     var _buf = buffer_create(1024, buffer_grow, 1);
     buffer_write(_buf, buffer_string, _str);
-    buffer_save(_buf, working_directory + PH_SAVE_FILE);
+    buffer_save(_buf, PH_ASSETS_PATH + PH_SAVE_FILE);
     buffer_delete(_buf);
 }
 
@@ -52,7 +62,7 @@ function ph_save_write(_data) {
 /// struct (same defaults as a brand-new install). Callers should assign the
 /// result to `global.save`. Used by the Profile-screen triple-tap easter egg.
 function ph_save_reset() {
-    var _path = working_directory + PH_SAVE_FILE;
+    var _path = PH_ASSETS_PATH + PH_SAVE_FILE;
     if (file_exists(_path)) file_delete(_path);
     var _fresh = {
         version:            1,
@@ -64,6 +74,11 @@ function ph_save_reset() {
         streak:             0,
         timers:             {},
         created:            ph_today_key(),
+        notif_requested:    false,
+        session_count:      0,
+        spin_claimed_date:  "",
+        spin_claimed_dt:    0,
+        tutorial_done:      false,   // replay the soft onboarding after a progress reset
     };
     ph_week_init(_fresh);   // fresh Week 1 after a reset
     return _fresh;
@@ -144,7 +159,9 @@ function ph_update_streak(_save) {
         _current_dt = ph_date_add_days(_dt, -1);
     }
     
-    while (true) {
+    var _guard = 0;
+    while (_guard < 1000) {
+        _guard++;
         var _key = ph_date_key(_current_dt);
         if (ph_solved_count_on(_save, _key) > 0) {
             _streak++;
@@ -339,10 +356,12 @@ function ph_ladder_mark_done(_save, _date_key) {
 
 /// Persist in-progress play state for resume.
 ///   _step  : number of words already found (0..count). current word derives from it.
-///   _hinted: step index with an active hint highlight, or -1 if none.
-function ph_ladder_save_state(_save, _date_key, _step, _hinted) {
+///   _hinted: tile index with an active hint highlight, or -1 if none.
+///   _hint_lvl: how many hints used on the CURRENT rung (0=none, 1=tile shown,
+///              2=keyboard letter also shown). Recomputed letter on resume.
+function ph_ladder_save_state(_save, _date_key, _step, _hinted, _hint_lvl = 0) {
     if (!variable_struct_exists(_save, "ladder_state")) _save.ladder_state = {};
-    _save.ladder_state[$ _date_key] = { step: _step, hinted: _hinted };
+    _save.ladder_state[$ _date_key] = { step: _step, hinted: _hinted, hint_lvl: _hint_lvl };
 }
 
 /// Read a previously-saved Ladder state struct, or undefined if none stored.

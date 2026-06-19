@@ -59,6 +59,17 @@
 #macro PH_COL_AMBER_DEEP  make_color_rgb(205,150, 40)
 #macro PH_COL_AMBER_SOFT  make_color_rgb(255,229,168)   // #ffe5a8 hint highlight
 #macro PH_COL_LADDER_BAD  make_color_rgb(235, 90, 90)   // #eb5a5a wrong flash
+// Colordoku (Queens / Meowdoku) accent: bright teal queen gem / title / win.
+// Deep variant is a readable teal for titles & text on light backgrounds.
+#macro PH_COL_BRTEAL      make_color_rgb( 90,242,188)   // #5af2bc accent gem
+#macro PH_COL_BRTEAL_DEEP make_color_rgb( 22,150,118)   // readable deep teal
+
+// ── Assets Path ───────────────────────────────────────────────────────────────
+// On HTML5, relative asset paths are automatically resolved inside the "html5game/"
+// folder on the server by the runner. Prepending working_directory (which is "html5game/")
+// would double the prefix and cause 404 errors (e.g., "html5game/html5game/fonts/...").
+// On other platforms, we prepend working_directory for correct bundle sandboxing.
+#macro PH_ASSETS_PATH     ((os_browser != browser_not_a_browser) ? "" : working_directory)
 
 // ── Canvas ────────────────────────────────────────────────────────────────────
 // PH_W is fixed. PH_H is set at runtime in obj_persistent to match the device's
@@ -150,6 +161,32 @@
 #macro PH_ARROWS_PENALTY_SECS  5   // time added on a blocked tap (no loss state — only time is lost)
 #macro PH_ARROWS_MONO          true                       // single-ink ribbons (harder: player must trace paths); false = rainbow palette
 #macro PH_ARROWS_INK           make_color_rgb(26,30,54)   // mono ribbon colour (deep navy, like the reference)
+
+// ── Ladder ────────────────────────────────────────────────────────────────────
+#macro PH_LADDER_PENALTY_SECS  5   // time added on a wrong guess (no loss state — only time is lost)
+
+// ── Daily Spin ────────────────────────────────────────────────────────────────
+// Free once-per-day prize wheel shown on the hub to drive D1+ retention. Unlocks
+// on the player's PH_SPIN_UNLOCK_SESSION-th app launch (so brand-new players see
+// it on their *second* session), then offers one free spin per calendar day.
+// Six equal slices, prize picked uniformly at random; the player may double the
+// coins by watching a (placeholder) rewarded video. Reward is COINS only for now;
+// a consecutive-day progression bump is planned later (see GDD §Daily Spin).
+#macro PH_SPIN_UNLOCK_SESSION 2     // first app session on which the wheel appears
+#macro PH_SPIN_SLICES         6     // wedges on the wheel (matches ph_spin_prizes length)
+#macro PH_SPIN_SPIN_SECS      2.6   // wheel spin duration (seconds) before it settles
+#macro PH_SPIN_FULL_TURNS     5     // extra full rotations before landing on the prize
+// ⚠️ TEST MODE: when > 0 the spin becomes available again this many MINUTES after a
+// claim (instead of once per calendar day) so the returning-player flow can be
+// tested without waiting a day. SET TO 0 BEFORE SHIPPING to restore daily behaviour.
+#macro PH_SPIN_TEST_COOLDOWN_MINS 10
+
+/// The six coin prizes, one per wheel slice (clockwise from the slice under the
+/// pointer). Picked uniformly. Keep length == PH_SPIN_SLICES. Mirror any change
+/// in GDD.md. Average ≈ 68 coins/spin.
+function ph_spin_prizes() {
+    return [10, 25, 50, 75, 100, 150];
+}
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"
@@ -271,6 +308,16 @@ function ph_game_cards() {
         text_col: PH_COL_AMBER_DEEP,
         btn_type: "play_light",
     });
+    array_push(_cards, {
+        name:     "COLORDOKU",
+        subtitle: "One queen per colour, row & column",
+        room:     "rm_colordoku",
+        locked:   false,
+        card_spr: global.spr_card_brightteal,
+        icon_spr: global.spr_game_colordoku,
+        text_col: PH_COL_BRTEAL_DEEP,
+        btn_type: "play_light",
+    });
     return _cards;
 }
 
@@ -291,6 +338,7 @@ function ph_game_tip(_key) {
         case "wordbend":  return "Find words using every letter on the board";
         case "arrows":    return "Guide arrows out without causing any collisions";
         case "ladder":    return "Change one letter at a time";
+        case "colordoku": return "Place one queen per colour, row and column";
         default:         return "";
     }
 }

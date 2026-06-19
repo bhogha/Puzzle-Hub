@@ -65,28 +65,42 @@ for (var _i = 0; _i < NARROWS; _i++) {
     // The bumped arrow is drawn as a snake below (so it follows its path); skip here.
     if (!alive[_i] || _i == launching || _i == bump_idx) continue;
 
-    // The blocker flashes red while the blocked arrow glides at it.
-    var _ov = (bump_idx != -1 && _i == blocker_idx) ? _block_red : -1;
-
-    // Hint glow — pulsing white halo behind the highlighted safe arrow.
-    if (_i == ar_hint_idx && ar_hint_t > 0) {
-        var _pulse = 0.55 + 0.45 * sin(current_time / 110);
-        ar_draw_one(_i, grid_x, grid_y, CELL, RIBBON_W * 1.7, 0, 0, 0.5 * _pulse, c_white);
+    // Hinted arrows are recoloured GREEN permanently so the safe move is easy to
+    // find. A soft static halo behind them makes them read even on a busy board.
+    var _ov = -1;
+    if (ar_hinted[_i]) {
+        _ov = PH_COL_GREEN;
+        ar_draw_one(_i, grid_x, grid_y, CELL, RIBBON_W * 1.7, 0, 0, 0.28, PH_COL_GREEN);
     }
+    // The blocker flashes red while the blocked arrow glides at it (overrides green).
+    if (bump_idx != -1 && _i == blocker_idx) _ov = _block_red;
 
     ar_draw_one(_i, grid_x, grid_y, CELL, RIBBON_W, 0, 0, 1, _ov);
 }
 
-// Launching arrow — body glides head-first along its smoothed trail, off-board.
+// Launching arrow — 3-phase juice: recoil (wind-up) → accelerate off-board → exit
+// flash. `_launch_hs` (head arc-length) is stashed for the unclipped flash below.
+var _launch_hs = -1;
 if (launching != -1) {
-    var _hs  = lerp(launch_head_s0, launch_head_s1, power(launch_t, 1.4));
+    if (launch_t < LAUNCH_WIND_FRAC) {
+        // Anticipation: the arrow recoils into itself, gathering energy before firing.
+        var _wp = launch_t / LAUNCH_WIND_FRAC;
+        _launch_hs = launch_head_s0 - LAUNCH_COIL*CELL * ph_ease_out(_wp);
+    } else {
+        // Main action: fire off the board, ACCELERATING the whole way out.
+        var _ap = (launch_t - LAUNCH_WIND_FRAC) / (1 - LAUNCH_WIND_FRAC);
+        _launch_hs = lerp(launch_head_s0 - LAUNCH_COIL*CELL, launch_head_s1, ph_ease_in_cubic(_ap));
+    }
+    // Motion smear — thin the ribbon as it speeds up (follow-through energy).
+    var _spd = (launch_t < LAUNCH_WIND_FRAC) ? 0 : ph_ease_in_cubic((launch_t - LAUNCH_WIND_FRAC)/(1 - LAUNCH_WIND_FRAC));
+    var _lrw = RIBBON_W * (1 - LAUNCH_STRETCH*_spd);
     var _cnt = max(2, ceil(launch_body_len / (CELL * 0.16)));   // dense samples → smooth body
     var _pts = array_create(_cnt + 1);
     for (var _j = 0; _j <= _cnt; _j++) {
-        _pts[_j] = ar_path_at(_hs - launch_body_len * (_j / _cnt));   // [0]=head … [cnt]=tail
+        _pts[_j] = ar_path_at(_launch_hs - launch_body_len * (_j / _cnt));   // [0]=head … [cnt]=tail
     }
     draw_set_color(arrow_col[launching]);
-    ar_stroke(_pts, RIBBON_W);
+    ar_stroke(_pts, _lrw);
     ar_arrowhead(_pts[0].x, _pts[0].y, launch_dir[1], launch_dir[0], CELL);
 }
 
@@ -109,6 +123,23 @@ if (bump_idx != -1) {
 }
 
 ph_scissor_reset();
+
+// Launch exit flash (reaction) — a quick additive glow + bright core punches the
+// spot where the tip whooshed off the board edge. Unclipped + on top, fading as the
+// arrow clears. Fires the instant the head crosses the edge arc-length.
+if (launching != -1 && _launch_hs > launch_edge_s) {
+    var _ff = clamp((_launch_hs - launch_edge_s) / (CELL * LAUNCH_FLASH_CELLS), 0, 1);
+    var _fa = 1 - _ff;
+    gpu_set_blendmode(bm_add);
+    draw_set_color(arrow_col[launching]);
+    draw_set_alpha(_fa * 0.85);
+    draw_circle(launch_exit_x, launch_exit_y, CELL*(0.30 + 0.55*_ff), false);   // coloured glow
+    draw_set_color(c_white);
+    draw_set_alpha(_fa * 0.60);
+    draw_circle(launch_exit_x, launch_exit_y, CELL*(0.12 + 0.30*_ff), false);   // bright core
+    draw_set_alpha(1);
+    gpu_set_blendmode(bm_normal);
+}
 
 // Floating "+5s" penalty label near the blocked tap.
 if (float_t > 0) {

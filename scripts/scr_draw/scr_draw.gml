@@ -244,10 +244,41 @@ function ph_safe_top()    { return global.safe_top_gui    + PH_PAD_TOP; }
 function ph_safe_bottom() { return global.safe_bottom_gui + PH_PAD_BOTTOM; }
 
 // ── Easing ────────────────────────────────────────────────────────────────────
-function ph_ease_out(_t)  { return 1 - (1-_t)*(1-_t); }
+function ph_ease_out(_t)  { return 1 - (1-_t)*(1-_t); }      // quad decel
+function ph_ease_in(_t)   { return _t*_t; }                  // quad accel (from rest)
+function ph_ease_in_cubic(_t)  { return _t*_t*_t; }              // strong accel
+function ph_ease_out_cubic(_t) { return 1 - power(1-_t, 3); }     // snappier decel
+function ph_ease_in_out(_t) {                                     // cubic accel → decel
+    return (_t < 0.5) ? 4*_t*_t*_t : 1 - power(-2*_t+2, 3)/2;
+}
 function ph_ease_back(_t) {
     var _c1 = 1.70158; var _c3 = _c1+1;
     return 1 + _c3*power(_t-1,3) + _c1*power(_t-1,2);
+}
+/// Decelerating overshoot with a tunable strength (_ov; ~1.7 = subtle, ~2.5 = poppy).
+function ph_ease_out_back(_t, _ov) {
+    var _c1 = _ov; var _c3 = _c1+1;
+    return 1 + _c3*power(_t-1,3) + _c1*power(_t-1,2);
+}
+
+/// ── Screen transition (iris cover → reveal) ──────────────────────────────────
+/// State lives in globals; obj_persistent advances it (Step) and draws the overlay
+/// (Draw GUI) so it spans BOTH the old and new room. Call this to kick it off from
+/// a tap: the iris closes over the screen in `_col`, the room swaps under full
+/// cover, then the iris opens to reveal the new room. _ox/_oy = origin (tap point).
+function ph_trans_begin(_ox, _oy, _col, _room) {
+    global.trans_active = true;
+    global.trans_phase  = 1;     // 1 = cover (iris in), 2 = reveal (iris out)
+    global.trans_t      = 0;
+    global.trans_ox     = _ox;
+    global.trans_oy     = _oy;
+    global.trans_col    = _col;
+    global.trans_room   = _room;
+}
+/// Radius that fully covers the screen from an origin (farthest corner + margin).
+function ph_trans_radius_max(_ox, _oy) {
+    return max(point_distance(_ox,_oy,0,0),   point_distance(_ox,_oy,PH_W,0),
+               point_distance(_ox,_oy,0,PH_H), point_distance(_ox,_oy,PH_W,PH_H)) + 6;
 }
 
 /// Set a scissor rectangle in GUI coordinate space.
@@ -296,7 +327,7 @@ function ph_draw_nav(_active_tab) {
     var _tcy_base = _nav_top + _usable_h / 2 - 14;
 
     // 3D icon sprites (full colour — drawn with c_white to preserve colours)
-    var _labels  = ["Shop", "Games", "Profile"];
+    var _labels  = ["Shop", "Games", "Events"];
     var _sprites = [global.spr_shop3d, global.spr_puzzle, global.spr_position];
     var _icon_s  = 110 / 512;   // ~110px icon size (bigger than the old 80px)
     var _icon_active_s = 150 / 512;  // selected tab pops bigger
@@ -394,13 +425,62 @@ function ph_draw_dot_bg(_col) {
 // right of the label, and an optional rewarded-video TV badge in the top-right
 // corner (the DOUBLE variant). _cy is the vertical CENTRE; _bh is the half-height.
 
+/// Image-button background (blue / green / pink / red bg sprites) drawn as a
+/// horizontal 3-slice so the baked rounded corners + drop shadow keep their shape
+/// at any width. (_x1,_y1)-(_x2,_y2) is the desired BODY rectangle (the coloured
+/// area); the baked drop shadow extends a few px below it for the 3-D look.
+/// All button-bg sprites share one source frame (loaded origin top-left, 230px
+/// tall): a 20px transparent margin, a 149px-tall body, then a ~10px drop shadow.
+function ph_draw_btn_bg(_spr, _x1, _y1, _x2, _y2) {
+    var _sw  = sprite_get_width(_spr);
+    var _sh  = sprite_get_height(_spr);
+    var _pad     = 20;     // transparent margin (top / left / right) in source px
+    var _body_h  = 149;    // coloured body height in source px
+    var _cap_src = 95;     // source cap width — must fully cover the rounded corner
+    var _h   = _y2 - _y1;
+    var _sy  = _h / _body_h;          // uniform scale → round caps stay circular
+    var _dy  = _y1 - _pad * _sy;      // sprite top so the body-top lands on _y1
+    var _dl  = _x1 - _pad * _sy;      // sprite left edge (body-left maps to _x1)
+    var _dr  = _x2 + _pad * _sy;      // sprite right edge (body-right maps to _x2)
+    var _cap_dst = _cap_src * _sy;
+    var _maxcap  = (_dr - _dl) / 2;
+    if (_cap_dst > _maxcap) _cap_dst = _maxcap;   // clamp for very narrow buttons
+    var _cap_xs  = _cap_dst / _cap_src;
+    // Left cap
+    draw_sprite_part_ext(_spr, 0, 0, 0, _cap_src, _sh, _dl, _dy, _cap_xs, _sy, c_white, 1);
+    // Right cap
+    draw_sprite_part_ext(_spr, 0, _sw - _cap_src, 0, _cap_src, _sh, _dr - _cap_dst, _dy, _cap_xs, _sy, c_white, 1);
+    // Stretched flat middle
+    var _mid_dst_w = (_dr - _dl) - 2 * _cap_dst;
+    if (_mid_dst_w > 0) {
+        var _mid_src_w = _sw - 2 * _cap_src;
+        draw_sprite_part_ext(_spr, 0, _cap_src, 0, _mid_src_w, _sh,
+                             _dl + _cap_dst, _dy, _mid_dst_w / _mid_src_w, _sy, c_white, 1);
+    }
+}
+
+/// Map a button BODY colour to its image-background sprite (loaded in
+/// obj_persistent). Returns noone when no art matches (caller falls back to the
+/// primitive chip) — keeps every existing call site working unchanged while
+/// routing the standard blue / green / share-pink / give-up-red buttons to art.
+function ph_btn_sprite_for(_body) {
+    if (!variable_global_exists("spr_btn_blue") || global.spr_btn_blue < 0) return noone;
+    if (_body == PH_COL_GREEN)             return global.spr_btn_green;
+    if (_body == PH_COL_PINK)              return global.spr_btn_pink;
+    if (_body == make_color_rgb(235,90,90)) return global.spr_btn_red;   // GIVE UP
+    if (_body == PH_COL_BLUE)              return global.spr_btn_blue;
+    return noone;                          // unknown colour → primitive chip
+}
+
 /// Reward button: label + value icon (+ optional TV badge). _icon_spr may be
 /// noone for a label-only button. _body/_edge override the colour (default blue);
 /// pass PH_COL_GREEN / PH_COL_GREEN_DEEP for the green hint / lost-aversion buttons.
 function ph_draw_reward_btn(_l, _cy, _r, _bh, _label, _icon_spr, _tv, _body, _edge) {
     if (is_undefined(_body)) _body = PH_COL_BLUE;
     if (is_undefined(_edge)) _edge = PH_COL_BLUE_DEEP;
-    ph_draw_chip(_l, _cy - _bh, _r, _cy + _bh, 30, _body, _edge, 8);
+    var _spr = ph_btn_sprite_for(_body);
+    if (_spr != noone) ph_draw_btn_bg(_spr, _l, _cy - _bh, _r, _cy + _bh);
+    else ph_draw_chip(_l, _cy - _bh, _r, _cy + _bh, 30, _body, _edge, 8);
     var _has = (_icon_spr != noone && _icon_spr >= 0);
     var _cx  = (_l + _r) / 2;
     draw_set_font(global.fnt_btn);
@@ -420,7 +500,9 @@ function ph_draw_reward_btn(_l, _cy, _r, _bh, _label, _icon_spr, _tv, _body, _ed
 function ph_draw_nav_btn(_l, _cy, _r, _bh, _label, _icon_spr, _accent, _accent_deep) {
     var _body = (_accent == noone)      ? PH_COL_BLUE      : _accent;
     var _edge = (_accent_deep == noone) ? PH_COL_BLUE_DEEP : _accent_deep;
-    ph_draw_chip(_l, _cy - _bh, _r, _cy + _bh, 30, _body, _edge, 8);
+    var _spr = ph_btn_sprite_for(_body);
+    if (_spr != noone) ph_draw_btn_bg(_spr, _l, _cy - _bh, _r, _cy + _bh);
+    else ph_draw_chip(_l, _cy - _bh, _r, _cy + _bh, 30, _body, _edge, 8);
     var _has = (_icon_spr != noone && _icon_spr >= 0);
     draw_set_font(global.fnt_btn);
     var _lw  = string_width(_label);

@@ -1,6 +1,13 @@
 // ── Date roll-over (hub left open past midnight) ──────────────────────────────
 if (ph_today_key() != today_key) hub_refresh_dates();
 
+// ── Tile press/pop feedback timers (advance regardless of input lock) ─────────
+if (card_press_idx != -1 && card_press_t < 1) card_press_t = min(1, card_press_t + 1/CARD_PRESS_FR);
+if (card_pop_idx != -1) {
+    card_pop_t += 1/CARD_POP_FR;
+    if (card_pop_t >= 1) { card_pop_idx = -1; card_pop_t = 0; }
+}
+
 // ── Coin-flow reward animation ────────────────────────────────────────────────
 // Advances independently of the input lock so it still plays during the brief
 // post-room-transition lock. Coins ride an eased arc into the pill; once the
@@ -29,6 +36,20 @@ if (coinflow_active) {
     if (_all_done && coinflow_label_t >= 1) coinflow_active = false;
 }
 
+// ── Daily Spin modal ──────────────────────────────────────────────────────────
+// Animates regardless of the input lock. While open it captures ALL input
+// (must-spin, no close), so the rest of the hub is suspended until claimed.
+ph_spin_tick(spin);
+if (ph_spin_is_open(spin)) {
+    if (current_time >= global.input_locked_until) {
+        var _smx = device_mouse_x_to_gui(0);
+        var _smy = device_mouse_y_to_gui(0);
+        var _sr  = ph_spin_input(spin, _smx, _smy);
+        if (_sr == "claimed") hub_start_coinflow(spin.grant_amount);
+    }
+    exit;
+}
+
 // ── Input lock ────────────────────────────────────────────────────────────────
 if (current_time < global.input_locked_until) exit;
 
@@ -49,12 +70,38 @@ var _eff_strip_h  = LAYOUT.strip_h * lerp(1.0, 0.50, cal_anim_t);
 // is rendered (closed: below the strip slot; open: just below the month grid).
 var _grid_rows    = ceil(array_length(month_days) / 7);
 var _grid_bottom  = LAYOUT.calbar_y + LAYOUT.calbar_h + LAYOUT.cal_grid_off + _grid_rows * LAYOUT.cal_cell_h;
-var _post_cal     = lerp(LAYOUT.calbar_y + _cal_h + _eff_strip_h, _grid_bottom + 40, cal_anim_t);
+// Open layout reserves room for the month-nav slider bar below the grid.
+var _post_cal_open = _grid_bottom + LAYOUT.cal_monthnav_gap + LAYOUT.cal_monthnav_h + 28;
+var _post_cal     = lerp(LAYOUT.calbar_y + _cal_h + _eff_strip_h, _post_cal_open, cal_anim_t);
 var _body_top     = _post_cal + LAYOUT.section_h;
 var _body_bot     = PH_H - LAYOUT.nav_h;
 var _view_h       = _body_bot - _body_top;
 var _total_h      = array_length(cards) * (LAYOUT.card_h + LAYOUT.card_gap) - LAYOUT.card_gap;
 scroll_max        = max(0, _total_h - _view_h);
+
+// ── First-run soft onboarding (auto-scroll + finger; non-blocking) ────────────
+// The auto-scroll sweep itself (last game → first game) is driven at the very END
+// of Step so it overrides manual scroll while it plays. Here we only count the
+// settle delay and aim the soft finger at the top tile's PLAY pill once the sweep
+// has finished. Nothing captures input — the player can scroll/tap/explore freely
+// (the finger tracks the top tile and hides if it scrolls off-screen).
+if (intro_active && intro_t >= 1) {
+    intro_settle_t++;
+    if (intro_settle_t >= INTRO_FINGER_DELAY_FR) {
+        var _card0_y1 = _body_top - scroll_y;          // top tile (i = 0)
+        var _card0_y2 = _card0_y1 + LAYOUT.card_h;
+        // Only point while the top tile is actually visible in the list band.
+        if (_card0_y2 > _body_top + 30 && _card0_y1 < _body_bot - 30) {
+            var _csx        = (PH_W - 2*LAYOUT.card_pad_x) / 1430;
+            var _pill_right = LAYOUT.card_pad_x + 1380 * _csx;
+            var _pill_cx    = _pill_right - (350 * _csx) * 0.5;
+            ph_finger_point_at(finger, _pill_cx, (_card0_y1 + _card0_y2) * 0.5 + 6, 0);
+        } else {
+            ph_finger_hide(finger);
+        }
+    }
+}
+ph_finger_tick(finger);
 
 // ── Press start ───────────────────────────────────────────────────────────────
 if (device_mouse_check_button_pressed(0, mb_left)) {
@@ -65,6 +112,16 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
     mx_prev = _mx;
     my_prev = _my;
     scroll_vel = 0;
+
+    // Tile press feedback — which (unlocked, playable) card is under the finger.
+    card_press_idx = -1; card_press_t = 0;
+    if ((!intro_active || intro_t >= 1) && ph_point_in_rect(_mx,_my, 0,_body_top, PH_W,_body_bot)) {
+        for (var _pi = 0; _pi < array_length(cards); _pi++) {
+            var _pcy1 = _body_top + _pi*(LAYOUT.card_h + LAYOUT.card_gap) - scroll_y;
+            if (_my >= _pcy1 && _my < _pcy1 + LAYOUT.card_h
+                && !cards[_pi].locked && cards[_pi].room != "") { card_press_idx = _pi; break; }
+        }
+    }
 }
 
 // ── Held: drag to scroll ──────────────────────────────────────────────────────
@@ -75,6 +132,7 @@ if (device_mouse_check_button(0, mb_left)) {
     if (is_dragging) {
         scroll_y -= _dy;
         scroll_vel = _dy;   // fling continues drag direction (scroll_y -= scroll_vel)
+        card_press_idx = -1; // a scroll cancels the press feedback
     }
     mx_prev = _mx;
     my_prev = _my;
@@ -82,6 +140,9 @@ if (device_mouse_check_button(0, mb_left)) {
 
 // ── Release: fling + tap ──────────────────────────────────────────────────────
 if (device_mouse_check_button_released(0, mb_left)) {
+    // The press ends here → spring-pop the held card back (whether or not the tap
+    // lands on it; releasing off-card still springs it back).
+    if (card_press_idx != -1) { card_pop_idx = card_press_idx; card_pop_t = 0; card_press_idx = -1; }
     if (!is_dragging) {
         // ── TAP ──────────────────────────────────────────────────────────────
         var _tap_x = drag_start_x;
@@ -108,12 +169,23 @@ if (device_mouse_check_button_released(0, mb_left)) {
                              0, LAYOUT.calbar_y,
                              PH_W, LAYOUT.calbar_y + LAYOUT.calbar_h)) {
             cal_open = !cal_open;
+            hub_view_to_selected();   // re-anchor the viewed month to the selected day
             exit;
         }
 
-        // Month grid tap (when expanded) — checked BEFORE strip so taps inside the
-        // grid window don't fall through to the strip below.
+        // Month grid + month-nav tap (when expanded) — checked BEFORE strip so taps
+        // inside the calendar window don't fall through to the strip below.
         if (cal_open) {
+            // Month-nav slider bar (below the grid): left half = prev month, right
+            // half = next month. Stays open so the player can keep browsing.
+            var _mn_top = _grid_bottom + LAYOUT.cal_monthnav_gap;
+            var _mn_bot = _mn_top + LAYOUT.cal_monthnav_h;
+            if (ph_point_in_rect(_tap_x,_tap_y, 0,_mn_top, PH_W,_mn_bot)) {
+                if (_tap_x < PH_W/2) hub_month_step(-1);
+                else                 hub_month_step(1);   // self-caps at the current month
+                exit;
+            }
+
             var _grid_top  = LAYOUT.calbar_y + LAYOUT.calbar_h + LAYOUT.cal_grid_off;
             var _cell_w    = PH_W / 7;
             var _cell_h    = LAYOUT.cal_cell_h;
@@ -162,8 +234,10 @@ if (device_mouse_check_button_released(0, mb_left)) {
             }
         }
 
-        // Card tap
-        if (ph_point_in_rect(_tap_x,_tap_y, 0,_body_top, PH_W,_body_bot)) {
+        // Card tap — disabled only while the first-run tiles are still sliding in
+        // (the cards are moving; resume normal taps the instant they settle).
+        if ((!intro_active || intro_t >= 1)
+            && ph_point_in_rect(_tap_x,_tap_y, 0,_body_top, PH_W,_body_bot)) {
             for (var _i = 0; _i < array_length(cards); _i++) {
                 var _card = cards[_i];
                 var _cy1  = _body_top + _i*(LAYOUT.card_h + LAYOUT.card_gap) - scroll_y;
@@ -178,6 +252,14 @@ if (device_mouse_check_button_released(0, mb_left)) {
                         var _rm_idx = asset_get_index(_card.room);
                         if (_rm_idx >= 0) {
                             global.input_locked_until = current_time + 200;
+                            // First puzzle opened → first-run onboarding is complete;
+                            // the soft finger hint never shows again (until a reset).
+                            if (intro_active && !global.save.tutorial_done) {
+                                global.save.tutorial_done = true;
+                                ph_save_write(global.save);
+                                intro_active = false;
+                                ph_finger_hide(finger);
+                            }
                             // Flag review mode explicitly so each puzzle's Create_0 can rely on it
                             if (_card.name == "ANYGRAM") {
                                 global.anygram_review_mode =
@@ -239,7 +321,19 @@ if (device_mouse_check_button_released(0, mb_left)) {
                             } else {
                                 global.ladder_review_mode = false;
                             }
-                            room_goto(_rm_idx);
+                            if (_card.name == "COLORDOKU") {
+                                global.colordoku_review_mode =
+                                    ph_colordoku_is_done(global.save, global.selected_date_key);
+                            } else {
+                                global.colordoku_review_mode = false;
+                            }
+                            // Launch the iris transition from the tap point in the
+                            // card's accent colour. obj_persistent covers the screen,
+                            // swaps to _rm_idx under full cover, then reveals the game
+                            // (so we do NOT room_goto directly here). Input stays
+                            // locked for the whole transition.
+                            global.input_locked_until = current_time + 800;
+                            ph_trans_begin(_tap_x, _tap_y, _card.text_col, _rm_idx);
                         }
                     }
                     break;
@@ -255,3 +349,14 @@ if (!device_mouse_check_button(0, mb_left)) {
     scroll_y   -= scroll_vel;
 }
 scroll_y = clamp(scroll_y, 0, scroll_max);
+
+// ── First-run intro auto-scroll (overrides manual scroll while it plays) ──────
+// Sweeps the list from the last game (scroll_max, bottom) up to the first game
+// (0, top) with an ease-out, so it reads as the player flicking up through the
+// whole list. Runs LAST so it wins over the drag/fling above. See Create_0.
+if (intro_active && intro_t < 1) {
+    scroll_y   = scroll_max * (1 - ph_ease_out(intro_t));
+    scroll_vel = 0;
+    intro_t    = min(1, intro_t + 1/INTRO_SLIDE_FR);
+    if (intro_t >= 1) { intro_settle_t = 0; scroll_y = 0; }
+}

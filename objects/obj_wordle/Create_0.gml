@@ -50,6 +50,12 @@ toast_col   = PH_COL_GRAY;
 toast_timer = 0;
 TOAST_DUR   = 90;
 
+// Keyboard press feedback: the last-tapped key darkens for a few frames.
+// Tag = the letter char, or the key type ("del"/"send") for the action keys.
+key_press_tag = "";
+key_press_t   = 0;
+KEY_PRESS_DUR = 9;
+
 // Win flow
 win_phase    = 0;
 win_time_str = "0:00";

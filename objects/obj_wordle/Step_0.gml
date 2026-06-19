@@ -16,7 +16,8 @@ if (lose_phase != "none") {
     exit;
 }
 
-if (toast_timer > 0) toast_timer--;
+if (toast_timer > 0)  toast_timer--;
+if (key_press_t > 0)  key_press_t--;
 
 // Advance the shared hint-flow timers (modal slide / "-100" / video).
 ph_hint_tick(hint);
@@ -90,6 +91,10 @@ var _keys = wd_build_keys();
 for (var _i = 0; _i < array_length(_keys); _i++) {
     var _k = _keys[_i];
     if (!ph_point_in_rect(_mx, _my, _k.x1, _k.y1, _k.x2, _k.y2)) continue;
+
+    // Press feedback: this key darkens briefly (drawn in Draw_64).
+    key_press_tag = (_k.type == "letter") ? _k.ch : _k.type;
+    key_press_t   = KEY_PRESS_DUR;
 
     if (_k.type == "letter") {
         // Fill the leftmost empty slot.

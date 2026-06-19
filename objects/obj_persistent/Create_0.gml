@@ -75,8 +75,14 @@ show_debug_message("[safe-area] src=" + global.safe_src
 
 ph_load_fonts();
 global.save              = ph_save_load();
+// Count this app launch (once per session — obj_persistent lives the whole run).
+// Gates the Daily Spin: it appears from the PH_SPIN_UNLOCK_SESSION-th session on.
+global.save.session_count += 1;
+ph_save_write(global.save);
 global.selected_date_key = ph_today_key();
 global.input_locked_until = 0;
+// Re-arm the daily puzzle reminder if the player already opted in (iOS only).
+ph_notify_boot();
 // Queued level-up reward (set at puzzle completion, consumed by the Level-Up
 // screen in rm_win). { level, base_reward } when pending; undefined otherwise.
 global.pending_levelup   = undefined;
@@ -103,7 +109,7 @@ draw_set_circle_precision(64);
 gpu_set_texfilter(true);
 
 // Load icon sprites from datafiles (white strokes — tint at draw time, 256×256, origin centred)
-var _d = working_directory + "icons/";
+var _d = PH_ASSETS_PATH + "icons/";
 global.spr_icon_back    = sprite_add(_d + "spr_icon_back.png",    1, false, true, 128, 128);
 global.spr_icon_gear    = sprite_add(_d + "spr_icon_gear.png",    1, false, true, 128, 128);
 global.spr_icon_shuffle = sprite_add(_d + "spr_icon_shuffle.png", 1, false, true, 128, 128);
@@ -151,6 +157,11 @@ global.spr_card_skyblue = sprite_add(_d + "card_skyblue.png", 1, false, false, 7
 global.spr_card_lime    = sprite_add(_d + "card_lime.png",    1, false, false, 715, 225);   // Color Link (#c7e70f)
 global.spr_card_tangerine = sprite_add(_d + "card_tangerine.png", 1, false, false, 715, 225); // Word Bend (#ff5b38)
 global.spr_card_silver    = sprite_add(_d + "card_silver.png",    1, false, false, 715, 225);   // Arrows (#b8b9bd, 1430×450)
+global.spr_card_brightteal = sprite_add(_d + "card_brightteal.png", 1, false, false, 715, 225); // Colordoku (#5af2bc)
+
+// ── Event Hub mission card + claimed checkmark (Penpot "Events" assets) ────────
+global.spr_card_mission = sprite_add(_d + "card_mission.png", 1, false, false, 705, 195); // 1410×390, divider+reward col baked in, origin centred
+global.spr_checkmark    = sprite_add(_d + "Checkmark.png",    1, false, false,  97,  86); // 194×172 gold-outlined purple tick, origin centred
 
 // ── Game icons (512×512, origin centred) ──────────────────────────────────────
 global.spr_game_anygram  = sprite_add(_d + "game_anygram.png",  1, false, false, 256, 256);
@@ -170,6 +181,8 @@ global.spr_game_arrows = sprite_add(_d + "game_arrows.png", 1, false, false, 317
 if (global.spr_game_arrows < 0) global.spr_game_arrows = global.spr_game_mixup;
 global.spr_game_ladder = sprite_add(_d + "game_ladder.png", 1, false, false, 256, 256);   // Ladder (Word Ladder)
 if (global.spr_game_ladder < 0) global.spr_game_ladder = global.spr_game_wordle;
+global.spr_game_colordoku = sprite_add(_d + "game_colordoku.png", 1, false, false, 256, 256);   // Colordoku (Queens)
+if (global.spr_game_colordoku < 0) global.spr_game_colordoku = global.spr_game_sudoku;
 
 // ── Anygram tile (256×256, origin centred) ────────────────────────────────────
 global.spr_tile = sprite_add(_d + "tile_empty.png", 1, false, false, 128, 128);
@@ -200,6 +213,18 @@ global.spr_bg_pattern = sprite_add(_d + "BG Pattern.png", 1, false, false, 0, 0)
 // button (512×512, origin centred). Placeholder art until the ad SDK ships.
 global.spr_tv = sprite_add(_d + "retro tv icon.png", 1, false, false, 256, 256);
 
+// ── Image button backgrounds (origin top-left for the 3-slice in ph_draw_btn_bg) ─
+// One sprite per button colour; ph_draw_btn_bg slices it to any width so a single
+// source covers every button. All share the source frame (height 230: 20px margin,
+// 149px body, ~10px drop shadow). Routed by colour via ph_btn_sprite_for, so every
+// blue/green/pink/red reward + nav button across the app uses these automatically.
+global.spr_btn_blue  = sprite_add(_d + "blue_button_xlarge.png", 1, false, false, 0, 0); // CLAIM/DOUBLE/HOME/NEXT/YESTERDAY/CANCEL/COLLECT
+global.spr_btn_green = sprite_add(_d + "green_button_large.png", 1, false, false, 0, 0); // BUY / FREE (hint + Wordle lose)
+global.spr_btn_pink  = sprite_add(_d + "share_button.png",       1, false, false, 0, 0); // SHARE
+global.spr_btn_red   = sprite_add(_d + "giveup_button.png",      1, false, false, 0, 0); // GIVE UP
+// share_icon.png — white share glyph (100×100, origin centred) tinted on the SHARE button.
+global.spr_share_icon = sprite_add(_d + "share_icon.png", 1, false, true, 50, 50);
+
 // ── Hub date badge + progress-bar art ─────────────────────────────────────────
 // today_circle.png — solid yellow circle behind the "today/selected" date number
 //                    in the 7-day strip (124×124, origin centred).
@@ -222,3 +247,22 @@ global.spr_cal_day_today = sprite_add(_d + "calendar_day_bg_box_yellow.png", 1, 
 
 // ── Characters (origin centred) ───────────────────────────────────────────────
 global.spr_blinky = sprite_add(_d + "char_blinky.png", 1, false, false, 332, 350);
+
+// ── Onboarding tutorial finger pointer (origin centred) ───────────────────────
+// Used by scr_tutorial coachmarks to point at the element the player should tap.
+global.spr_finger = sprite_add(_d + "finger.png", 1, false, false, 153, 190);
+
+// ── Screen-transition state (iris cover → reveal) ─────────────────────────────
+// This persistent object spans every room, so it owns the transition: Step advances
+// it (and swaps the room under full cover), Draw GUI renders the iris on top. Kick
+// it off with ph_trans_begin(ox, oy, col, room). Drawn on top via a very low depth.
+depth = -100000;
+global.trans_active = false;
+global.trans_phase  = 0;          // 1 = cover (iris in), 2 = reveal (iris out)
+global.trans_t      = 0;          // frames elapsed in the current phase
+global.trans_ox     = PH_W/2;     // iris origin (tap point)
+global.trans_oy     = global.PH_H_dyn/2;
+global.trans_col    = c_white;    // cover colour (the tapped card's accent)
+global.trans_room   = -1;         // target room index, swapped to under full cover
+global.TRANS_COVER_FR  = 16;      // cover beat — iris ACCELERATES out to fill (ph_ease_in)
+global.TRANS_REVEAL_FR = 22;      // reveal beat — iris DECELERATES back to a point (ph_ease_out)

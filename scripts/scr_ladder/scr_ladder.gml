@@ -2,7 +2,7 @@
 // Ladder (Word Ladder) puzzle logic — pure functions, ph_ladder_ prefix. No UI
 // and no save-struct access here (the controller and scr_save own those).
 //
-// Data file (datafiles/, copied to working_directory at runtime):
+// Data file (datafiles/, copied to PH_ASSETS_PATH at runtime):
 //   puzzles_ladder.json : array of
 //     { "date"?: "YYYY-MM-DD", "length": N, "start": "<N letters>",
 //       "steps": [ { "word": "<N letters>", "clue": "..." } × 10 ] }
@@ -27,7 +27,7 @@ function ph_load_ladders() {
     if (variable_global_exists("ph_ladder_cache")) {
         return global.ph_ladder_cache;   // may be undefined (file missing)
     }
-    var _path = working_directory + "puzzles_ladder.json";
+    var _path = PH_ASSETS_PATH + "puzzles_ladder.json";
     if (!file_exists(_path)) {
         global.ph_ladder_cache = undefined;
         return undefined;

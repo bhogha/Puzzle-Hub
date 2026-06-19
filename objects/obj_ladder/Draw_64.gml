@@ -74,9 +74,19 @@ draw_set_alpha(1);
 var _keys = ld_build_keys();
 for (var _i = 0; _i < array_length(_keys); _i++) {
     var _k = _keys[_i];
-    draw_set_color(make_color_rgb(228,228,228));
+    var _kfill = make_color_rgb(228,228,228);
+    var _ktext = PH_COL_DARK;
+    // 2nd hint highlights the correct letter on the keyboard (amber, dark text).
+    if (hint_lvl >= 2 && hint_key != "" && _k.ch == hint_key) {
+        _kfill = PH_COL_AMBER;
+    }
+    // Press feedback: the last-tapped key darkens briefly.
+    if (key_press_t > 0 && _k.ch == key_press_ch) {
+        _kfill = merge_color(_kfill, c_black, 0.22);
+    }
+    draw_set_color(_kfill);
     draw_roundrect_ext(_k.x1, _k.y1, _k.x2, _k.y2, 16, 16, false);
-    ph_draw_text((_k.x1+_k.x2)/2, (_k.y1+_k.y2)/2, _k.ch, global.fnt_disp_md, PH_COL_DARK, fa_center, fa_middle);
+    ph_draw_text((_k.x1+_k.x2)/2, (_k.y1+_k.y2)/2, _k.ch, global.fnt_disp_md, _ktext, fa_center, fa_middle);
 }
 
 // ── Bottom bar: timer pill (left) · HINT pill (right) ─────────────────────────
@@ -86,7 +96,18 @@ var _t_str  = string(_e_s div 60) + ":" + (((_e_s mod 60) < 10) ? "0" : "") + st
 var _tp_l = 60, _tp_r = 60 + 210;
 ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_stopwatch, 0, _tp_l+30, _tool_y, 106/512, 106/512, 0, c_white, 1);
-ph_draw_text(_tp_l+78, _tool_y, _t_str, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+// Timer text flashes red right after a wrong-guess penalty.
+var _t_col = (pen_t > 0) ? PH_COL_LADDER_BAD : PH_COL_DARK;
+ph_draw_text(_tp_l+78, _tool_y, _t_str, global.fnt_body_md, _t_col, fa_left, fa_middle);
+// Floating "+5s" rising above the timer pill.
+if (pen_t > 0) {
+    var _pa = min(1, pen_t / 18);
+    var _py = (_tool_y - 50) - (PEN_DUR - pen_t) * 1.1;
+    draw_set_alpha(_pa);
+    ph_draw_text((_tp_l + _tp_r)/2, _py, "+" + string(PH_LADDER_PENALTY_SECS) + "s",
+                 global.fnt_body_md, PH_COL_LADDER_BAD, fa_center, fa_middle);
+    draw_set_alpha(1);
+}
 
 HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;

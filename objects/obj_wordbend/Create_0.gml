@@ -1,5 +1,5 @@
 // ── Word Bend — Create ────────────────────────────────────────────────────────
-// 4×4 … 6×6 letter board, completely filled. Every letter belongs to one hidden
+// 5×5 letter board, completely filled. Every letter belongs to one hidden
 // word whose cell-path tiles the board (orthogonal bends, no diagonals). Tap a
 // word's first letter and drag across the rest to find it. No bonus, no loss.
 // Tangerine accent; found words lock green.

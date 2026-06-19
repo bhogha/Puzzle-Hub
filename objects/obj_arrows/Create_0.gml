@@ -49,6 +49,14 @@ launch_arc      = [];     // cumulative arc-length per launch_path point
 launch_body_len = 0;      // snake body length along the path (px)
 launch_head_s0  = 0;      // head arc-length at launch start
 launch_head_s1  = 1;      // head arc-length when fully off-board
+launch_exit_x   = 0;      // board-edge point the tip crosses (exit-flash anchor)
+launch_exit_y   = 0;
+launch_edge_s   = 0;      // head arc-length when the tip reaches the board edge
+// Launch animation tuning — 3-phase juice (recoil wind-up → accelerate off → exit flash):
+LAUNCH_WIND_FRAC   = 0.26; // fraction of the launch spent on the recoil wind-up
+LAUNCH_COIL        = 0.5;  // recoil distance before firing (cells)
+LAUNCH_STRETCH     = 0.22; // ribbon thinning at top speed (motion smear)
+LAUNCH_FLASH_CELLS = 1.2;  // distance past the edge the exit flash expands/fades over (cells)
 
 // Blocked-tap feedback: the tapped arrow glides head-first ALONG ITS OWN SNAKE
 // PATH (same motion as a launch) up to the arrow that blocks it, then eases back
@@ -87,9 +95,9 @@ HINT_PILL_R = PH_W - 50;
 HINT_PILL_T = PH_H - 143 - global.safe_bottom_gui;
 HINT_PILL_B = PH_H - 77  - global.safe_bottom_gui;
 
-// Hint highlight (a safe arrow to play next; pulses for a few seconds).
-ar_hint_idx = -1;
-ar_hint_t   = 0;
+// Hint highlight: hinted arrows are recoloured GREEN permanently (until played),
+// so the player can always find the safe move. One bool per arrow; persisted.
+ar_hinted = array_create(NARROWS, false);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 /// Cell index under a GUI point, or -1 if off the board.
@@ -259,7 +267,17 @@ ar_start_launch = function(_idx) {
     launch_body_len = ar_pathlen(ar_round(_bn, _r));
     launch_head_s0  = launch_body_len;
     launch_head_s1  = launch_arc[_np-1] + launch_body_len;   // tail reaches the path end
-    launch_frames   = round(clamp((launch_head_s1 - launch_head_s0)/CELL * 1.4, 14, 28));
+    // A touch longer than before to fit the recoil wind-up without slowing the exit.
+    launch_frames   = round(clamp((launch_head_s1 - launch_head_s0)/CELL * 1.6, 18, 34));
+
+    // Exit-edge point (where the tip crosses the board boundary) + the head
+    // arc-length at that moment — drives the reaction flash.
+    var _edge_dist;
+    if      (_dr < 0) { _edge_dist = _hr*CELL + CELL/2;     launch_exit_x = grid_x + _hc*CELL + CELL/2; launch_exit_y = grid_y; }
+    else if (_dr > 0) { _edge_dist = (ROWS-_hr-0.5)*CELL;   launch_exit_x = grid_x + _hc*CELL + CELL/2; launch_exit_y = grid_y + BOARD_H; }
+    else if (_dc < 0) { _edge_dist = _hc*CELL + CELL/2;     launch_exit_x = grid_x;                     launch_exit_y = grid_y + _hr*CELL + CELL/2; }
+    else              { _edge_dist = (COLS-_hc-0.5)*CELL;   launch_exit_x = grid_x + BOARD_W;           launch_exit_y = grid_y + _hr*CELL + CELL/2; }
+    launch_edge_s = launch_head_s0 + _edge_dist;
 };
 
 /// Begin a BLOCKED-tap bump: build the same head-first snake path as a launch but
@@ -300,20 +318,33 @@ ar_start_bump = function(_idx, _gap) {
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 ar_save = function() {
-    ph_arrows_save_state(global.save, global.selected_date_key, alive, penalty_secs);
+    ph_arrows_save_state(global.save, global.selected_date_key, alive, penalty_secs, ar_hinted);
     ph_save_write(global.save);
 };
 
-// ── Hint: highlight a guaranteed-safe arrow ───────────────────────────────────
+// ── Hint: recolour a guaranteed-safe arrow green (permanent until played) ──────
+// Pick the longest currently-clear arrow that hasn't already been hinted, so each
+// paid hint reveals a NEW safe move and the pill greys out once they're all shown.
+ar_hint_pick = function() {
+    var _best = -1, _best_len = -1;
+    for (var _i = 0; _i < NARROWS; _i++) {
+        if (!alive[_i] || ar_hinted[_i]) continue;
+        if (ph_arrows_sweep_clear(puzzle, alive, _i)) {
+            if (puzzle.arrows[_i].len > _best_len) { _best_len = puzzle.arrows[_i].len; _best = _i; }
+        }
+    }
+    return _best;
+};
+
 ar_can_hint = function() {
-    return ph_arrows_first_clear(puzzle, alive) >= 0;
+    return ar_hint_pick() >= 0;
 };
 
 ar_apply_hint = function() {
-    var _i = ph_arrows_first_clear(puzzle, alive);
+    var _i = ar_hint_pick();
     if (_i < 0) return false;
-    ar_hint_idx = _i;
-    ar_hint_t   = 180;     // ~3 s pulse
+    ar_hinted[_i] = true;     // stays green until the arrow is cleared
+    ar_save();
     return true;
 };
 
@@ -372,6 +403,7 @@ var _st = ph_arrows_load_state(global.save, global.selected_date_key, NARROWS);
 if (_st != undefined) {
     alive        = _st.alive;
     penalty_secs = _st.penalty;
+    if (variable_struct_exists(_st, "hinted")) ar_hinted = _st.hinted;
 }
 
 var _already_solved = _review || ph_arrows_is_done(global.save, global.selected_date_key);
