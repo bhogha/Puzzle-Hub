@@ -426,3 +426,24 @@ if (_already_solved) {
     win_phase = 1;
     ph_win_celebrate(win);
 }
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Taps the head of the LONGEST arrow with a clear escape lane, teaching the
+// tap-to-slide-out mechanic on a guaranteed-safe move. Loops until the player
+// slides their first arrow out, then the tip is marked seen.
+coach = ph_coach_create(ACCENT);
+if (!ph_tip_seen("ARROWS") && !_already_solved) {
+    var _best = -1, _blen = -1;
+    for (var _i = 0; _i < NARROWS; _i++) {
+        if (!alive[_i]) continue;
+        if (ph_arrows_sweep_clear(puzzle, alive, _i) && puzzle.arrows[_i].len > _blen) {
+            _blen = puzzle.arrows[_i].len; _best = _i;
+        }
+    }
+    if (_best >= 0) {
+        var _hcell = puzzle.arrows[_best].cells[0];
+        var _hx = grid_x + _hcell.c * CELL + CELL/2;
+        var _hy = grid_y + _hcell.r * CELL + CELL/2;
+        ph_coach_set_steps(coach, [ ph_coach_tap(_hx, _hy) ]);
+    }
+}

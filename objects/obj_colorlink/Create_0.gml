@@ -387,3 +387,26 @@ if (_already_solved) {
     win_phase = 1;
     ph_win_celebrate(win);
 }
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Press-slides the finger along the SHORTEST unsolved flow's solution path, from
+// one coloured dot to its match, teaching the connect-the-dots drag. Loops until
+// the player connects their first line, then the tip is marked seen.
+coach = ph_coach_create(ACCENT);
+if (!ph_tip_seen("COLORLINK") && !_already_solved) {
+    var _best = -1, _blen = 1000000;
+    for (var _f = 0; _f < NFLOWS; _f++) {
+        if (cl_flow_connected(_f)) continue;
+        var _pl = array_length(puzzle.flows[_f].path);
+        if (_pl >= 2 && _pl < _blen) { _blen = _pl; _best = _f; }
+    }
+    if (_best >= 0) {
+        var _path = puzzle.flows[_best].path;
+        var _pts  = [];
+        for (var _i = 0; _i < array_length(_path); _i++) {
+            var _cc = cl_center(_path[_i].r * COLS + _path[_i].c);
+            array_push(_pts, ph_coach_pt(_cc.x, _cc.y));
+        }
+        if (array_length(_pts) >= 2) ph_coach_set_steps(coach, [ ph_coach_slide(_pts) ]);
+    }
+}

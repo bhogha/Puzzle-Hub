@@ -292,3 +292,24 @@ if (_already_solved) {
 // entry; clear any flashes the seeding pass produced.
 sd_check_units();
 for (var _i = 0; _i < 81; _i++) cell_flash[_i] = 0.0;
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// 2-step: tap an empty cell, then tap the digit that belongs there. Step 1 loops
+// until the player taps THAT cell; step 2 then points at the correct number on
+// the pad. Retired (marked seen) once the first cell is filled correctly; a
+// mid-tip quit replays from step 0.
+coach    = ph_coach_create(PH_COL_PURPLE);
+tip_cell = -1;
+if (!ph_tip_seen("SUDOKU") && !_already_solved) {
+    for (var _i = 0; _i < 81; _i++) {
+        if (puzzle.givens[_i] == 0 && puzzle.grid[_i] == 0) { tip_cell = _i; break; }
+    }
+    if (tip_cell >= 0) {
+        var _tr  = tip_cell div 9, _tc = tip_cell mod 9;
+        var _ccx = grid_x + _tc * CELL + CELL/2;
+        var _ccy = grid_y + _tr * CELL + CELL/2;
+        var _val = puzzle.solution[tip_cell];          // 1..9
+        var _nx  = num_x[_val - 1] + NUM_W/2;
+        ph_coach_set_steps(coach, [ ph_coach_tap(_ccx, _ccy), ph_coach_tap(_nx, NUM_Y) ]);
+    }
+}

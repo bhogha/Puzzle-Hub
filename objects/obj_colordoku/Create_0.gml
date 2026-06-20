@@ -257,3 +257,20 @@ if (_already_solved) {
     win_phase = 1;
     ph_win_celebrate(win);
 }
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Taps a real solution-queen cell. A single tap cycles empty→X→queen, so the
+// looping tap lands the player on a correct gem after two follows. Loops until
+// the first queen is placed, then the tip is marked seen.
+coach = ph_coach_create(ACCENT);
+if (!ph_tip_seen("COLORDOKU") && !_already_solved) {
+    var _tgt = -1;
+    for (var _i = 0; _i < NCELLS; _i++) {
+        if (puzzle.solution[_i] == 1 && state[_i] == 0) { _tgt = _i; break; }
+    }
+    if (_tgt >= 0) {
+        var _qx = grid_x + (_tgt mod N) * CELL + CELL/2;
+        var _qy = grid_y + (_tgt div N) * CELL + CELL/2;
+        ph_coach_set_steps(coach, [ ph_coach_tap(_qx, _qy) ]);
+    }
+}

@@ -21,6 +21,7 @@ function ph_save_load() {
             if (!variable_struct_exists(_data, "spin_claimed_date")) _data.spin_claimed_date = ""; // last date_key the Daily Spin was claimed
             if (!variable_struct_exists(_data, "spin_claimed_dt")) _data.spin_claimed_dt = 0;       // last claim wall-clock datetime (for PH_SPIN_TEST_COOLDOWN_MINS)
             if (!variable_struct_exists(_data, "tutorial_done")) _data.tutorial_done = false;      // first-run soft onboarding (tile slide-in + finger) seen? set true on first puzzle open; cleared by reset
+            if (!variable_struct_exists(_data, "tips_seen")) _data.tips_seen = {};                 // per-puzzle first-play finger tip seen? keyed by puzzle key (ph_tip_seen / ph_tip_mark_seen); set true once the desired first action is completed
             ph_update_streak(_data);
             // Missions: ensure a weekly set exists, then flip to "finished" if the
             // timer expired (or it's all done) while the player was away.
@@ -45,6 +46,7 @@ function ph_save_load() {
         spin_claimed_date:  "",
         spin_claimed_dt:    0,
         tutorial_done:      false,
+        tips_seen:          {},
     };
     ph_week_init(_fresh);   // seed the hand-authored Week 1 mission set
     return _fresh;
@@ -79,9 +81,31 @@ function ph_save_reset() {
         spin_claimed_date:  "",
         spin_claimed_dt:    0,
         tutorial_done:      false,   // replay the soft onboarding after a progress reset
+        tips_seen:          {},      // replay every per-puzzle first-play finger tip after a reset
     };
     ph_week_init(_fresh);   // fresh Week 1 after a reset
     return _fresh;
+}
+
+/// Per-puzzle first-play finger-tip bookkeeping.
+/// A tip is "seen" (and never shown again) only once the player completes that
+/// puzzle's desired first action — quitting mid-tip leaves it unseen so the whole
+/// sequence replays from step 0 next time. Keyed by a short puzzle key, e.g.
+/// "ANYGRAM", "SUDOKU", "WORDWAVE", "SHIKAKU", "WORDLE", "HUESORT", "COLORLINK",
+/// "WORDBEND", "ARROWS", "LADDER", "COLORDOKU".
+function ph_tip_seen(_key) {
+    if (!variable_global_exists("save")) return true;
+    var _s = global.save;
+    if (!variable_struct_exists(_s, "tips_seen")) return false;
+    return variable_struct_exists(_s.tips_seen, _key) && _s.tips_seen[$ _key];
+}
+
+function ph_tip_mark_seen(_key) {
+    if (!variable_global_exists("save")) return;
+    var _s = global.save;
+    if (!variable_struct_exists(_s, "tips_seen")) _s.tips_seen = {};
+    _s.tips_seen[$ _key] = true;
+    ph_save_write(_s);
 }
 
 function ph_is_solved(_save, _date_key, _puzzle_name) {

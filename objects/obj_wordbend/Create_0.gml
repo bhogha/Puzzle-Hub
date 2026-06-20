@@ -259,3 +259,26 @@ if (_already_solved) {
     win_phase = 1;
     ph_win_celebrate(win);
 }
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Press-slides the finger across the cells of the LONGEST hidden word, tracing
+// its bends, to teach the drag-to-trace mechanic. Loops until the first word is
+// found, then the tip is marked seen (a mid-tip quit replays it from step 0).
+coach = ph_coach_create(ACCENT);
+if (!ph_tip_seen("WORDBEND") && !_already_solved) {
+    var _best = -1, _blen = 0;
+    for (var _w = 0; _w < NWORDS; _w++) {
+        if (found[_w]) continue;
+        var _ln = array_length(puzzle.words[_w].cells);
+        if (_ln > _blen) { _blen = _ln; _best = _w; }
+    }
+    if (_best >= 0) {
+        var _cs  = puzzle.words[_best].cells;
+        var _pts = [];
+        for (var _k = 0; _k < array_length(_cs); _k++) {
+            var _cc = wb_center(_cs[_k].r * N + _cs[_k].c);
+            array_push(_pts, ph_coach_pt(_cc.x, _cc.y));
+        }
+        if (array_length(_pts) >= 2) ph_coach_set_steps(coach, [ ph_coach_slide(_pts) ]);
+    }
+}

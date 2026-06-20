@@ -172,6 +172,9 @@ ph_draw_text(HINT_PILL_L+51, _tool_y, "HINT", global.fnt_body_md, PH_COL_DARK, f
 // ── Message Prompt (shared toast) — just above the game tip ────────────────────
 if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
 
+// ── Onboarding finger tip (above the board, below the hint modal) ─────────────
+ph_coach_draw(coach);
+
 // ── Hint modal + placeholder rewarded-video (drawn last) ──────────────────────
 ph_hint_draw_modal(hint);
 ph_hint_draw_video(hint);

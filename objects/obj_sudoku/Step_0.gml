@@ -27,6 +27,9 @@ if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
 // Advance the shared hint-flow timers (modal slide / "-100" / video / reveal).
 ph_hint_tick(hint);
+
+// Advance the onboarding finger tip (no-op once solved / already seen).
+ph_coach_tick(coach);
 if (sd_hint_pop_t < 1) sd_hint_pop_t = min(1, sd_hint_pop_t + 1/12);
 
 // Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
@@ -150,6 +153,8 @@ if (ph_point_in_rect(_mx, _my, grid_x, grid_y, grid_x + BOARD, grid_y + BOARD)) 
     var _idx = _r * 9 + _c;
     // Givens can't be selected for editing — tapping one just clears selection.
     sel_idx = ph_sudoku_is_given(puzzle, _idx) ? -1 : _idx;
+    // Onboarding tip: tapping the highlighted cell advances to the "tap number" step.
+    if (ph_coach_active(coach) && coach.step == 0 && sel_idx == tip_cell) ph_coach_next(coach);
     exit;
 }
 
@@ -164,6 +169,10 @@ if (_my >= NUM_Y - NUM_H/2 && _my <= NUM_Y + NUM_H/2) {
                 sd_check_units();
                 ph_sudoku_save_grid(global.save, global.selected_date_key, ph_sudoku_grid_to_str(puzzle));
                 ph_save_write(global.save);
+                // First correct number placed → retire the onboarding finger tip.
+                if (ph_coach_active(coach) && puzzle.grid[sel_idx] == puzzle.solution[sel_idx]) {
+                    ph_coach_stop(coach); ph_tip_mark_seen("SUDOKU");
+                }
                 sd_check_win();
             }
             exit;

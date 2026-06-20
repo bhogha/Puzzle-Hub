@@ -23,6 +23,9 @@ if (key_press_t > 0)  key_press_t--;
 ph_hint_tick(hint);
 if (wd_hint_pop_t < 1) wd_hint_pop_t = min(1, wd_hint_pop_t + 1/12);
 
+// Advance the onboarding finger tip (no-op once solved / already seen).
+ph_coach_tick(coach);
+
 // Persist the play timer (≤ once/sec) while the puzzle is still live, so leaving
 // or an app kill resumes here. Won/lost states freeze the clock.
 if (puzzle.status == "in_progress")
@@ -112,6 +115,8 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
         for (var _s = 0; _s < COLS; _s++) {
             if (row_slots[_s] == "") { row_slots[_s] = _k.ch; break; }
         }
+        // First letter typed → retire the onboarding finger tip.
+        if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("WORDLE"); }
     } else if (_k.type == "del") {
         // Clear the rightmost filled, non-locked slot.
         for (var _s = COLS - 1; _s >= 0; _s--) {

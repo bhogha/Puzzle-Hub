@@ -171,6 +171,9 @@ if (bonus_modal_open) {
     }
 }
 
+// ── Onboarding finger tip (above the board, below the hint modal) ─────────────
+ph_coach_draw(coach);
+
 // ── Hint modal + placeholder rewarded-video (drawn last, cover everything) ─────
 ph_hint_draw_modal(hint);
 ph_hint_draw_video(hint);

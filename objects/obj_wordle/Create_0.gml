@@ -629,6 +629,23 @@ if (_already_solved) {
 // are defined and the puzzle/hints are restored).
 wd_reset_row();
 
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Taps the keyboard key of the answer's FIRST letter so a new player learns to
+// type. Loops until the first letter is entered, then the tip is marked seen
+// (a mid-tip quit replays it next open).
+coach = ph_coach_create(PH_COL_GREEN);
+if (!ph_tip_seen("WORDLE") && !_already_solved && puzzle.status == "in_progress") {
+    var _firstch = string_char_at(puzzle.answer, 1);
+    var _tkeys   = wd_build_keys();
+    for (var _i = 0; _i < array_length(_tkeys); _i++) {
+        var _tk = _tkeys[_i];
+        if (_tk.type == "letter" && _tk.ch == _firstch) {
+            ph_coach_set_steps(coach, [ ph_coach_tap((_tk.x1 + _tk.x2)/2, (_tk.y1 + _tk.y2)/2) ]);
+            break;
+        }
+    }
+}
+
 // Resume into the correct lose state if the restored game was already lost.
 if (!_already_solved && puzzle.status == "lost") {
     if (ph_wordle_is_missed(global.save, global.selected_date_key)) {

@@ -353,3 +353,26 @@ ww_apply_hint = function() {
 
 // Shared hint-flow controller (modal + placeholder video). Teal accent.
 hint = ph_hint_create(ww_apply_hint, PH_COL_TEAL, "This hint will reveal one\ncorrect letter", "wordwave_" + global.selected_date_key);
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Press-slides the finger straight through the cells of the longest hidden word
+// so a new player learns to swipe. Loops until the first word is found, then the
+// tip is marked seen (a mid-tip quit replays it from step 0).
+coach = ph_coach_create(PH_COL_TEAL);
+if (!ph_tip_seen("WORDWAVE") && !_already_solved) {
+    var _best = -1, _bestlen = 0;
+    for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
+        if (puzzle.words[_wi].found) continue;
+        var _ln = array_length(puzzle.words[_wi].cells);
+        if (_ln > _bestlen) { _bestlen = _ln; _best = _wi; }
+    }
+    if (_best >= 0) {
+        var _cells = puzzle.words[_best].cells;
+        var _pts = [];
+        for (var _k = 0; _k < array_length(_cells); _k++) {
+            var _cc = ww_cell_center(_cells[_k].r, _cells[_k].c);
+            array_push(_pts, ph_coach_pt(_cc.x, _cc.y));
+        }
+        if (array_length(_pts) >= 2) ph_coach_set_steps(coach, [ ph_coach_slide(_pts) ]);
+    }
+}

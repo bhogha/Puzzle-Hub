@@ -16,6 +16,7 @@ if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
 // Advance the shared hint-flow timers (modal slide / "-100" / video / reveal).
 ph_hint_tick(hint);
+ph_coach_tick(coach);   // onboarding finger tip (no-op once solved / already seen)
 if (cd_pop_f >= 0) {
     var _pop_end = array_length(cd_hint_cells) * CD_POP_STAG + CD_POP_DUR + 2;
     cd_pop_f = min(cd_pop_f + 1, _pop_end);
@@ -82,6 +83,8 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
     if (_in_grid && !hint_x_locked[_cur_idx]) {
         var _i = _cur_idx;
         state[_i] = (state[_i] + 1) mod 3;   // 0 empty → 1 X → 2 queen → 0
+        // First queen placed → retire the onboarding finger tip.
+        if (ph_coach_active(coach) && state[_i] == 2) { ph_coach_stop(coach); ph_tip_mark_seen("COLORDOKU"); }
         cd_save();
         cd_check_win();
     }

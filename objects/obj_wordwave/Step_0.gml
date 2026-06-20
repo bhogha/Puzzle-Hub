@@ -103,6 +103,9 @@ if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 // Advance the shared hint-flow timers (modal slide / "-100" / video).
 ph_hint_tick(hint);
 
+// Advance the onboarding finger tip (no-op once solved / already seen).
+ph_coach_tick(coach);
+
 // Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
 if (win_phase == 0) ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
 
@@ -222,6 +225,8 @@ if (is_dragging && device_mouse_check_button_released(0, mb_left)) {
                 puzzle.words[_result.index].found = true;
                 ph_wordwave_mark_word(global.save, global.selected_date_key, _result.index);
                 ph_save_write(global.save);
+                // First hidden word found → retire the onboarding finger tip.
+                if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("WORDWAVE"); }
                 ww_flash_path(puzzle.words[_result.index].cells);
                 toast_text  = "FOUND  •  " + puzzle.words[_result.index].text;
                 toast_col   = word_colors[_result.index];

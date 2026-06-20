@@ -115,6 +115,9 @@ HINT_PILL_T = _tool_y - 33;
 HINT_PILL_B = _tool_y + 33;
 ph_hint_pill_draw(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, make_color_rgb(190,170,155));   // bounces after 5s idle
 
+// ── Onboarding finger tip (above the board, below the hint modal/reveal) ──────
+ph_coach_draw(coach);
+
 // ── Post-buy reveal (iris contracts onto the hinted tile / keyboard key) ──────
 ph_hint_draw_reveal(hint);
 

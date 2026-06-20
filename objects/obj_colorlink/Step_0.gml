@@ -12,6 +12,7 @@ if (coin_pulse_t < 1)     coin_pulse_t     = min(1, coin_pulse_t + 1/18);
 if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 
 ph_hint_tick(hint);
+ph_coach_tick(coach);   // onboarding finger tip (no-op once solved / already seen)
 ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
 
 if (current_time < global.input_locked_until) exit;
@@ -101,7 +102,12 @@ if (dragging && device_mouse_check_button(0, mb_left)) {
 // ── Release: commit, check win, persist ───────────────────────────────────────
 if (dragging && device_mouse_check_button_released(0, mb_left)) {
     dragging = false;
+    var _dc = drag_color;
     drag_color = -1;
+    // First line connected by hand → retire the onboarding finger tip.
+    if (ph_coach_active(coach) && _dc >= 0 && cl_flow_connected(_dc)) {
+        ph_coach_stop(coach); ph_tip_mark_seen("COLORLINK");
+    }
     cl_check_win();
     if (win_phase == 0) cl_save();
     exit;

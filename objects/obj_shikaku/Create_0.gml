@@ -231,3 +231,25 @@ if (_already_solved) {
     win_phase = 1;
     ph_win_celebrate(win);
 }
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Press-slides the finger corner-to-corner of the LARGEST solution rectangle so a
+// new player learns the drag-a-box mechanic. Loops until they draw their first
+// rectangle, then the tip is marked seen (a mid-tip quit replays it from step 0).
+coach = ph_coach_create(PH_COL_BLUE);
+if (!ph_tip_seen("SHIKAKU") && !_already_solved) {
+    var _best = -1, _area = 0;
+    for (var _i = 0; _i < array_length(puzzle.sol_rects); _i++) {
+        var _s = puzzle.sol_rects[_i];
+        var _ar = _s.w * _s.h;
+        if (_ar > _area) { _area = _ar; _best = _i; }
+    }
+    if (_best >= 0) {
+        var _sr = puzzle.sol_rects[_best];
+        var _x1 = grid_x + _sr.c * CELL + CELL/2;
+        var _y1 = grid_y + _sr.r * CELL + CELL/2;
+        var _x2 = grid_x + (_sr.c + _sr.w - 1) * CELL + CELL/2;
+        var _y2 = grid_y + (_sr.r + _sr.h - 1) * CELL + CELL/2;
+        ph_coach_set_steps(coach, [ ph_coach_slide([ ph_coach_pt(_x1, _y1), ph_coach_pt(_x2, _y2) ]) ]);
+    }
+}

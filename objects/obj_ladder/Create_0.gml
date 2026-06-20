@@ -269,3 +269,29 @@ if (_already_solved) {
     win_phase = 1;
     ph_win_celebrate(win);
 }
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// 2-step: tap the tile that must change (the differing letter), then tap the
+// correct letter on the keyboard. Step 1 loops until the player taps THAT tile;
+// step 2 then points at the keyboard letter. Retired once the first rung is
+// solved; a mid-tip quit replays from step 0.
+coach     = ph_coach_create(PH_COL_AMBER);
+ld_tip_pos = -1;
+if (!ph_tip_seen("LADDER") && !_already_solved && step < puzzle.count) {
+    var _cur = ph_ladder_current_word(puzzle, step);
+    var _tgt = puzzle.words[step];
+    ld_tip_pos = ph_ladder_diff_pos(_cur, _tgt);
+    if (ld_tip_pos >= 0) {
+        var _ttx = row_x + ld_tip_pos * (TILE + TILE_GAP) + TILE/2;
+        var _tty = row_y + TILE/2;
+        var _tch = string_char_at(_tgt, ld_tip_pos + 1);
+        var _kx  = PH_W/2, _ky = row_y + TILE/2;
+        var _tkeys = ld_build_keys();
+        for (var _i = 0; _i < array_length(_tkeys); _i++) {
+            if (_tkeys[_i].ch == _tch) {
+                var _tk2 = _tkeys[_i]; _kx = (_tk2.x1 + _tk2.x2)/2; _ky = (_tk2.y1 + _tk2.y2)/2; break;
+            }
+        }
+        ph_coach_set_steps(coach, [ ph_coach_tap(_ttx, _tty), ph_coach_tap(_kx, _ky) ]);
+    }
+}

@@ -32,6 +32,7 @@ if (launching != -1) {
 }
 
 ph_hint_tick(hint);
+ph_coach_tick(coach);   // onboarding finger tip (no-op once solved / already seen)
 ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
 
 if (current_time < global.input_locked_until) exit;
@@ -81,6 +82,8 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
         if (_idx != -1) {
             if (ph_arrows_sweep_clear(puzzle, alive, _idx)) {
                 ar_start_launch(_idx);
+                // First arrow slid out → retire the onboarding finger tip.
+                if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("ARROWS"); }
             } else {
                 // Glide the arrow head-first up to whatever blocks it, then back —
                 // the same snake path-follow as a launch (built in ar_start_bump,

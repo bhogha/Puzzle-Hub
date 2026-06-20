@@ -18,6 +18,9 @@ if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 ph_hint_tick(hint);
 if (hs_hint_pop_t < 1) hs_hint_pop_t = min(1, hs_hint_pop_t + 1/12);
 
+// Advance the onboarding finger tip (no-op once solved / already seen).
+ph_coach_tick(coach);
+
 // Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
 ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
 

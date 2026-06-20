@@ -15,6 +15,9 @@ if (key_press_t > 0)   key_press_t--;
 // Advance the shared hint-flow timers (modal slide / "-100" / video).
 ph_hint_tick(hint);
 
+// Advance the onboarding finger tip (no-op once solved / already seen).
+ph_coach_tick(coach);
+
 // Persist the play timer (≤ once/sec) while the puzzle is still live.
 if (!solved)
     ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
@@ -81,6 +84,8 @@ for (var _i = 0; _i < N; _i++) {
     var _tx = row_x + _i * (TILE + TILE_GAP);
     if (ph_point_in_rect(_mx, _my, _tx, row_y, _tx + TILE, row_y + TILE)) {
         sel = _i;
+        // Onboarding tip: tapping the highlighted tile advances to the "tap letter" step.
+        if (ph_coach_active(coach) && coach.step == 0 && _i == ld_tip_pos) ph_coach_next(coach);
         exit;
     }
 }
@@ -105,6 +110,8 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
     var _target  = puzzle.words[step];
     if (ld_row_string() == _target) {
         feedback = "correct"; fb_timer = FB_DUR;   // green flash → advance in feedback block
+        // First rung solved → retire the onboarding finger tip.
+        if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("LADDER"); }
     } else {
         feedback = "wrong";   fb_timer = FB_DUR;   // red flash → revert in feedback block
         // Wrong guess → +5 s time penalty (folded into the play timer, like Arrows),

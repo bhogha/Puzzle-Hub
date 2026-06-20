@@ -151,6 +151,9 @@ ph_hint_pill_draw(HINT_PILL_L, HINT_PILL_T, HINT_PILL_R, HINT_PILL_B, make_color
 // ── Message Prompt — above the game tip, just below the HUD (Penpot design) ────
 if (toast_timer > 0) ph_draw_toast(toast_text, toast_col, min(1, toast_timer/15), grid_y);
 
+// ── Onboarding finger tip (above the board, below the hint modal/reveal) ──────
+ph_coach_draw(coach);
+
 // ── Post-buy reveal (iris contracts onto the revealed number) ─────────────────
 ph_hint_draw_reveal(hint);
 

@@ -31,6 +31,7 @@ if (shake_t > 0) {
 }
 
 ph_hint_tick(hint);
+ph_coach_tick(coach);   // onboarding finger tip (no-op once solved / already seen)
 ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
 
 if (current_time < global.input_locked_until) exit;
@@ -127,6 +128,8 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
         var _idx = ph_wordbend_match(puzzle, sel_path, found, N);
         if (_idx >= 0) {
             found[_idx] = true;
+            // First hidden word traced → retire the onboarding finger tip.
+            if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("WORDBEND"); }
             wb_rebuild_owner();
             var _cells_idx = [];
             var _cs = puzzle.words[_idx].cells;

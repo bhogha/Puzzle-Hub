@@ -19,6 +19,9 @@ if (coin_overshoot_t < 1) coin_overshoot_t = min(1, coin_overshoot_t + 1/10);
 ph_hint_tick(hint);
 if (sk_hint_pop_t < 1) sk_hint_pop_t = min(1, sk_hint_pop_t + 1/12);
 
+// Advance the onboarding finger tip (no-op once solved / already seen).
+ph_coach_tick(coach);
+
 // Persist the play timer (≤ once/sec) so leaving or an app kill resumes here.
 if (win_phase == 0) ph_timer_step(global.save, timer_key, timer_base_secs, session_start_ms);
 
@@ -170,5 +173,7 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
         }
     }
     sk_commit_rect(_r0, _c0, _w, _h);
+    // First rectangle drawn → retire the onboarding finger tip.
+    if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("SHIKAKU"); }
     exit;
 }

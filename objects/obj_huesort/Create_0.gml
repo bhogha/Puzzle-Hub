@@ -106,6 +106,8 @@ hs_swap = function(_a, _b) {
     if (puzzle.locked[_a] || puzzle.locked[_b]) return;
     if (hint_locked[_a] || hint_locked[_b]) return;
     var _t = tiles[_a]; tiles[_a] = tiles[_b]; tiles[_b] = _t;
+    // First manual swap → retire the onboarding finger tip.
+    if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("HUESORT"); }
     hs_save();
     hs_check_win();
 };
@@ -225,4 +227,27 @@ if (_already_solved) {
     win.cfg.time_str = win_time_str;
     win_phase = 1;
     ph_win_celebrate(win);
+}
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Press-slides one out-of-place tile from where it currently sits to its correct
+// home, teaching the drag-to-swap mechanic. Loops until the first manual swap,
+// then the tip is marked seen (a mid-tip quit replays it from step 0).
+coach = ph_coach_create(PH_COL_VIOLET);
+if (!ph_tip_seen("HUESORT") && !_already_solved) {
+    var _p = hs_first_wrong();
+    if (_p >= 0) {
+        var _src = -1;
+        for (var _i = 0; _i < NCELLS; _i++) {
+            if (_i == _p || puzzle.locked[_i] || hint_locked[_i]) continue;
+            if (ph_huesort_rgb_eq(tiles[_i], puzzle.target[_p])) { _src = _i; break; }
+        }
+        if (_src >= 0) {
+            var _sx = grid_x + (_src mod N) * CELL + CELL/2;
+            var _sy = grid_y + (_src div N) * CELL + CELL/2;
+            var _dx = grid_x + (_p   mod N) * CELL + CELL/2;
+            var _dy = grid_y + (_p   div N) * CELL + CELL/2;
+            ph_coach_set_steps(coach, [ ph_coach_slide([ ph_coach_pt(_sx, _sy), ph_coach_pt(_dx, _dy) ]) ]);
+        }
+    }
 }

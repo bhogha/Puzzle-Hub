@@ -430,3 +430,26 @@ ag_hint_subtitle = function() {
 
 // Shared hint-flow controller (modal + placeholder video). Pink accent.
 hint = ph_hint_create(ag_apply_hint, PH_COL_PINK, ag_hint_subtitle(), "anygram_" + global.selected_date_key);
+
+// ── First-play onboarding finger tip (soft, no text) ──────────────────────────
+// Slides the finger across the wheel letters of the longest hidden word so a
+// brand-new player learns to drag-to-spell. Loops until they find ANY word; only
+// then is the tip marked seen (a mid-tip quit replays it from step 0 next time).
+coach = ph_coach_create(PH_COL_PINK);
+if (!ph_tip_seen("ANYGRAM") && !_already_solved) {
+    var _best = -1, _bestlen = 0;
+    for (var _wi = 0; _wi < array_length(puzzle.words); _wi++) {
+        if (puzzle.words[_wi].found) continue;
+        var _ln = string_length(puzzle.words[_wi].text);
+        if (_ln > _bestlen) { _bestlen = _ln; _best = _wi; }
+    }
+    if (_best >= 0) {
+        var _wtxt = string_upper(puzzle.words[_best].text);
+        var _pts  = [];
+        for (var _k = 1; _k <= string_length(_wtxt); _k++) {
+            var _wp = _ag_find_wheel_pos_for_letter(string_char_at(_wtxt, _k));
+            array_push(_pts, ph_coach_pt(_wp.x, _wp.y));
+        }
+        if (array_length(_pts) >= 2) ph_coach_set_steps(coach, [ ph_coach_slide(_pts) ]);
+    }
+}

@@ -488,5 +488,8 @@ if (win_phase == 1) {
     draw_set_alpha(1);
 }
 
+// ── Onboarding finger tip (above the board/wheel, below the hint modal/video).
+ph_coach_draw(coach);
+
 // ── Placeholder rewarded-video screen — drawn last so it covers every layer.
 ph_hint_draw_video(hint);
