@@ -20,7 +20,7 @@
   "option_sci_usesci":true,
   "option_spine_licence":true,
   "option_steam_app_id":"0",
-  "option_template_description":"A \"Daily Puzzles\" mobile game built with GameMaker. Players solve a set of daily puzzles — earning XP, leveling up, and collecting coins.",
+  "option_template_description":"A \"Daily Puzzles\" mobile game. Players solve a set of daily puzzles — earning XP, leveling up, and collecting coins.",
   "option_template_icon":"${options_dir}/main/template_icon.png",
   "option_template_image":"${options_dir}/main/template_image.png",
   "option_window_colour":255,

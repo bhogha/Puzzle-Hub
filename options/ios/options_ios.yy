@@ -36,7 +36,7 @@
   "option_ios_orientation_landscape_flipped":false,
   "option_ios_orientation_portrait":true,
   "option_ios_orientation_portrait_flipped":true,
-  "option_ios_output_dir":"~/gamemakerstudio2",
+  "option_ios_output_dir":"/Users/boraarslan/Documents/Projects/Daily Puzzle/Puzzle Hub",
   "option_ios_podfile_lock_path":"${options_dir}/ios/Podfile.lock",
   "option_ios_podfile_path":"${options_dir}/ios/Podfile",
   "option_ios_scale":1,
