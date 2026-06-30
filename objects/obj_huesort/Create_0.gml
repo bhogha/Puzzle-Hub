@@ -209,7 +209,7 @@ win_draw_recap = function(_cx, _top, _bw, _bh) {
     }
 };
 win = ph_win_create({
-    puzzle_name: "HUE SORT",
+    puzzle_name: "COLORS",
     title_col:   ACCENT,
     bg_col:      ACCENT,
     claim_key:   "huesort_" + global.selected_date_key,

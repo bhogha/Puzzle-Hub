@@ -166,6 +166,9 @@ if (_my >= NUM_Y - NUM_H/2 && _my <= NUM_Y + NUM_H/2) {
                 puzzle.grid[sel_idx]   = _n + 1;
                 puzzle.hinted[sel_idx] = false;
                 cell_scale[sel_idx]    = 1.18;
+                // NOTE: no "correct digit" haptic on purpose — like the SFX design
+                // (GDD §2.13), it would let the player feel out the solution. Sudoku
+                // uses only the universal tap + the win buzz.
                 sd_check_units();
                 ph_sudoku_save_grid(global.save, global.selected_date_key, ph_sudoku_grid_to_str(puzzle));
                 ph_save_write(global.save);

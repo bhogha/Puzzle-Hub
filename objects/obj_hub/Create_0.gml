@@ -12,9 +12,10 @@ LAYOUT = {
     calbar_h:      110,
     calexpand_h:   560,
     strip_h:       280,   // taller so the day strip and progress tube have breathing room
-    section_h:     120,   // "TODAY'S GAMES" header row — extra height lets the title sit lower, clear of the progress tube
+    section_h:      40,   // gap between the calendar/progress band and the card list (header text removed 2026-06-29)
     card_h:        317,   // keeps the Penpot tile's 1430×450 (≈3.18:1) proportions at the 1008px render width, so icon/text/pill scale uniformly
-    card_gap:       28,
+    card_gap:      -12,   // card_*.png has ~50px baked transparent padding (≈35px on-screen) so even gap 0 leaves a wide band; a small negative gap overlaps the transparent boxes (NOT the artwork) to tighten the visible spacing
+
     card_pad_x:     36,
     nav_h:         190,
     radius:         28,
@@ -174,6 +175,8 @@ coinflow_pop     = 0;      // 0..1 pill-coin pulse when a coin lands
 // Level-Up entry path (global.coin_flow_amount, below) and the Daily Spin claim.
 hub_start_coinflow = function(_amount) {
     if (_amount <= 0) return;
+    ph_sfx(snd_coin, 1.0);   // coins streaming into the wallet pill
+    ph_haptic_coin();        // light tick as the coins land
     coinflow_amount  = _amount;
     coinflow_active  = true;
     coinflow_t       = 0;
@@ -232,10 +235,29 @@ INTRO_FINGER_DELAY_FR = 60;                      // ~1s pause after settle befor
 // sweep climbs up to the first. (scroll_max was computed just above.)
 if (intro_active) scroll_y = scroll_max;
 
+// ── Daily-progress FTUE coach (first RETURN from a puzzle) ────────────────────
+// The FIRST time the player returns to the hub from a puzzle AFTER solving their
+// first puzzle, run the one-time 2-step daily-progress tutorial (see scr_tutorial
+// ph_dailytut_*). "From a puzzle" = obj_persistent tracks the room we came from in
+// global.room_curr (still the source room at Create time); "after first solve" =
+// ph_has_any_solve. Shown once ever (save.daily_progress_tut_done); never during
+// the first-run intro; completing it persists the flag AND triggers the
+// notification-permission prompt.
+dailytut = ph_dailytut_create();
+var _from_room = variable_global_exists("room_curr") ? global.room_curr : -1;
+if (!global.save.daily_progress_tut_done
+ && !intro_active
+ && ph_room_is_puzzle(_from_room)
+ && ph_has_any_solve(global.save)) {
+    ph_dailytut_begin(dailytut);
+}
+
 // ── Daily Spin ────────────────────────────────────────────────────────────────
 // Free once-per-day prize wheel (see scr_spin). Opens immediately if the player
 // has reached the unlock session and hasn't claimed today's spin yet — but never
 // during the first-run intro (a brand-new / just-reset player gets the soft
-// finger hint instead; the spin can appear on a later session anyway).
+// finger hint instead; the spin can appear on a later session anyway), and never
+// while the daily-progress FTUE coach is showing (it takes priority this entry).
 spin = ph_spin_create();
-if (!intro_active && ph_spin_eligible(global.save)) ph_spin_open(spin);
+if (!intro_active && !ph_dailytut_is_open(dailytut) && ph_spin_eligible(global.save))
+    ph_spin_open(spin);

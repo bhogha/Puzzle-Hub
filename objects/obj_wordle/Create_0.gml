@@ -41,6 +41,7 @@ reveal_row   = -1;
 reveal_guess = "";
 reveal_score = [];
 reveal_t     = 0;
+wd_reveal_ticked = 0;             // tiles that have fired a reveal haptic tick this row
 REVEAL_STAGGER = 8;               // frames between columns
 REVEAL_FLIP    = 10;              // frames for a column to "land"
 
@@ -307,6 +308,7 @@ lose_claim_src_x = PH_W/2; lose_claim_src_y = 0; // fly origin (set by draw)
 
 /// Record the miss (time + WORDLE_MISSED flag) and open the red lose screen.
 wd_finalize_loss = function() {
+    ph_sfx(snd_error, 0.85);   // out of guesses — missed the word
     var _s = ph_timer_now(timer_base_secs, session_start_ms);
     lose_time_str = string(_s div 60) + ":" + (((_s mod 60) < 10) ? "0" : "") + string(_s mod 60);
     global.save[$ "wordle_time_" + global.selected_date_key] = lose_time_str;
@@ -481,7 +483,7 @@ wd_lose_draw = function() {
         var _pl = _grpx + _clw + _lpgap, _pr = _pl + _pillw;
         ph_draw_chip(_pl, _completed_cy-38, _pr, _completed_cy+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
         draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _completed_cy, 150/512, 150/512, 0, c_white, 1);
-        ph_draw_text(_pl+96, _completed_cy, lose_time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
+        ph_draw_text(_pl+96, _completed_cy, lose_time_str, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
         // Level progress bar — grey track, purple fill, "xp / 500" count above-right,
         // oversized star level badge. The fill animates from the pre-claim snapshot.
@@ -607,7 +609,7 @@ if (_review) global.wordle_review_mode = false;
 var _already_solved = _review || ph_wordle_is_done(global.save, global.selected_date_key) || puzzle.status == "won";
 
 win = ph_win_create({
-    puzzle_name: "WORDLE",
+    puzzle_name: "WORD",
     title_col:   PH_COL_GREEN,
     bg_col:      PH_COL_TEAL,
     claim_key:   "wordle_" + global.selected_date_key,

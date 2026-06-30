@@ -242,7 +242,7 @@ if (_already_solved) {
 wb_rebuild_owner();
 
 win = ph_win_create({
-    puzzle_name: "WORD BEND",
+    puzzle_name: "BEND",
     title_col:   ACCENT_DEEP,
     bg_col:      ACCENT,
     claim_key:   "wordbend_" + global.selected_date_key,

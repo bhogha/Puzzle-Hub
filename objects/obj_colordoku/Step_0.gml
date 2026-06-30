@@ -83,6 +83,14 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
     if (_in_grid && !hint_x_locked[_cur_idx]) {
         var _i = _cur_idx;
         state[_i] = (state[_i] + 1) mod 3;   // 0 empty → 1 X → 2 queen → 0
+        // Two distinct feels: a firm "mark" tap for an X, a positive success for
+        // the queen gem (empty/clear keeps just the universal light tap).
+        if (state[_i] == 1) {
+            ph_haptic_tap(1);                            // X ruled out → firm medium tap
+        } else if (state[_i] == 2) {
+            ph_sfx(snd_correct, 0.55);                   // queen placed
+            ph_haptic_success();                         // queen gem placed → positive buzz
+        }
         // First queen placed → retire the onboarding finger tip.
         if (ph_coach_active(coach) && state[_i] == 2) { ph_coach_stop(coach); ph_tip_mark_seen("COLORDOKU"); }
         cd_save();

@@ -184,7 +184,7 @@ win_draw_recap = function(_cx, _top, _bw, _bh) {
     }
 };
 win = ph_win_create({
-    puzzle_name: "WORDWAVE",
+    puzzle_name: "WORD HUNT",
     title_col:   PH_COL_TEAL_DEEP,
     bg_col:      PH_COL_TEAL,
     claim_key:   "wordwave_" + global.selected_date_key,

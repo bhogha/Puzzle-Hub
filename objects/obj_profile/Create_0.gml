@@ -153,3 +153,127 @@ prof_sorted_indices = function() {
     }
     return array_concat(_claimable, _prog, _claimed);
 };
+
+// ── Week-Complete (finished) state ────────────────────────────────────────────
+// In the finished week the page swaps the desc + reset-timer for a "Week Complete"
+// title and lays the list out as: claimable (CLAIM) → CLAIM ALL button → claimed
+// (checkmark) → incomplete (greyed). CLAIM ALL fires every reward ★ at once, then
+// the week rolls over (Bora 2026-06-29).
+CLAIMALL_H   = 150;       // height of the CLAIM ALL button row inside the scroll list
+WC_TITLE_H   = 200;       // vertical space reserved for the "Week Complete" title
+
+fly_idxs    = [];         // mission indices whose ★ is currently flying (phase 3)
+fly_top     = [];         // frozen card-top (incl. scroll) per mission idx during phase 3
+finalize_after = false;   // when phase 3 ends, run ph_week_collect (bonus + roll over)
+
+// Finished-state grouping (claimable / claimed / incomplete). _force_claimable lets
+// the caller treat already-marked-claimed (just-claimed, mid-animation) tiles as if
+// still in the claimable group, so the layout/source positions don't jump.
+prof_finished_groups = function(_force_claimable) {
+    var _ms = global.save.week.missions;
+    var _claimable = [], _claimed = [], _incomplete = [];
+    for (var _i = 0; _i < array_length(_ms); _i++) {
+        var _m = _ms[_i];
+        var _forced = (!is_undefined(_force_claimable) && array_get_index(_force_claimable, _i) >= 0);
+        if (_forced)                                                  array_push(_claimable, _i);
+        else if (_m.claimed)                                          array_push(_claimed, _i);
+        else if (ph_mission_value(global.save, _m) >= _m.target)      array_push(_claimable, _i);
+        else                                                          array_push(_incomplete, _i);
+    }
+    return { claimable:_claimable, claimed:_claimed, incomplete:_incomplete };
+};
+
+// Card-top (screen y) per mission index for the finished layout, plus the CLAIM ALL
+// button centre y. Returns { top:[per-mi y], btn_cy, content_h, has_claimable }.
+prof_finished_layout = function(_list_top, _groups) {
+    var _ms = global.save.week.missions;
+    var _top = array_create(array_length(_ms), -99999);
+    var _y   = _list_top - scroll_y;
+    var _y0  = _y;
+    var _ca  = _groups.claimable;
+    for (var _i = 0; _i < array_length(_ca); _i++) { _top[_ca[_i]] = _y; _y += CARD_H + CARD_GAP; }
+    var _btn_cy = _y + CLAIMALL_H/2;
+    _y += CLAIMALL_H + CARD_GAP;
+    var _cl = _groups.claimed;
+    for (var _i = 0; _i < array_length(_cl); _i++) { _top[_cl[_i]] = _y; _y += CARD_H + CARD_GAP; }
+    var _ic = _groups.incomplete;
+    for (var _i = 0; _i < array_length(_ic); _i++) { _top[_ic[_i]] = _y; _y += CARD_H + CARD_GAP; }
+    return { top:_top, btn_cy:_btn_cy, content_h:(_y - _y0), has_claimable:(array_length(_ca) > 0) };
+};
+
+// CLAIM ALL button rect (centred), given its centre y.
+prof_claimall_rect = function(_cy) {
+    return { l:PH_W/2 - 240, r:PH_W/2 + 240, cy:_cy, bh:60 };
+};
+
+// Draw one mission card at screen-top _t for the FINISHED (Week Complete) list.
+// States: flying (mid ★→✓ during a finished claim), claimed (checkmark), claimable
+// (CLAIM button), incomplete (greyed in-progress). Self-contained so it can be
+// called from Draw without sharing locals.
+prof_draw_mission_card = function(_mi, _t) {
+    var _save = global.save;
+    var _m    = _save.week.missions[_mi];
+    var _icy  = _t + CARD_H/2;
+    var _flying  = (claim_phase == 3 && array_get_index(fly_idxs, _mi) >= 0);
+    var _claimed = _m.claimed && !_flying;
+    var _comp    = (ph_mission_value(_save, _m) >= _m.target);
+    var _rew_col   = make_color_rgb(120,108,122);
+    var _claim_ink = make_color_rgb(170,160,172);
+    var _title = ph_mission_title(_m);
+
+    // Card background (incomplete greyed, claimed muted, else white).
+    var _ccx = (CARD_L + CARD_R)/2;
+    var _tint = c_white;
+    if      (_claimed)        _tint = make_color_rgb(232,228,224);
+    else if (!_comp && !_flying) _tint = make_color_rgb(214,210,206);   // greyed incomplete
+    draw_sprite_ext(global.spr_card_mission, 0, _ccx, _icy, CARD_W/1410, CARD_H/390, 0, _tint, 1);
+
+    // Icon tile + icon (dimmed for incomplete).
+    ph_draw_rounded(ICON_CX-ICON_SZ/2, _icy-ICON_SZ/2, ICON_CX+ICON_SZ/2, _icy+ICON_SZ/2, 26, PH_COL_WHITE);
+    var _ia = (!_comp && !_claimed && !_flying) ? 0.5 : 1;
+    draw_sprite_ext(prof_icon(_m.icon), 0, ICON_CX, _icy, ICON_SZ/512, ICON_SZ/512, 0, c_white, _ia);
+
+    if (_flying) {
+        draw_set_font(global.fnt_tip); draw_set_halign(fa_left); draw_set_valign(fa_middle);
+        draw_set_color(PH_COL_DARK);
+        draw_text_ext(MAIN_X1, _icy, _title, 50, MAIN_X2 - MAIN_X1);
+        var _spawn_done = SF_GATHER + SF_ORBIT + (STARFLY_N-1)*SF_RELGAP;
+        if (claim_t < SF_GATHER) {
+            draw_set_alpha(1 - claim_t / SF_GATHER);
+            ph_draw_text(REW_CX+2, _icy, string(_m.reward), global.fnt_num_reg, _rew_col, fa_right, fa_middle);
+            draw_set_alpha(1);
+        } else if (claim_t >= _spawn_done - 4) {
+            var _ks = (CARD_W * 190/1410) / 194;
+            var _pp = ph_ease_out_back(clamp((claim_t - (_spawn_done - 4)) / CHECK_POP, 0, 1), 2.4);
+            draw_sprite_ext(global.spr_checkmark, 0, REW_CX, _icy, _ks*_pp, _ks*_pp, 0, c_white, 1);
+        }
+    } else if (_claimed) {
+        draw_set_font(global.fnt_tip); draw_set_halign(fa_left); draw_set_valign(fa_middle);
+        draw_set_color(_claim_ink);
+        draw_text_ext(MAIN_X1, _icy, _title, 50, MAIN_X2 - MAIN_X1);
+        var _ks2 = (CARD_W * 190/1410) / 194;
+        draw_sprite_ext(global.spr_checkmark, 0, REW_CX, _icy, _ks2, _ks2, 0, c_white, 1);
+    } else if (_comp) {
+        var _cr = prof_claim_rect(_t);
+        ph_draw_reward_btn(_cr.l, _cr.cy, _cr.r, _cr.bh, "CLAIM", noone, false);
+        draw_set_font(global.fnt_tip); draw_set_halign(fa_left); draw_set_valign(fa_top);
+        draw_set_color(PH_COL_DARK);
+        draw_text_ext(MAIN_X1, _t+165, _title, 50, MAIN_X2 - MAIN_X1);
+        draw_sprite_ext(global.spr_star3d, 0, REW_CX+46, _icy, 100/512, 100/512, 0, c_white, 1);
+        ph_draw_text(REW_CX+2, _icy, string(_m.reward), global.fnt_num_reg, _rew_col, fa_right, fa_middle);
+    } else {
+        // Incomplete — greyed in-progress (title + faded progress bar + count).
+        draw_set_font(global.fnt_tip); draw_set_halign(fa_left); draw_set_valign(fa_top);
+        draw_set_color(_claim_ink);
+        draw_text_ext(MAIN_X1, _t+50, _title, 50, MAIN_X2 - MAIN_X1);
+        var _val = ph_mission_value(_save, _m);
+        var _bcy = _t + CARD_H - 66, _bh = 44;
+        var _bx2 = MAIN_X2 - 150;
+        ph_draw_rounded(MAIN_X1, _bcy-_bh/2, _bx2, _bcy+_bh/2, _bh/2, make_color_rgb(228,221,231));
+        var _fillw = (_bx2-MAIN_X1) * clamp(_val/_m.target, 0, 1);
+        if (_fillw > _bh) ph_draw_rounded(MAIN_X1, _bcy-_bh/2, MAIN_X1+_fillw, _bcy+_bh/2, _bh/2, merge_color(PH_COL_PURPLE, c_white, 0.45));
+        ph_draw_text(MAIN_X2, _bcy, string(_val) + " / " + string(_m.target), global.fnt_body_md, _rew_col, fa_right, fa_middle);
+        draw_sprite_ext(global.spr_star3d, 0, REW_CX+46, _icy, 100/512, 100/512, 0, c_white, 0.6);
+        ph_draw_text(REW_CX+2, _icy, string(_m.reward), global.fnt_num_reg, _rew_col, fa_right, fa_middle);
+    }
+};

@@ -19,6 +19,20 @@ if (claim_phase == 1) {                                  // STARFLY → collisio
 } else if (claim_phase == 2) {                            // REORDER (bounce + slide)
     claim_t++;
     if (claim_t >= REORDER_DUR) { claim_phase = 0; claim_t = 0; claim_mi = -1; }
+} else if (claim_phase == 3) {                            // FINISHED claim / CLAIM ALL (simultaneous)
+    claim_t++;
+    if (claim_t == SF_GATHER + SF_ORBIT + SF_TRAVEL - LEVELSTAR_LEAD) levelstar_t = 0;
+    var _p3_dur = SF_GATHER + SF_ORBIT + (STARFLY_N-1)*SF_RELGAP + SF_TRAVEL + LEVELSTAR_TAIL + 4;
+    if (claim_t >= _p3_dur) {
+        claim_phase = 0; claim_t = 0; fly_idxs = [];
+        if (finalize_after) {
+            finalize_after = false;
+            ph_week_collect(global.save);   // grants week bonus (if full clear) + rolls over to a fresh week
+            scroll_y = 0; scroll_vel = 0;
+        }
+        // Any mission/bonus claim that crossed a level shows the Level-Up screen now.
+        if (ph_levelup_pending()) { ph_win_route(rm_profile, global.selected_date_key); exit; }
+    }
 }
 if (levelstar_t >= 0) { levelstar_t++; if (levelstar_t >= LEVELSTAR_LEAD + (STARFLY_N-1)*SF_RELGAP + LEVELSTAR_TAIL) levelstar_t = -1; }
 if (pending_hub_timer > 0) {
@@ -36,9 +50,33 @@ var _third   = PH_W / 3;
 var _ms      = global.save.week.missions;
 var _finished = (global.save.week.status == "finished");
 
+// ── Sound on/off toggle (speaker chip, header bottom-left) ────────────────────
+if (device_mouse_check_button_pressed(0, mb_left)
+ && point_distance(_mx, _my, 120, M.timer_cy) <= 64) {
+    var _now_on = ph_sfx_toggle();
+    toast_text  = _now_on ? "SOUND ON" : "SOUND OFF";
+    toast_timer = TOAST_DUR;
+    exit;
+}
+
+// ── Haptics on/off toggle (vibrate chip, beside the speaker) ──────────────────
+if (device_mouse_check_button_pressed(0, mb_left)
+ && point_distance(_mx, _my, 244, M.timer_cy) <= 64) {
+    var _hnow_on = ph_haptic_toggle();   // also fires a confirming buzz when turning ON
+    toast_text   = _hnow_on ? "VIBRATION ON" : "VIBRATION OFF";
+    toast_timer  = TOAST_DUR;
+    exit;
+}
+
 // ── Scroll bounds ─────────────────────────────────────────────────────────────
-var _total_h = _finished ? 0 : (array_length(_ms) * (CARD_H + CARD_GAP) - CARD_GAP);
-scroll_max   = max(0, _total_h - (M.list_bot - M.list_top));
+var _total_h;
+if (_finished) {
+    var _gsb = prof_finished_groups((claim_phase == 3) ? fly_idxs : undefined);
+    _total_h = prof_finished_layout(M.list_top, _gsb).content_h;
+} else {
+    _total_h = array_length(_ms) * (CARD_H + CARD_GAP) - CARD_GAP;
+}
+scroll_max = max(0, _total_h - (M.list_bot - M.list_top));
 
 // ── Press / drag / release (mirrors obj_hub) ──────────────────────────────────
 if (device_mouse_check_button_pressed(0, mb_left)) {
@@ -81,14 +119,51 @@ if (device_mouse_check_button_released(0, mb_left)) {
             exit;
         }
 
-        // 3) Finished week → COLLECT placeholder.
+        // 3) Finished week → Week Complete: in-page individual CLAIM + CLAIM ALL.
         if (_finished) {
-            var _mid = (M.list_top + M.list_bot)/2;
-            if (ph_point_in_rect(_tx,_ty, PH_W/2-220, _mid+70-60, PH_W/2+220, _mid+70+60)) {
-                var _cres = ph_week_collect(global.save);
-                if (_cres.leveled) { ph_win_route(rm_profile, global.selected_date_key); exit; }
-                toast_text = "+" + string(_cres.xp_total) + " XP COLLECTED";
-                toast_col  = PH_COL_PURPLE; toast_timer = TOAST_DUR;
+            if (claim_phase != 0) exit;                 // ignore taps during the celebration
+            var _g  = prof_finished_groups(undefined);
+            var _fl = prof_finished_layout(M.list_top, _g);
+
+            // Individual CLAIM on a claimable card.
+            var _ca = _g.claimable;
+            for (var _i = 0; _i < array_length(_ca); _i++) {
+                var _mi = _ca[_i];
+                var _t  = _fl.top[_mi];
+                if (_t > M.list_bot || _t + CARD_H < M.list_top) continue;
+                var _cr = prof_claim_rect(_t);
+                if (ph_point_in_rect(_tx,_ty, _cr.l, _cr.cy-_cr.bh, _cr.r, _cr.cy+_cr.bh)) {
+                    var _m = _ms[_mi];
+                    var _r = ph_mission_claim(global.save, _m);
+                    if (_r.ok) {
+                        fly_idxs = [_mi];
+                        fly_top  = array_create(array_length(_ms), -99999);
+                        fly_top[_mi]   = _t;            // freeze the source ★ position
+                        finalize_after = !ph_week_has_claimable(global.save); // last one → roll over
+                        claim_phase = 3; claim_t = 0; levelstar_t = -1;
+                    }
+                    exit;
+                }
+            }
+
+            // CLAIM ALL button — fires every reward ★ at once, then rolls the week over.
+            var _br = prof_claimall_rect(_fl.btn_cy);
+            if (ph_point_in_rect(_tx,_ty, _br.l, _br.cy-_br.bh, _br.r, _br.cy+_br.bh)) {
+                if (_fl.has_claimable) {
+                    var _res = ph_week_claim_all(global.save);
+                    // Freeze sources: keep the just-claimed tiles in their claimable slots.
+                    var _fll = prof_finished_layout(M.list_top, prof_finished_groups(_res.indices));
+                    fly_idxs = _res.indices;
+                    fly_top  = _fll.top;
+                    finalize_after = true;
+                    claim_phase = 3; claim_t = 0; levelstar_t = -1;
+                } else {
+                    // Nothing claimable (all pre-claimed) — just grant the bonus + roll over.
+                    ph_week_collect(global.save);
+                    scroll_y = 0; scroll_vel = 0;
+                    if (ph_levelup_pending()) { ph_win_route(rm_profile, global.selected_date_key); exit; }
+                }
+                exit;
             }
             exit;
         }
@@ -112,6 +187,8 @@ if (device_mouse_check_button_released(0, mb_left)) {
                             slot_old = array_create(array_length(_ms), 0);
                             for (var _q = 0; _q < array_length(_order); _q++) slot_old[_order[_q]] = _q;
                             // Kick off the sequenced celebration at phase 1 (STARFLY).
+                            ph_sfx(snd_star, 0.95);   // reward stars gather + fly to the level star
+                            ph_haptic_success();      // mission reward claimed
                             claim_mi      = _order[_p];
                             claim_phase   = 1;
                             claim_t       = 0;

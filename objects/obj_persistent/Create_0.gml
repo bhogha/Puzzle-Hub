@@ -83,6 +83,9 @@ global.selected_date_key = ph_today_key();
 global.input_locked_until = 0;
 // Re-arm the daily puzzle reminder if the player already opted in (iOS only).
 ph_notify_boot();
+// Pre-warm the Taptic Engine so the first buzz has no latency (iOS only, no-op else).
+global.ph_haptic_last = {};   // per-effect debounce timestamps (see scr_haptics)
+ph_haptic_prepare();
 // Queued level-up reward (set at puzzle completion, consumed by the Level-Up
 // screen in rm_win). { level, base_reward } when pending; undefined otherwise.
 global.pending_levelup   = undefined;
@@ -95,13 +98,27 @@ global.coin_flow_amount  = 0;
 // screen (obj_win.lu_claim) consumes it and continues there instead of the hub.
 global.post_levelup      = undefined;
 
+// HTML5: fit the canvas to the browser viewport FIRST (sizes the canvas so GM
+// scales render + input together), then pin the application surface / GUI to the
+// design resolution below. See ph_html5_fit_canvas. Native targets are untouched.
+ph_html5_fit_canvas();
+ph_last_bw = (os_browser != browser_not_a_browser) ? browser_width  : 0;
+ph_last_bh = (os_browser != browser_not_a_browser) ? browser_height : 0;
+
 application_surface_draw_enable(true);
 surface_resize(application_surface, PH_W, global.PH_H_dyn);
 display_set_gui_size(PH_W, global.PH_H_dyn);
 // 4× MSAA smooths every primitive edge (rounded-chip corners, swipe lines,
 // halos). 64-segment circles keep larger arcs from looking faceted even
 // when MSAA isn't available (rare, but possible on some older GPUs).
-display_reset(4, true);
+// NOTE: display_reset() is NOT supported on HTML5 — calling it there throws
+// "function display_reset() is not supported." mid-Create, aborting the rest of
+// this event (sprite loads, transition state) and hanging the game on the
+// "Loading" screen. Guard it to native targets; HTML5 falls back to the
+// 64-segment circles below for smoothing.
+if (os_browser == browser_not_a_browser) {
+    display_reset(4, true);
+}
 draw_set_circle_precision(64);
 // Bilinear texture sampling — fonts (font_add produces anti-aliased glyph
 // atlases that look crisp/jaggy without this) and the heavily-downscaled
@@ -136,6 +153,7 @@ global.spr_gift         = sprite_add(_d + "icon_gift.png",         1, false, fal
 global.spr_gold_coin    = sprite_add(_d + "icon_gold_coin.png",    1, false, false, 256, 256);
 global.spr_heart        = sprite_add(_d + "icon_heart.png",        1, false, false, 256, 256);
 global.spr_home         = sprite_add(_d + "icon_home.png",         1, false, false, 256, 256);
+global.spr_events       = sprite_add(_d + "icon_events.png",       1, false, false, 256, 256); // nav Events tab (new clay icon)
 global.spr_bulb         = sprite_add(_d + "icon_bulb.png",         1, false, false, 256, 256);
 global.spr_lock3d       = sprite_add(_d + "icon_lock3d.png",       1, false, false, 256, 256);
 global.spr_position     = sprite_add(_d + "icon_position.png",     1, false, false, 256, 256);
@@ -266,6 +284,15 @@ global.trans_col    = c_white;    // cover colour (the tapped card's accent)
 global.trans_room   = -1;         // target room index, swapped to under full cover
 global.TRANS_COVER_FR  = 16;      // cover beat — iris ACCELERATES out to fill (ph_ease_in)
 global.TRANS_REVEAL_FR = 22;      // reveal beat — iris DECELERATES back to a point (ph_ease_out)
+
+// ── Room history (which room did we just come FROM) ───────────────────────────
+// GameMaker has no runtime "previous room", so we track it here. Step updates
+// these the frame AFTER a room change, so a new room's Create_0 reads room_curr
+// as the room it was opened FROM (the value is still one behind there). obj_hub
+// uses this to detect "the player just returned from a puzzle" (daily-progress
+// FTUE trigger). See obj_persistent/Step_0 and ph_room_is_puzzle.
+global.room_curr = room;   // room we are in now (updated in Step on change)
+global.room_prev = -1;     // room we were in before this one
 
 // ── Idle anchor (for the HINT-pill nudge) ─────────────────────────────────────
 // Reset to current_time on any tap anywhere (see Step); the shared

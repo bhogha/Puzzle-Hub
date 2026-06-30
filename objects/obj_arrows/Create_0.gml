@@ -409,7 +409,7 @@ if (_st != undefined) {
 var _already_solved = _review || ph_arrows_is_done(global.save, global.selected_date_key);
 
 win = ph_win_create({
-    puzzle_name: "ARROWS",
+    puzzle_name: "ARROW",
     title_col:   ACCENT_DEEP,
     bg_col:      ACCENT,
     claim_key:   "arrows_" + global.selected_date_key,

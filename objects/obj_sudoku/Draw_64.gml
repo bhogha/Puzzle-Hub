@@ -34,7 +34,7 @@ var _cb_l = _cb_r - 220;
 ph_draw_chip(_cb_l, _hud_y-33, _cb_r, _hud_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 var _cb_is = (112/512) * _cp_hud;
 draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+23, _hud_y, _cb_is, _cb_is, 0, c_white, 1);
-ph_draw_text(_cb_l+74, _hud_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_cb_l+74, _hud_y, string(global.save.coins), global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 COIN_BAL_X = (_cb_l + _cb_r)/2;
 COIN_BAL_Y = _hud_y;
 
@@ -139,7 +139,7 @@ var _tp_l = PH_W/2 - 105;
 var _tp_r = PH_W/2 + 105;
 ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_stopwatch, 0, _tp_l+19, _tool_y, 106/512, 106/512, 0, c_white, 1);
-ph_draw_text(_tp_l+65, _tool_y, _b_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_tp_l+65, _tool_y, _b_time, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
 // HINT pill — bulb · "HINT" (cost chip removed; handled elsewhere)
 HINT_PILL_R = PH_W - 50;
@@ -239,7 +239,7 @@ if (win_phase == 1) {
     var _streak = variable_struct_exists(global.save, "streak") ? global.save.streak : 1;
     ph_draw_chip(80, _y, 520, _y+70, 35, PH_COL_TEAL_SOFT, make_color_rgb(13,148,136), 5);
     draw_sprite_ext(global.spr_stopwatch, 0, 232, _y+35, 56/512, 56/512, 0, c_white, 1);
-    ph_draw_text(296, _y+35, win_time_str, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+    ph_draw_text(296, _y+35, win_time_str, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
     ph_draw_chip(560, _y, 1000, _y+70, 35, PH_COL_PINK_SOFT, make_color_rgb(180,10,100), 5);
     draw_sprite_ext(global.spr_boxing_glove, 0, 700, _y+35, 56/512, 56/512, 0, c_white, 1);
     ph_draw_text(764, _y+35, string(_streak) + " day streak", global.fnt_body_sm, PH_COL_DARK, fa_left, fa_middle);

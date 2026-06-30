@@ -79,6 +79,7 @@ function ph_spin_open(_s) {
     _s.spin_t       = 0;
     _s.result_delay = 0;
     _s.video_t      = 0;
+    _s.last_tick_slice = -1;   // tracks pie-corner crossings for the spin haptic
     // Uniform random prize.
     _s.prize_idx    = irandom(array_length(_s.prizes) - 1);
     _s.prize_amount = _s.prizes[_s.prize_idx];
@@ -99,10 +100,22 @@ function ph_spin_tick(_s) {
             // Ease-out cubic so the wheel decelerates into the prize.
             var _e = 1 - power(1 - _s.spin_t, 3);
             _s.rot = _s.rot_final * _e;
+            // Tick each time the pointer passes a pie corner. Because the wheel
+            // decelerates, the crossings (and so the ticks) naturally go fast → slow
+            // — the requested "triangle hitting each corner" feel. Debounced in
+            // scr_haptics so the blur-fast early crossings don't overload the motor.
+            var _seg_tick  = 360 / PH_SPIN_SLICES;
+            var _cur_slice = floor(_s.rot / _seg_tick);
+            if (_cur_slice != _s.last_tick_slice) {
+                _s.last_tick_slice = _cur_slice;
+                ph_haptic_select();
+            }
             if (_s.spin_t >= 1) {
                 _s.rot   = _s.rot_final;
                 _s.phase = "result";
                 _s.result_delay = 18;   // brief pause before buttons fully read
+                ph_sfx(snd_star, 0.9);  // wheel lands on the prize
+                ph_haptic_success();    // landed on the prize
             }
             break;
         case "result":
@@ -131,6 +144,7 @@ function ph_spin_input(_s, _mx, _my) {
             if (ph_point_in_circle(_mx, _my, _s.wheel_cx, _s.wheel_cy, _s.wheel_r)) {
                 _s.phase  = "spinning";
                 _s.spin_t = 0;
+                ph_sfx(snd_button, 0.9);   // kick the wheel
                 return "spun";
             }
             return "none";
@@ -275,27 +289,44 @@ function ph_spin__draw_wheel(_s, _cx, _cy, _R) {
         draw_line_width(_cx, _cy, _x2, _y2, 6);
     }
 
-    // Prize labels — angled radially per slice (number near the rim, coin tucked
-    // inward toward the hub), matching the design. The label rotation follows its
-    // slice's radius but is folded into [-90,90] so every number stays readable
-    // (the top & bottom labels read vertically, the sides fan out ~±30°).
+    // Prize labels — angled radially per slice (Penpot "Daily Spin Modal"):
+    //   • the COIN sits on the OUTER side, near the rim;
+    //   • the NUMBER sits inward of it, RIGHT-ALIGNED to the coin — i.e. every
+    //     number's outer edge stops at the same fixed gap below the coin, so
+    //     longer prizes (150) grow inward rather than drifting under the coin.
+    // The label rotation follows its slice's radius, folded into [-90,90] so all
+    // numbers stay readable (top & bottom read vertical, the sides fan out).
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
+    draw_set_font(global.fnt_num_md);
+
+    var _coin_px   = 84;                 // drawn coin diameter
+    var _coin_R    = _R * 0.80;          // coin centre radius (outer, near rim)
+    var _num_edge_R = _coin_R - _coin_px*0.5 - 14;  // radius of each number's OUTER edge
+
     for (var _i = 0; _i < _n; _i++) {
         var _dc = 90 - (_i * _seg + _seg/2 + _s.rot);   // GM dir to the slice centre
-        var _lx = _cx + lengthdir_x(_R * 0.62, _dc);
-        var _ly = _cy + lengthdir_y(_R * 0.62, _dc);
-        var _kx = _cx + lengthdir_x(_R * 0.40, _dc);    // coin sits inward of the number
-        var _ky = _cy + lengthdir_y(_R * 0.40, _dc);
 
-        var _coin_s = 72/256;
-        draw_sprite_ext(global.spr_gold_coin, 0, _kx, _ky, _coin_s, _coin_s, 0, c_white, 1);
+        // Coin — outer, on the slice bisector.
+        var _kx = _cx + lengthdir_x(_coin_R, _dc);
+        var _ky = _cy + lengthdir_y(_coin_R, _dc);
+        draw_sprite_ext(global.spr_gold_coin, 0, _kx, _ky, _coin_px/256, _coin_px/256, 0, c_white, 1);
 
-        var _ang = _dc;                                 // radial reading direction
-        while (_ang >   90) _ang -= 180;                // fold upright/readable
-        while (_ang <= -90) _ang += 180;
+        // Number — inward, anchored so its outer edge meets _num_edge_R (the text
+        // reads along the radius, so half its width offsets the centre inward).
+        // Fold the label upright/readable, but offset the fold SEAM by half a slice
+        // so it sits BETWEEN slices, never on a slice centre. The winning slice
+        // always rests with its centre at the top (_dc = 90); keeping the seam off
+        // the centres stops the top number from flipping 180° as the wheel settles.
+        var _bias = _seg * 0.5;
+        var _ang = _dc;
+        while (_ang >   90 + _bias) _ang -= 180;
+        while (_ang <= -90 + _bias) _ang += 180;
         var _str = string(_s.prizes[_i]);
-        draw_set_font(global.fnt_num_md);
+        var _num_R = _num_edge_R - string_width(_str) * 0.5;
+        var _lx = _cx + lengthdir_x(_num_R, _dc);
+        var _ly = _cy + lengthdir_y(_num_R, _dc);
+
         draw_set_color(make_color_rgb(0, 0, 0));
         draw_text_transformed(_lx + 3, _ly + 3, _str, 1, 1, _ang);   // drop shadow
         draw_set_color(PH_COL_WHITE);

@@ -173,6 +173,9 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
         }
     }
     sk_commit_rect(_r0, _c0, _w, _h);
+    // NOTE: no "correct rectangle" haptic on purpose — like the SFX design
+    // (GDD §2.13), it would imply a wrong rectangle is right. Shikaku uses only
+    // the universal tap + the win buzz.
     // First rectangle drawn → retire the onboarding finger tip.
     if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("SHIKAKU"); }
     exit;

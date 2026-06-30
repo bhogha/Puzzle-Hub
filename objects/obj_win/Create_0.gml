@@ -18,6 +18,8 @@ if (!valid) {
 } else {
     level       = lu.level;
     base_reward = lu.base_reward;        // 100 (PH_COINS_PER_LEVEL)
+    ph_sfx(snd_levelup, 1.0);            // triumphant fanfare on the Level-Up screen
+    ph_haptic_levelup();                 // celebratory success buzz on level up
 }
 
 claimed = false;                          // guards against double-granting

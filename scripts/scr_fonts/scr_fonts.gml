@@ -1,7 +1,20 @@
 function ph_load_fonts() {
     if (os_browser != browser_not_a_browser) {
-        // HTML5: use standard clean sans-serif system fonts directly. This avoids GameMaker's
-        // dynamic font_add polling engine which causes infinite loops and freezes in browsers.
+        // ── HTML5 fonts: use the built-in font (id -1). ───────────────────────
+        // Two runtime-2026.0.0.23 dead-ends ruled out by testing (2026-06-25):
+        //   • font_add(<path>.ttf,…) → Uncaught InvalidCharacterError: btoa
+        //     outside Latin1 (base64s the raw font binary) → corrupts render,
+        //     hub goes BLACK.
+        //   • font_add("Lilita One"/"Nunito" by family name, Google-Fonts-loaded)
+        //     → no crash, but glyphs bake BLANK (invisible text) — the web font
+        //     isn't reliably ready when GM rasterizes, and re-rasterizing can't be
+        //     gated from GML without a JS-bridge extension.
+        // So the web build stays on the built-in font (small but VISIBLE). The
+        // real fix for design-accurate web text is GameMaker FONT ASSETS (Add ▸
+        // Font in the IDE for Lilita One + each Nunito size; baked into the
+        // texture page at build, no runtime font_add / btoa / async) — then point
+        // these globals at those assets. Native (iOS/Android/desktop) is unaffected
+        // and keeps the real font_add path below.
         global.fnt_disp_xxl = -1;
         global.fnt_disp_xl  = -1;
         global.fnt_disp_xlg = -1;
@@ -21,6 +34,7 @@ function ph_load_fonts() {
         global.fnt_num_md   = -1;
         global.fnt_num_reg  = -1;
         global.fnt_num_xl   = -1;
+        global.fnt_pill_num = -1;
         return;
     }
 
@@ -57,4 +71,8 @@ function ph_load_fonts() {
     // ("100 ⭐" / "25 ⭐" / "100 🪙"). Penpot design uses a chunky Nunito ~150px on
     // the ~1.4× board, so ~96px is the faithful scale on the app canvas.
     global.fnt_num_xl   = font_add(_nunito+"Nunito-ExtraBold.ttf", 96, false,false,32,127);
+    // CENTRAL non-bold pill font — used app-wide for every Level/Coin pill number
+    // AND the tile PLAY buttons (Bora: these should read non-bold). Penpot spec =
+    // Nunito SemiBold (600). Change the weight/size here once to restyle all pills.
+    global.fnt_pill_num = font_add(_nunito+"Nunito-ExtraBold.ttf",  42, false,false,32,127);
 }

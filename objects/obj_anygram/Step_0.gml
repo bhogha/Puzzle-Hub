@@ -305,6 +305,9 @@ if (is_dragging_wheel && device_mouse_check_button_released(0, mb_left)) {
                 puzzle.words[_result.index].found = true;
                 ph_anygram_mark_word(global.save, global.selected_date_key, _result.index);
                 ph_save_write(global.save);
+                ph_sfx(snd_correct, 0.8);   // hidden word found
+                ph_haptic_success();        // hidden word found
+
                 // First hidden word found → retire the onboarding finger tip.
                 if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("ANYGRAM"); }
                 ag_flash_word_by_index(_result.index);
@@ -321,6 +324,8 @@ if (is_dragging_wheel && device_mouse_check_button_released(0, mb_left)) {
                 ph_anygram_mark_bonus(global.save, global.selected_date_key, puzzle.bonus[_result.index]);
                 // Bonus words pay coins only — no XP (single 100 XP awarded on full puzzle completion).
                 ph_grant_coins(global.save, PH_BONUS_WORD_COINS); ph_week_record_bonus_word(global.save, _word);
+                ph_sfx(snd_coin, 0.85);   // bonus word → +coins
+                ph_haptic_coin();         // bonus word → +coins
                 ph_save_write(global.save);
                 ag_spawn_fly_bonus(string_upper(_word));
                 toast_text  = "BONUS +" + string(PH_BONUS_WORD_COINS) + " COINS - " + string_upper(_word);

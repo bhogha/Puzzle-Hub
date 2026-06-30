@@ -82,6 +82,8 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
         if (_idx != -1) {
             if (ph_arrows_sweep_clear(puzzle, alive, _idx)) {
                 ar_start_launch(_idx);
+                ph_sfx(snd_correct, 0.7);   // arrow slides free
+                ph_haptic_success();        // arrow slides free
                 // First arrow slid out → retire the onboarding finger tip.
                 if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("ARROWS"); }
             } else {
@@ -91,6 +93,8 @@ if (device_mouse_check_button_pressed(0, mb_left)) {
                 var _bi      = ph_arrows_block_info(puzzle, alive, _idx);
                 blocker_idx  = _bi.blocker;                     // arrow that stops it
                 ar_start_bump(_idx, max(_bi.gap, 0));
+                ph_sfx(snd_error, 0.7);   // blocked → +5 s penalty
+                ph_haptic_error();        // blocked move → negative feedback
                 penalty_secs += PH_ARROWS_PENALTY_SECS;
                 timer_base_secs += PH_ARROWS_PENALTY_SECS;   // fold the penalty into the play timer
                 float_t      = FLOAT_DUR;

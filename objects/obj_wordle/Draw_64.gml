@@ -15,13 +15,13 @@ if (win_phase == 1) {
 
 // ── Top HUD: back · WORDLE · coin balance ─────────────────────────────────────
 draw_sprite_ext(global.spr_back2, 0, 60, HUD_Y, 0.36, 0.36, 0, c_white, 1);
-ph_draw_text(PH_W/2, HUD_Y, "WORDLE", global.fnt_disp_md, PH_COL_GREEN, fa_center, fa_middle);
+ph_draw_text(PH_W/2, HUD_Y, "WORD", global.fnt_disp_md, PH_COL_GREEN, fa_center, fa_middle);
 
 var _cb_r = PH_W - 50;
 var _cb_l = _cb_r - 220;
 ph_draw_chip(_cb_l, HUD_Y-33, _cb_r, HUD_Y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+23, HUD_Y, 112/512, 112/512, 0, c_white, 1);
-ph_draw_text(_cb_l+74, HUD_Y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_cb_l+74, HUD_Y, string(global.save.coins), global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
 // "-100" coin-spend feedback near the coin pill (shared hint helper).
 hint.coin_x = (_cb_l + _cb_r) / 2;
@@ -179,7 +179,7 @@ var _t_str  = string(_e_s div 60) + ":" + (((_e_s mod 60) < 10) ? "0" : "") + st
 var _tp_l = 60, _tp_r = 60 + 210;
 ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_stopwatch, 0, _tp_l+30, _tool_y, 106/512, 106/512, 0, c_white, 1);
-ph_draw_text(_tp_l+78, _tool_y, _t_str, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_tp_l+78, _tool_y, _t_str, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
 // HINT pill — bulb · "HINT"
 HINT_PILL_R = PH_W - 50;

@@ -238,7 +238,7 @@ win_draw_recap = function(_cx, _top, _bw, _bh) {
     }
 };
 win = ph_win_create({
-    puzzle_name: "COLORDOKU",
+    puzzle_name: "DIAMOND",
     title_col:   ACCENT_DEEP,
     bg_col:      ACCENT,
     claim_key:   "colordoku_" + global.selected_date_key,

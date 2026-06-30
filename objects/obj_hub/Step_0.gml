@@ -50,6 +50,26 @@ if (ph_spin_is_open(spin)) {
     exit;
 }
 
+// ── Daily-progress FTUE coach ─────────────────────────────────────────────────
+// Animates regardless of the input lock. While open it captures ALL input (tap
+// anywhere advances / closes, gated to ~1 s into each step), so the rest of the
+// hub is suspended. On the final tap it persists the seen-flag and fires the
+// notification-permission request (retargeted here from first-solve).
+ph_dailytut_tick(dailytut);
+if (ph_dailytut_is_open(dailytut)) {
+    if (current_time >= global.input_locked_until) {
+        var _dr = ph_dailytut_input(dailytut);
+        if (_dr == "done") {
+            global.save.daily_progress_tut_done = true;
+            ph_save_write(global.save);
+            // Tutorial finished → ask for notification permission now (iOS-guarded,
+            // once-only inside). Replaces the old first-solve prompt.
+            ph_notify_request_after_first_solve();
+        }
+    }
+    exit;
+}
+
 // ── Input lock ────────────────────────────────────────────────────────────────
 if (current_time < global.input_locked_until) exit;
 
@@ -261,67 +281,67 @@ if (device_mouse_check_button_released(0, mb_left)) {
                                 ph_finger_hide(finger);
                             }
                             // Flag review mode explicitly so each puzzle's Create_0 can rely on it
-                            if (_card.name == "ANYGRAM") {
+                            if (_card.room == "rm_anygram") {
                                 global.anygram_review_mode =
                                     ph_anygram_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.anygram_review_mode = false;
                             }
-                            if (_card.name == "SUDOKU") {
+                            if (_card.room == "rm_sudoku") {
                                 global.sudoku_review_mode =
                                     ph_sudoku_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.sudoku_review_mode = false;
                             }
-                            if (_card.name == "WORD WAVE") {
+                            if (_card.room == "rm_wordwave") {
                                 global.wordwave_review_mode =
                                     ph_wordwave_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.wordwave_review_mode = false;
                             }
-                            if (_card.name == "SHIKAKU") {
+                            if (_card.room == "rm_shikaku") {
                                 global.shikaku_review_mode =
                                     ph_shikaku_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.shikaku_review_mode = false;
                             }
-                            if (_card.name == "WORDLE") {
+                            if (_card.room == "rm_wordle") {
                                 global.wordle_review_mode =
                                     ph_wordle_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.wordle_review_mode = false;
                             }
-                            if (_card.name == "HUE SORT") {
+                            if (_card.room == "rm_huesort") {
                                 global.huesort_review_mode =
                                     ph_huesort_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.huesort_review_mode = false;
                             }
-                            if (_card.name == "COLOR LINK") {
+                            if (_card.room == "rm_colorlink") {
                                 global.colorlink_review_mode =
                                     ph_colorlink_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.colorlink_review_mode = false;
                             }
-                            if (_card.name == "WORD BEND") {
+                            if (_card.room == "rm_wordbend") {
                                 global.wordbend_review_mode =
                                     ph_wordbend_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.wordbend_review_mode = false;
                             }
-                            if (_card.name == "ARROWS") {
+                            if (_card.room == "rm_arrows") {
                                 global.arrows_review_mode =
                                     ph_arrows_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.arrows_review_mode = false;
                             }
-                            if (_card.name == "LADDER") {
+                            if (_card.room == "rm_ladder") {
                                 global.ladder_review_mode =
                                     ph_ladder_is_done(global.save, global.selected_date_key);
                             } else {
                                 global.ladder_review_mode = false;
                             }
-                            if (_card.name == "COLORDOKU") {
+                            if (_card.room == "rm_colordoku") {
                                 global.colordoku_review_mode =
                                     ph_colordoku_is_done(global.save, global.selected_date_key);
                             } else {

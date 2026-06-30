@@ -106,6 +106,8 @@ function ph_hint_tick(_h) {
 /// the hint + returns its target) and arms the reveal animation. The deferred
 /// result (_kind) is emitted by ph_hint_input once the reveal finishes.
 function ph_hint__begin_reveal(_h, _kind) {
+    ph_sfx(snd_hint, 0.85);   // magical shimmer as the hint reveals
+    ph_haptic_success();      // satisfying confirm as the hint lands (shared by every puzzle)
     _h.result_pending = _kind;
     _h.reveal_t       = 0;
     _h.reveal_frames  = _h.REVEAL_FR_DEF;
@@ -277,7 +279,7 @@ function ph_hint_draw_modal(_h) {
     var _bal_y = 95 + global.safe_top_gui;
     ph_draw_chip(_bal_l, _bal_y - 33, _bal_r, _bal_y + 33, 33, PH_COL_WHITE, make_color_rgb(150, 134, 120), 6);
     draw_sprite_ext(global.spr_gold_coin, 0, _bal_l + 23, _bal_y, 112/512, 112/512, 0, c_white, 1);
-    ph_draw_text(_bal_l + 74, _bal_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+    ph_draw_text(_bal_l + 74, _bal_y, string(global.save.coins), global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 }
 
 /// ── Post-buy hint reveal (the "circle smalling down to the hinted area") ───────
@@ -353,7 +355,7 @@ function ph_hint_pill_draw(_l, _t, _r, _b, _shadow) {
 
     ph_draw_chip(_l, _t + _dy, _r, _b + _dy, 33, PH_COL_WHITE, _shadow, 6);
     draw_sprite_ext(global.spr_bulb, 0, _l + 12, _cy + _dy, 101/512, 101/512, 0, c_white, 1);
-    ph_draw_text(_l + 51, _cy + _dy, "HINT", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+    ph_draw_text(_l + 51, _cy + _dy, "HINT", global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 }
 
 /// Full-screen dark placeholder for the rewarded video. Call LAST in Draw so it

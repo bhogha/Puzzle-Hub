@@ -370,7 +370,7 @@ if (_st != undefined) {
 var _already_solved = _review || ph_colorlink_is_done(global.save, global.selected_date_key);
 
 win = ph_win_create({
-    puzzle_name: "COLOR LINK",
+    puzzle_name: "DOTS",
     title_col:   ACCENT_DEEP,
     bg_col:      ACCENT,
     claim_key:   "colorlink_" + global.selected_date_key,

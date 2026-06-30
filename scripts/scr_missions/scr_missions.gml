@@ -255,9 +255,12 @@ function ph_mission_is_complete(_save, _m) {
     return ph_mission_value(_save, _m) >= _m.target;
 }
 
-/// Claimable = complete, not yet claimed, and the week is still active.
+/// Claimable = complete and not yet claimed. Allowed during the active week AND
+/// the finished ("Week Complete") state, where the player claims rewards in-page
+/// (individually or via CLAIM ALL) before the next week rolls in.
 function ph_mission_claimable(_save, _m) {
-    return (_save.week.status == "active") && !_m.claimed && ph_mission_is_complete(_save, _m);
+    var _st = _save.week.status;
+    return (_st == "active" || _st == "finished") && !_m.claimed && ph_mission_is_complete(_save, _m);
 }
 
 /// Claim a single mission's reward (per-mission CLAIM during the active week).
@@ -451,6 +454,34 @@ function ph_week_check_finish(_save) {
         _save.week.status = "finished";
         ph_save_write(_save);
     }
+}
+
+/// CLAIM ALL: grant every currently-claimable mission's reward at once (used by
+/// the Week-Complete screen's "CLAIM ALL" button and the simultaneous star burst).
+/// Does NOT grant the week bonus or advance the week — the caller runs
+/// ph_week_collect after the celebration to finalize (bonus + roll over).
+/// A level crossing queues the Level-Up screen via global.pending_levelup.
+/// Returns { indices, xp_total, leveled }.
+function ph_week_claim_all(_save) {
+    var _idxs = [];
+    var _xp_total = 0;
+    var _leveled  = false;
+    var _ms = _save.week.missions;
+    for (var _i = 0; _i < array_length(_ms); _i++) {
+        var _m = _ms[_i];
+        if (!_m.claimed && ph_mission_is_complete(_save, _m)) {
+            _m.claimed = true;
+            var _r = ph_grant_xp(_save, _m.reward, false);
+            _xp_total += _m.reward;
+            if (_r.levels_gained > 0) _leveled = true;
+            array_push(_idxs, _i);
+        }
+    }
+    if (_leveled) {
+        global.pending_levelup = { level:ph_level_from_xp(_save.xp), base_reward:PH_COINS_PER_LEVEL };
+    }
+    ph_save_write(_save);
+    return { indices:_idxs, xp_total:_xp_total, leveled:_leveled };
 }
 
 /// COLLECT: grant any complete-but-unclaimed mission rewards + the week-complete

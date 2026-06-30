@@ -201,7 +201,7 @@ win_draw_recap = function(_cx, _top, _bw, _bh) {
     }
 };
 win = ph_win_create({
-    puzzle_name: "ANYGRAM",
+    puzzle_name: "WHEEL",
     title_col:   PH_COL_PINK,
     bg_col:      PH_COL_TEAL,
     claim_key:   "anygram_" + global.selected_date_key,

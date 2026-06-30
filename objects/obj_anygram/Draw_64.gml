@@ -29,7 +29,7 @@ var _hud_y = 95 + global.safe_top_gui;
 
 // Back chevron — new baked-black sprite (drawn with c_white to keep its colour).
 draw_sprite_ext(global.spr_back2, 0, 60, _hud_y, 0.36, 0.36, 0, c_white, 1);
-ph_draw_text(PH_W/2, _hud_y, "ANYGRAM", global.fnt_disp_md, PH_COL_PINK, fa_center, fa_middle);
+ph_draw_text(PH_W/2, _hud_y, "WHEEL", global.fnt_disp_md, PH_COL_PINK, fa_center, fa_middle);
 
 // Coin balance pill — top-right (moved up from the bottom toolbar). Keeps the
 // pulse/overshoot animation so coin-fly arrivals still feel alive. No tap action.
@@ -48,7 +48,7 @@ ph_draw_chip(_cb_pill_l, _hud_y-33, _cb_pill_r, _hud_y+33, 33,
 var _cb_icon_s = (112/512) * _cp_hud;
 draw_sprite_ext(global.spr_gold_coin, 0, _cb_pill_l+23, _hud_y, _cb_icon_s, _cb_icon_s, 0, c_white, 1);
 ph_draw_text(_cb_pill_l+74, _hud_y, string(global.save.coins),
-             global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+             global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 // Expose the coin pill centre as the coin-fly target so the reward arc lands here.
 COIN_BAL_X = (_cb_pill_l + _cb_pill_r) / 2;
 COIN_BAL_Y = _hud_y;
@@ -194,7 +194,7 @@ var _tp_r = PH_W/2 + 105;
 ph_draw_chip(_tp_l, _tool_y - 33, _tp_r, _tool_y + 33, 33,
              PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_stopwatch, 0, _tp_l + 19, _tool_y, 106/512, 106/512, 0, c_white, 1);
-ph_draw_text(_tp_l + 65, _tool_y, _hud_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_tp_l + 65, _tool_y, _hud_time, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
 // Right — HINT pill: bulb · "HINT" (cost chip removed; handled elsewhere).
 // Tap target lives in Step_0.gml as HINT_PILL_{L,R,T,B}; keep them in sync.
@@ -419,7 +419,7 @@ if (win_phase == 1) {
 
     ph_draw_chip(80, _y, 520, _y+70, 35, PH_COL_TEAL_SOFT, make_color_rgb(13,148,136), 5);
     draw_sprite_ext(global.spr_stopwatch, 0, 232, _y+35, 56/512, 56/512, 0, c_white, 1);
-    ph_draw_text(296, _y+35, win_time_str, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+    ph_draw_text(296, _y+35, win_time_str, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
     ph_draw_chip(560, _y, 1000, _y+70, 35, PH_COL_PINK_SOFT, make_color_rgb(180,10,100), 5);
     draw_sprite_ext(global.spr_boxing_glove, 0, 700, _y+35, 56/512, 56/512, 0, c_white, 1);

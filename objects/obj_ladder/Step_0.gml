@@ -107,13 +107,20 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
 
     // Replace the selected letter and check the whole word against the target.
     letters[sel] = _k.ch;
+    ph_haptic_type();   // crisp typewriter rap as the letter lands in the tile
     var _target  = puzzle.words[step];
     if (ld_row_string() == _target) {
         feedback = "correct"; fb_timer = FB_DUR;   // green flash → advance in feedback block
+        ph_sfx(snd_correct, 0.85);                 // rung solved
+        ph_haptic_success();                       // rung solved
+
         // First rung solved → retire the onboarding finger tip.
         if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("LADDER"); }
     } else {
         feedback = "wrong";   fb_timer = FB_DUR;   // red flash → revert in feedback block
+        ph_sfx(snd_error, 0.8);                    // wrong letter → +5 s penalty
+        ph_haptic_error();                         // wrong letter → +5 s penalty
+
         // Wrong guess → +5 s time penalty (folded into the play timer, like Arrows),
         // with a floating "+5s" + red timer flash so the cost is clear.
         timer_base_secs += PH_LADDER_PENALTY_SECS;

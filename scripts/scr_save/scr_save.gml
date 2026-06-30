@@ -21,7 +21,10 @@ function ph_save_load() {
             if (!variable_struct_exists(_data, "spin_claimed_date")) _data.spin_claimed_date = ""; // last date_key the Daily Spin was claimed
             if (!variable_struct_exists(_data, "spin_claimed_dt")) _data.spin_claimed_dt = 0;       // last claim wall-clock datetime (for PH_SPIN_TEST_COOLDOWN_MINS)
             if (!variable_struct_exists(_data, "tutorial_done")) _data.tutorial_done = false;      // first-run soft onboarding (tile slide-in + finger) seen? set true on first puzzle open; cleared by reset
+            if (!variable_struct_exists(_data, "daily_progress_tut_done")) _data.daily_progress_tut_done = false; // daily-progress FTUE (2-step coach on first RETURN from a puzzle) seen? set true when it finishes; cleared by reset. Notif permission is requested when this completes.
             if (!variable_struct_exists(_data, "tips_seen")) _data.tips_seen = {};                 // per-puzzle first-play finger tip seen? keyed by puzzle key (ph_tip_seen / ph_tip_mark_seen); set true once the desired first action is completed
+            if (!variable_struct_exists(_data, "sfx_on")) _data.sfx_on = true;                     // feedback-sound master toggle (Events screen speaker); defaults on (ph_sfx_enabled)
+            if (!variable_struct_exists(_data, "haptics_on")) _data.haptics_on = true;             // haptic-feedback master toggle (Events screen vibrate chip); defaults on (ph_haptic_enabled)
             ph_update_streak(_data);
             // Missions: ensure a weekly set exists, then flip to "finished" if the
             // timer expired (or it's all done) while the player was away.
@@ -46,7 +49,10 @@ function ph_save_load() {
         spin_claimed_date:  "",
         spin_claimed_dt:    0,
         tutorial_done:      false,
+        daily_progress_tut_done: false,
         tips_seen:          {},
+        sfx_on:             true,
+        haptics_on:         true,
     };
     ph_week_init(_fresh);   // seed the hand-authored Week 1 mission set
     return _fresh;
@@ -81,7 +87,10 @@ function ph_save_reset() {
         spin_claimed_date:  "",
         spin_claimed_dt:    0,
         tutorial_done:      false,   // replay the soft onboarding after a progress reset
+        daily_progress_tut_done: false, // replay the daily-progress FTUE coach after a reset
         tips_seen:          {},      // replay every per-puzzle first-play finger tip after a reset
+        sfx_on:             true,    // sound preference survives a progress reset by defaulting on
+        haptics_on:         true,    // haptics preference survives a progress reset by defaulting on
     };
     ph_week_init(_fresh);   // fresh Week 1 after a reset
     return _fresh;
@@ -196,6 +205,17 @@ function ph_update_streak(_save) {
     }
     
     _save.streak = _streak;
+}
+
+/// True if the player has ever solved at least one puzzle (any date). Counts via
+/// ph_solved_count_on, so bookkeeping keys (ANYGRAM_*, WW_W*) and WORDLE_MISSED
+/// don't qualify. Gates the daily-progress FTUE coach to "after the first solve".
+function ph_has_any_solve(_save) {
+    var _dates = variable_struct_get_names(_save.puzzles_solved);
+    for (var _i = 0; _i < array_length(_dates); _i++) {
+        if (ph_solved_count_on(_save, _dates[_i]) > 0) return true;
+    }
+    return false;
 }
 
 function ph_mark_solved(_save, _date_key, _puzzle_name) {

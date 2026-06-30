@@ -51,6 +51,9 @@ if (_hr != "none") {
 // ── Reveal animation: advance, then commit the row when it finishes ───────────
 if (revealing) {
     reveal_t++;
+    // Selection tick as each letter tile flips open, left to right.
+    var _flipped = clamp(reveal_t div REVEAL_STAGGER, 0, COLS);
+    while (wd_reveal_ticked < _flipped) { ph_haptic_select(); wd_reveal_ticked++; }
     var _done_at = (COLS - 1) * REVEAL_STAGGER + REVEAL_FLIP;
     if (reveal_t >= _done_at) {
         revealing = false;
@@ -61,7 +64,8 @@ if (revealing) {
         if (_status == "won") {
             wd_check_win();
         } else if (_status == "lost") {
-            wd_enter_lose();   // out of guesses → lost-aversion modal (or finalize)
+            ph_haptic_error();   // out of guesses — missed the word
+            wd_enter_lose();     // out of guesses → lost-aversion modal (or finalize)
         }
     }
     exit;
@@ -113,7 +117,7 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
     if (_k.type == "letter") {
         // Fill the leftmost empty slot.
         for (var _s = 0; _s < COLS; _s++) {
-            if (row_slots[_s] == "") { row_slots[_s] = _k.ch; break; }
+            if (row_slots[_s] == "") { row_slots[_s] = _k.ch; ph_haptic_type(); break; }   // typewriter rap
         }
         // First letter typed → retire the onboarding finger tip.
         if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("WORDLE"); }
@@ -129,6 +133,7 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
             var _guess = wd_row_string();
             if (!ph_wordle_is_allowed(_guess, puzzle.answer)) {
                 wd_toast("NOT A WORD", PH_COL_PINK);
+                ph_haptic_error();   // not a valid word
             } else {
                 // Begin the reveal of this row; it commits in the reveal block above.
                 reveal_guess = _guess;
@@ -136,6 +141,7 @@ for (var _i = 0; _i < array_length(_keys); _i++) {
                 reveal_row   = array_length(puzzle.guesses);
                 reveal_t     = 0;
                 revealing    = true;
+                wd_reveal_ticked = 0;   // count of tiles that have ticked open this reveal
             }
         }
     }

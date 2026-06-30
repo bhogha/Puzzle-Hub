@@ -20,7 +20,7 @@ var _shx     = shake_offset_x;
 // ── Top HUD strip: back · WORD BEND · coin balance ────────────────────────────
 var _hud_y = 95 + global.safe_top_gui;
 draw_sprite_ext(global.spr_back2, 0, 60, _hud_y, 0.36, 0.36, 0, c_white, 1);
-ph_draw_text(PH_W/2, _hud_y, "WORD BEND", global.fnt_disp_md, ACCENT, fa_center, fa_middle);
+ph_draw_text(PH_W/2, _hud_y, "BEND", global.fnt_disp_md, ACCENT, fa_center, fa_middle);
 
 var _cp_hud = 1.0;
 if (coin_pulse_t < 1) {
@@ -33,7 +33,7 @@ var _cb_l = _cb_r - 220;
 ph_draw_chip(_cb_l, _hud_y-33, _cb_r, _hud_y+33, 33, PH_COL_WHITE, _chip_sh, 6);
 var _cb_is = (112/512) * _cp_hud;
 draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+23, _hud_y, _cb_is, _cb_is, 0, c_white, 1);
-ph_draw_text(_cb_l+74, _hud_y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_cb_l+74, _hud_y, string(global.save.coins), global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 COIN_BAL_X = (_cb_l + _cb_r)/2;
 COIN_BAL_Y = _hud_y;
 
@@ -123,7 +123,7 @@ var _tp_l = PH_W/2 - 105;
 var _tp_r = PH_W/2 + 105;
 ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, _chip_sh, 6);
 draw_sprite_ext(global.spr_stopwatch, 0, _tp_l+19, _tool_y, 106/512, 106/512, 0, c_white, 1);
-ph_draw_text(_tp_l+65, _tool_y, _b_time, global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_tp_l+65, _tool_y, _b_time, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
 HINT_PILL_R = PH_W - 50;
 HINT_PILL_L = HINT_PILL_R - 210;

@@ -251,6 +251,8 @@ function ph_win_create(_cfg) {
 
 /// Fire the celebratory confetti burst (call when win_phase flips to 1).
 function ph_win_celebrate(_w) {
+    ph_sfx(snd_win, 1.0);   // solved! celebratory sting under the confetti burst
+    ph_haptic_win();        // heavy thud as the puzzle is solved (every puzzle, centralized)
     _w.confetti_pending = true;
     _w.confetti_frames  = 0;
 }
@@ -276,15 +278,18 @@ function ph_win_grant(_w, _amount) {
     _w.xp_anim_from = _before;
     _w.xp_anim_t    = 0;
     ph_save_write(global.save);
-    // First genuine solve → ask for notification permission + schedule the daily
-    // reminder (iOS only; runs once, guarded inside). Never fires in review mode.
-    ph_notify_request_after_first_solve();
+    // NOTE: the notification-permission prompt used to fire here (first genuine
+    // solve). It's now triggered when the daily-progress FTUE coach finishes —
+    // which happens the first time the player returns to the hub after playing —
+    // so the prompt lands a beat later, after the tutorial. See obj_hub/Step_0 and
+    // ph_notify_request_after_first_solve (still once-only + iOS-guarded inside).
 }
 
 /// Begin the claim animation: grant XP, spawn the star flight, enter "claiming".
 function ph_win_begin_claim(_w, _amount) {
     if (_w.state == "claiming" || _w.state == "done") return;
     ph_win_grant(_w, _amount);
+    ph_sfx(snd_star, 0.95);   // XP stars peel off and fly to the bar
     _w.state   = "claiming";
     _w.claim_t = 0;
     _w.stars   = [];
@@ -447,7 +452,7 @@ function ph_win_draw(_w) {
     var _pl = _grpx + _clw + _lpgap, _pr = _pl + _pillw;
     ph_draw_chip(_pl, _completed_cy-38, _pr, _completed_cy+38, 38, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
     draw_sprite_ext(global.spr_stopwatch, 0, _pl+48, _completed_cy, 150/512, 150/512, 0, c_white, 1);
-    ph_draw_text(_pl+96, _completed_cy, _cfg.time_str, global.fnt_body_lg, PH_COL_DARK, fa_left, fa_middle);
+    ph_draw_text(_pl+96, _completed_cy, _cfg.time_str, global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
     // ── Level progress bar + animated number + level star badge ───────────────
     // Hidden once we reach the "done" state — that lower band becomes the

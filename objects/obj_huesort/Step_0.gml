@@ -97,6 +97,7 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
         var _to = _cur_idx;
         if (_to != drag_from && !puzzle.locked[_to] && !hint_locked[_to]) {
             hs_swap(drag_from, _to);
+            ph_haptic_select();   // tiles swap into place
         }
     }
     drag_from = -1;

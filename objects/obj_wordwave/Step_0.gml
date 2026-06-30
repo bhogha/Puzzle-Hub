@@ -209,6 +209,9 @@ if (is_dragging && device_mouse_check_button(0, mb_left)) {
     if (!is_undefined(_cell)) {
         var _path = ww_build_path(drag_start, _cell);
         if (!is_undefined(_path)) {       // colinear → adopt; else keep last good path
+            // Highlighter feel: a small tick each time the selection grows/shrinks
+            // by a cell as the finger drags across the grid (debounced in scr_haptics).
+            if (array_length(_path) != array_length(sel_path)) ph_haptic_select();
             sel_path  = _path;
             sel_valid = true;
         }
@@ -225,6 +228,9 @@ if (is_dragging && device_mouse_check_button_released(0, mb_left)) {
                 puzzle.words[_result.index].found = true;
                 ph_wordwave_mark_word(global.save, global.selected_date_key, _result.index);
                 ph_save_write(global.save);
+                ph_sfx(snd_correct, 0.8);   // hidden word found
+                ph_haptic_success();        // hidden word found
+
                 // First hidden word found → retire the onboarding finger tip.
                 if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("WORDWAVE"); }
                 ww_flash_path(puzzle.words[_result.index].cells);
@@ -239,6 +245,8 @@ if (is_dragging && device_mouse_check_button_released(0, mb_left)) {
                 ph_wordwave_mark_bonus(global.save, global.selected_date_key,
                                        puzzle.bonus_pool[_result.index]);
                 ph_grant_coins(global.save, PH_BONUS_WORD_COINS);
+                ph_sfx(snd_coin, 0.85);   // bonus word → +coins
+                ph_haptic_coin();         // bonus word → +coins
                 ph_save_write(global.save);
                 ww_flash_path(sel_path);
                 ww_spawn_coin_drop();

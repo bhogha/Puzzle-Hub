@@ -1,5 +1,24 @@
 // ── Drawing helpers ───────────────────────────────────────────────────────────
 
+/// HTML5 ONLY: resize the canvas to an aspect-fit of the browser viewport.
+/// This build's HTML5 scaling behaves as "No Scaling" (the game manually owns the
+/// application surface at PH_W×PH_H_dyn, which suppresses GameMaker's auto-fit), so
+/// the canvas renders at native size and overflows a smaller window — AND mouse
+/// input stays mapped 1:1 to that native size, so taps in the lower band miss
+/// entirely (the Daily Spin wheel was unclickable). window_set_size shrinks the
+/// canvas to fit while keeping aspect; GameMaker then scales the 1080×1920
+/// application surface down to it and — critically — maps device-mouse input
+/// through that same scale, so taps line up again. No-op on native targets.
+function ph_html5_fit_canvas() {
+    if (os_browser == browser_not_a_browser) return;
+    var _bw = browser_width;
+    var _bh = browser_height;
+    if (_bw <= 0 || _bh <= 0) return;
+    var _scale = min(_bw / PH_W, _bh / global.PH_H_dyn);
+    if (_scale <= 0) _scale = 1;
+    window_set_size(round(PH_W * _scale), round(global.PH_H_dyn * _scale));
+}
+
 /// Format an integer with thousand separators ("1000" → "1,000"). Used so
 /// large coin balances stay readable inside the small pill on the hub HUD.
 function ph_format_int_thousands(_n) {
@@ -161,7 +180,7 @@ function ph_draw_bonus_pill(_l, _cy, _count) {
     ph_draw_chip(_l, _t, _r, _b, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
     var _chest_s = 118 / 512;   // matches the coin icon's visible height
     draw_sprite_ext(global.spr_chest, 0, _l + 27, _cy, _chest_s, _chest_s, 0, c_white, 1);
-    ph_draw_text(_l + 82, _cy, "BONUS", global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+    ph_draw_text(_l + 82, _cy, "BONUS", global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
     if (_count > 0) {
         draw_set_color(PH_COL_PINK);
         draw_circle(_l + 60, _cy - 30, 20, false);
@@ -197,42 +216,43 @@ function ph_draw_icon(_spr, _x, _y, _scale, _col) {
     draw_sprite_ext(_spr, 0, _x, _y, _scale, _scale, 0, _col, 1);
 }
 
-/// Segmented progress bar built from the progress_bar_* sprites.
-/// Draws _total cells evenly across [_x1.._x2], vertically centred on _cy at
-/// height _h. The first _filled cells are purple, the rest grey. The two end
-/// cells use the rounded cap sprites; internal cells use the flat centre
-/// sprites. There is no grey_left.png asset, so an unfilled left cap is produced
-/// by mirroring the grey right cap (negative x-scale). Segment sprites are loaded
-/// with origin x=0, y=45 so each cell anchors at its own left edge.
+/// Fragmented progress bar matching the Penpot "Daily Progress Bar" design:
+/// a white rounded background pill with _total coloured chunks on top, separated
+/// by thin white slits. The first _filled chunks are purple (#9d5ff8), the rest
+/// grey (#d9d9d9). The two end chunks are rounded to fill the pill caps; interior
+/// chunks are square so the slits read as a clean division. Vertically centred on
+/// _cy at height _h across [_x1.._x2].
 function ph_draw_progress_segments(_x1, _x2, _cy, _h, _total, _filled, _alpha) {
     if (_alpha == undefined) _alpha = 1;
-    var _seg_src_w = 195;
-    var _seg_src_h = 90;
-    var _cell_w = (_x2 - _x1) / _total;
-    var _sx     = _cell_w / _seg_src_w;
-    var _sy     = _h / _seg_src_h;
+    if (_total <= 0) return;
+    draw_set_alpha(_alpha);
+
+    // White rounded background pill (the slits between chunks show this through).
+    var _r = _h * 0.5;
+    ph_draw_rounded(_x1, _cy - _h/2, _x2, _cy + _h/2, _r, PH_COL_WHITE);
+
+    // Chunk band, inset inside the pill. Thicker vertical inset = clearly visible
+    // white lines above/below the coloured chunks (Bora: the old ~5% was too thin).
+    var _inset  = max(8, _h * 0.14);
+    var _sy1    = _cy - _h/2 + _inset;
+    var _sy2    = _cy + _h/2 - _inset;
+    var _seg_h  = _sy2 - _sy1;
+    var _seg_r  = _seg_h * 0.45;             // every step rounded ("rounded steps")
+    var _band_l = _x1 + _inset;
+    var _band_r = _x2 - _inset;
+    var _cell_w = (_band_r - _band_l) / _total;
+    var _gap    = max(4, _cell_w * 0.10);   // thin white slit between chunks
+
+    var _col_fill  = make_color_rgb(157, 95, 248);   // #9d5ff8 purple
+    var _col_empty = make_color_rgb(217, 217, 217);  // #d9d9d9 grey
+
     for (var _i = 0; _i < _total; _i++) {
-        var _cx_left   = _x1 + _i * _cell_w;
-        var _is_filled = (_i < _filled);
-        if (_i == 0) {
-            // Left cap. Purple cap when filled; otherwise mirror the grey right
-            // cap into a left cap by anchoring at the cell's right edge and
-            // drawing with a negative x-scale.
-            if (_is_filled) {
-                draw_sprite_ext(global.spr_pb_purple_left, 0, _cx_left, _cy, _sx, _sy, 0, c_white, _alpha);
-            } else {
-                draw_sprite_ext(global.spr_pb_grey_right, 0, _cx_left + _cell_w, _cy, -_sx, _sy, 0, c_white, _alpha);
-            }
-        } else if (_i == _total - 1) {
-            // Right cap.
-            var _spr_r = _is_filled ? global.spr_pb_purple_right : global.spr_pb_grey_right;
-            draw_sprite_ext(_spr_r, 0, _cx_left, _cy, _sx, _sy, 0, c_white, _alpha);
-        } else {
-            // Flat interior cell.
-            var _spr_c = _is_filled ? global.spr_pb_purple_center : global.spr_pb_grey_center;
-            draw_sprite_ext(_spr_c, 0, _cx_left, _cy, _sx, _sy, 0, c_white, _alpha);
-        }
+        var _l   = _band_l + _i * _cell_w + _gap/2;
+        var _rr  = _band_l + (_i + 1) * _cell_w - _gap/2;
+        var _col = (_i < _filled) ? _col_fill : _col_empty;
+        ph_draw_rounded(_l, _sy1, _rr, _sy2, min(_seg_r, (_rr-_l)*0.5), _col);
     }
+    draw_set_alpha(1);
 }
 
 // ── Safe-area helpers ─────────────────────────────────────────────────────────
@@ -267,6 +287,7 @@ function ph_ease_out_back(_t, _ov) {
 /// a tap: the iris closes over the screen in `_col`, the room swaps under full
 /// cover, then the iris opens to reveal the new room. _ox/_oy = origin (tap point).
 function ph_trans_begin(_ox, _oy, _col, _room) {
+    ph_sfx(snd_transition, 0.7);   // whoosh as the iris closes over the screen
     global.trans_active = true;
     global.trans_phase  = 1;     // 1 = cover (iris in), 2 = reveal (iris out)
     global.trans_t      = 0;
@@ -327,8 +348,8 @@ function ph_draw_nav(_active_tab) {
     var _tcy_base = _nav_top + _usable_h / 2 - 14;
 
     // 3D icon sprites (full colour — drawn with c_white to preserve colours)
-    var _labels  = ["Shop", "Games", "Events"];
-    var _sprites = [global.spr_shop3d, global.spr_puzzle, global.spr_position];
+    var _labels  = ["Shop", "Home", "Events"];
+    var _sprites = [global.spr_shop3d, global.spr_home, global.spr_events];
     var _icon_s  = 110 / 512;   // ~110px icon size (bigger than the old 80px)
     var _icon_active_s = 150 / 512;  // selected tab pops bigger
     var _third   = PH_W / 3;
@@ -391,29 +412,13 @@ function ph_draw_burst(_cx, _cy, _r_out, _r_in, _n, _col) {
     }
 }
 
-// ── Cached tiled background pattern ──────────────────────────────────────────
-/// Draw the background by tiling BG Pattern.png across the screen (replaces the
-/// old dot grid). The tiled result is rendered once into a cached surface, so
-/// each frame is a single blit. The _col argument is kept for backward
-/// compatibility with existing call sites but is no longer used — the pattern
-/// art defines its own colour.
+// ── Flat background fill ─────────────────────────────────────────────────────
+/// Draw the background as a single solid PH_COL_BG fill. (The old tiled
+/// BG Pattern.png / dot-grid was removed — the app now uses a flat colour.)
+/// The _col argument is kept for backward compatibility with existing call
+/// sites but is ignored; the fill is always PH_COL_BG.
 function ph_draw_dot_bg(_col) {
-    if (!variable_global_exists("ph_dot_surface") || !surface_exists(global.ph_dot_surface)) {
-        global.ph_dot_surface = surface_create(PH_W, PH_H);
-        surface_set_target(global.ph_dot_surface);
-        draw_clear_alpha(c_black, 0);
-        if (variable_global_exists("spr_bg_pattern")) {
-            var _pw = sprite_get_width(global.spr_bg_pattern);
-            var _ph = sprite_get_height(global.spr_bg_pattern);
-            for (var _gx = 0; _gx < PH_W; _gx += _pw) {
-                for (var _gy = 0; _gy < PH_H; _gy += _ph) {
-                    draw_sprite(global.spr_bg_pattern, 0, _gx, _gy);
-                }
-            }
-        }
-        surface_reset_target();
-    }
-    draw_surface(global.ph_dot_surface, 0, 0);
+    draw_clear(PH_COL_BG);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -513,4 +518,52 @@ function ph_draw_nav_btn(_l, _cy, _r, _bh, _label, _icon_spr, _accent, _accent_d
     var _x0  = _cx - (_iw + _gap + _lw) / 2;
     if (_has) draw_sprite_ext(_icon_spr, 0, _x0 + _iw/2, _cy, _isz/512, _isz/512, 0, c_white, 1);
     ph_draw_text(_x0 + _iw + _gap + _lw/2, _cy, _label, global.fnt_btn, PH_COL_WHITE, fa_center, fa_middle);
+}
+
+/// Draw a speaker glyph in code (no sprite). Centred at (_cx,_cy); _s = scale px.
+/// _on=true draws two sound-wave chevrons; _on=false draws a mute slash instead.
+/// Used by the Events-screen sound toggle (obj_profile) so it needs no new asset.
+function ph_draw_speaker_icon(_cx, _cy, _s, _on, _col) {
+    draw_set_color(_col);
+    // Driver box + horn (narrow at the box, widening to the right).
+    draw_rectangle(_cx - 0.58*_s, _cy - 0.22*_s, _cx - 0.24*_s, _cy + 0.22*_s, false);
+    draw_triangle(_cx - 0.24*_s, _cy - 0.02*_s,
+                  _cx + 0.16*_s, _cy - 0.46*_s,
+                  _cx + 0.16*_s, _cy + 0.46*_s, false);
+    if (_on) {
+        // Two ">" chevrons as sound waves.
+        var _ks = [0.34, 0.56];
+        for (var _i = 0; _i < 2; _i++) {
+            var _k = _ks[_i];
+            draw_line_width(_cx + _k*_s,        _cy - 0.30*_s, _cx + (_k+0.10)*_s, _cy, max(2, 0.07*_s));
+            draw_line_width(_cx + (_k+0.10)*_s, _cy,           _cx + _k*_s,        _cy + 0.30*_s, max(2, 0.07*_s));
+        }
+    } else {
+        // Mute slash across the glyph.
+        draw_line_width(_cx - 0.52*_s, _cy - 0.50*_s, _cx + 0.62*_s, _cy + 0.50*_s, max(3, 0.09*_s));
+    }
+    draw_set_color(c_white);
+}
+
+/// Vibrate / haptics glyph (mirrors ph_draw_speaker_icon): a phone with motion
+/// waves either side when on, or a mute slash when off. _s ≈ icon size.
+function ph_draw_vibrate_icon(_cx, _cy, _s, _on, _col) {
+    draw_set_color(_col);
+    // Phone body — slim rounded rectangle, centred.
+    var _pw = 0.22*_s, _phh = 0.50*_s, _r = 0.07*_s;
+    draw_roundrect_ext(_cx - _pw, _cy - _phh, _cx + _pw, _cy + _phh, _r, _r, false);
+    if (_on) {
+        // Two short motion bars on each side, the outer pair longer (waves).
+        var _ks = [0.40, 0.60];
+        var _hs = [0.20, 0.32];
+        for (var _i = 0; _i < 2; _i++) {
+            var _k = _ks[_i]; var _h = _hs[_i]; var _w = max(2, 0.07*_s);
+            draw_line_width(_cx - _k*_s, _cy - _h*_s, _cx - _k*_s, _cy + _h*_s, _w);
+            draw_line_width(_cx + _k*_s, _cy - _h*_s, _cx + _k*_s, _cy + _h*_s, _w);
+        }
+    } else {
+        // Mute slash across the glyph.
+        draw_line_width(_cx - 0.52*_s, _cy - 0.50*_s, _cx + 0.52*_s, _cy + 0.50*_s, max(3, 0.09*_s));
+    }
+    draw_set_color(c_white);
 }

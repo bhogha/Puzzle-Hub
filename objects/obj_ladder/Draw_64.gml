@@ -21,7 +21,7 @@ var _cb_r = PH_W - 50;
 var _cb_l = _cb_r - 220;
 ph_draw_chip(_cb_l, HUD_Y-33, _cb_r, HUD_Y+33, 33, PH_COL_WHITE, make_color_rgb(190,170,155), 6);
 draw_sprite_ext(global.spr_gold_coin, 0, _cb_l+23, HUD_Y, 112/512, 112/512, 0, c_white, 1);
-ph_draw_text(_cb_l+74, HUD_Y, string(global.save.coins), global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+ph_draw_text(_cb_l+74, HUD_Y, string(global.save.coins), global.fnt_pill_num, PH_COL_DARK, fa_left, fa_middle);
 
 // "-100" coin-spend feedback near the coin pill (shared hint helper).
 hint.coin_x = (_cb_l + _cb_r) / 2;
@@ -98,7 +98,7 @@ ph_draw_chip(_tp_l, _tool_y-33, _tp_r, _tool_y+33, 33, PH_COL_WHITE, make_color_
 draw_sprite_ext(global.spr_stopwatch, 0, _tp_l+30, _tool_y, 106/512, 106/512, 0, c_white, 1);
 // Timer text flashes red right after a wrong-guess penalty.
 var _t_col = (pen_t > 0) ? PH_COL_LADDER_BAD : PH_COL_DARK;
-ph_draw_text(_tp_l+78, _tool_y, _t_str, global.fnt_body_md, _t_col, fa_left, fa_middle);
+ph_draw_text(_tp_l+78, _tool_y, _t_str, global.fnt_pill_num, _t_col, fa_left, fa_middle);
 // Floating "+5s" rising above the timer pill.
 if (pen_t > 0) {
     var _pa = min(1, pen_t / 18);

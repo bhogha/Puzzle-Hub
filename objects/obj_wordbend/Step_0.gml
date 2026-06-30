@@ -112,9 +112,11 @@ if (dragging && device_mouse_check_button(0, mb_left)) {
             if (_in != -1) {
                 // Re-touching an earlier cell → trim the tail back to it.
                 for (var _k = _len - 1; _k > _in; _k--) array_pop(sel_path);
+                ph_haptic_select();   // highlighter tick as the trace shrinks a cell
             } else if (wb_manhattan(_head, _fc) == 1 && cell_owner[_fc] == -1) {
                 // Orthogonally adjacent, not yet used, not in a found word → extend.
                 array_push(sel_path, _fc);
+                ph_haptic_select();   // highlighter tick as the trace grows a cell
             }
         }
     }
@@ -128,6 +130,8 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
         var _idx = ph_wordbend_match(puzzle, sel_path, found, N);
         if (_idx >= 0) {
             found[_idx] = true;
+            ph_sfx(snd_correct, 0.8);   // hidden word traced
+            ph_haptic_success();        // hidden word traced
             // First hidden word traced → retire the onboarding finger tip.
             if (ph_coach_active(coach)) { ph_coach_stop(coach); ph_tip_mark_seen("WORDBEND"); }
             wb_rebuild_owner();
@@ -153,6 +157,8 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
                 } else {
                     array_push(bonus_words, _word);
                     ph_grant_coins(global.save, PH_BONUS_WORD_COINS); ph_week_record_bonus_word(global.save, _word);
+                    ph_sfx(snd_coin, 0.85);   // bonus word → +coins
+                    ph_haptic_coin();         // bonus word → +coins
                     wb_flash_cells(sel_path);
                     coin_pulse_t = 0; coin_overshoot_t = 0;          // pulse the coin balance
                     toast_text  = "BONUS  +" + string(PH_BONUS_WORD_COINS) + " COINS  -  " + _word;

@@ -46,34 +46,81 @@ if (levelstar_t >= 0) {
     _lsy = _ls * _g;
 }
 draw_sprite_ext(global.spr_star3d, 0, 82, _cy, _lsx, _lsy, 0, c_white, 1);
-ph_draw_text((127 + 270)/2, _cy, string(_level), global.fnt_num_md, PH_COL_DARK, fa_center, fa_middle);
-ph_draw_text(PH_W/2, _cy, "EVENT HUB", global.fnt_disp_md, PH_COL_PINK, fa_center, fa_middle);
+ph_draw_text((127 + 270)/2, _cy, string(_level), global.fnt_pill_num, PH_COL_DARK, fa_center, fa_middle);
+ph_draw_text(PH_W/2, _cy, "EVENTS", global.fnt_disp_md, PH_COL_PINK, fa_center, fa_middle);
 var _px2 = PH_W - 24, _px1 = _px2 - 310;
 ph_draw_chip(_px1, _cy-34, _px2, _cy+34, 34, PH_COL_WHITE, PH_COL_TILE_DARK, 5);
 draw_sprite_ext(global.spr_gold_coin, 0, _px1+12, _cy, 110/512, 110/512, 0, c_white, 1);
 var _plus_cx = _px2 - 36;
 ph_draw_chip(_plus_cx-24, _cy-24, _plus_cx+24, _cy+24, 24, PH_COL_PINK, PH_COL_PINK_DEEP, 4);
 ph_draw_text(_plus_cx, _cy-2, "+", global.fnt_disp_xs, PH_COL_WHITE, fa_center, fa_middle);
-ph_draw_text(_plus_cx-32, _cy, ph_format_int_thousands(_coins), global.fnt_num_md, PH_COL_DARK, fa_right, fa_middle);
+ph_draw_text(_plus_cx-32, _cy, ph_format_int_thousands(_coins), global.fnt_pill_num, PH_COL_DARK, fa_right, fa_middle);
 
-// ═══ Header: description line + reset-timer pill ═════════════════════════════
-ph_draw_text(PH_W/2, M.desc_y, "Complete missions to win extra rewards",
-             global.fnt_tip, PH_COL_DARK, fa_center, fa_middle);
+// ═══ Sound on/off toggle (speaker chip, header bottom-left) ══════════════════
+var _spk_cx = 120, _spk_cy = M.timer_cy;
+ph_draw_chip(_spk_cx-52, _spk_cy-52, _spk_cx+52, _spk_cy+52, 52, PH_COL_WHITE, PH_COL_TILE_DARK, 5);
+var _son = ph_sfx_enabled();
+ph_draw_speaker_icon(_spk_cx-4, _spk_cy, 58, _son, _son ? PH_COL_DARK : PH_COL_GRAY);
 
-// Timer pill — white capsule, stopwatch over the left edge, "Xd Yh" beside it.
-var _tcy = M.timer_cy;
-var _tpl = PH_W/2 - 200, _tpr = PH_W/2 + 200;
-ph_draw_chip(_tpl, _tcy-50, _tpr, _tcy+50, 50, PH_COL_WHITE, PH_COL_TILE_DARK, 5);
-draw_sprite_ext(global.spr_stopwatch, 0, _tpl+4, _tcy, 120/512, 120/512, 0, c_white, 1);
-var _tstr = ph_week_time_left_str(_save);
-ph_draw_text((_tpl+70 + _tpr)/2, _tcy, _tstr, global.fnt_tip, PH_COL_DARK, fa_center, fa_middle);
+// ═══ Haptics on/off toggle (vibrate chip, beside the speaker) ═════════════════
+// Reads the raw save flag (not ph_haptic_enabled) so the chip reflects the
+// player's choice even when probed on a non-iOS build.
+var _vib_cx = 244, _vib_cy = M.timer_cy;
+ph_draw_chip(_vib_cx-52, _vib_cy-52, _vib_cx+52, _vib_cy+52, 52, PH_COL_WHITE, PH_COL_TILE_DARK, 5);
+var _von = (global.save.haptics_on ?? true);
+ph_draw_vibrate_icon(_vib_cx, _vib_cy, 58, _von, _von ? PH_COL_DARK : PH_COL_GRAY);
 
-// ═══ Finished week → minimal COLLECT placeholder (Phase 4 replaces this) ══════
-if (_save.week.status == "finished") {
-    var _mid = (M.list_top + M.list_bot)/2;
-    ph_draw_text(PH_W/2, _mid-130, "WEEK COMPLETE!", global.fnt_disp_lg, PH_COL_DARK, fa_center, fa_middle);
-    ph_draw_text(PH_W/2, _mid-50,  "Collect your rewards", global.fnt_body_md, PH_COL_INK_SOFT, fa_center, fa_middle);
-    ph_draw_reward_btn(PH_W/2-220, _mid+70, PH_W/2+220, 60, "COLLECT", noone, false);
+// ═══ Header: active = description + reset-timer pill; finished = "Week Complete" ═
+var _wc_finished = (_save.week.status == "finished");
+if (_wc_finished) {
+    // Finished state hides the countdown entirely — just the celebratory title.
+    var _wc_teal = make_color_rgb(20,150,132);
+    ph_draw_text(PH_W/2, (M.desc_y + M.timer_cy)/2, "Week Complete",
+                 global.fnt_disp_lg, _wc_teal, fa_center, fa_middle);
+} else {
+    ph_draw_text(PH_W/2, M.desc_y, "Complete missions to win extra rewards",
+                 global.fnt_tip, PH_COL_DARK, fa_center, fa_middle);
+
+    // Timer pill — white capsule, stopwatch over the left edge, "Xd Yh" beside it.
+    var _tcy = M.timer_cy;
+    var _tpl = PH_W/2 - 200, _tpr = PH_W/2 + 200;
+    ph_draw_chip(_tpl, _tcy-50, _tpr, _tcy+50, 50, PH_COL_WHITE, PH_COL_TILE_DARK, 5);
+    draw_sprite_ext(global.spr_stopwatch, 0, _tpl+4, _tcy, 120/512, 120/512, 0, c_white, 1);
+    var _tstr = ph_week_time_left_str(_save);
+    ph_draw_text((_tpl+70 + _tpr)/2, _tcy, _tstr, global.fnt_tip, PH_COL_DARK, fa_center, fa_middle);
+}
+
+// ═══ Finished week → Week Complete list: claimable → CLAIM ALL → claimed → grey ══
+if (_wc_finished) {
+    var _force = (claim_phase == 3) ? fly_idxs : undefined;
+    var _g  = prof_finished_groups(_force);
+    var _fl = prof_finished_layout(M.list_top, _g);
+
+    ph_scissor_gui(CARD_L-4, M.list_top, (CARD_R-CARD_L)+8, M.list_bot - M.list_top);
+
+    // Claimable cards (CLAIM button, or the ★→✓ transition while flying).
+    for (var _ci = 0; _ci < array_length(_g.claimable); _ci++) {
+        var _mi = _g.claimable[_ci];
+        var _t  = _fl.top[_mi];
+        if (_t <= M.list_bot && _t + CARD_H >= M.list_top) prof_draw_mission_card(_mi, _t);
+    }
+    // CLAIM ALL button (always shown in the finished state).
+    if (_fl.btn_cy - 60 < M.list_bot && _fl.btn_cy + 60 > M.list_top) {
+        ph_draw_reward_btn(PH_W/2-240, _fl.btn_cy, PH_W/2+240, 60, "CLAIM ALL", noone, false);
+    }
+    // Claimed cards (checkmark) — stay visible below the button.
+    for (var _ci = 0; _ci < array_length(_g.claimed); _ci++) {
+        var _mi = _g.claimed[_ci];
+        var _t  = _fl.top[_mi];
+        if (_t <= M.list_bot && _t + CARD_H >= M.list_top) prof_draw_mission_card(_mi, _t);
+    }
+    // Incomplete cards (greyed) — at the bottom.
+    for (var _ci = 0; _ci < array_length(_g.incomplete); _ci++) {
+        var _mi = _g.incomplete[_ci];
+        var _t  = _fl.top[_mi];
+        if (_t <= M.list_bot && _t + CARD_H >= M.list_top) prof_draw_mission_card(_mi, _t);
+    }
+    ph_scissor_reset();
 } else {
     // ═══ Scrollable mission list (sorted: claimable → in-progress → claimed) ══
     // Claim celebration: STARFLY (phase 1) holds the list still while the stars fly
@@ -205,13 +252,29 @@ ph_draw_nav(2);
 // gathers + orbits each other at the spot, then the copies peel off ONE BY ONE,
 // ACCELERATING up to the level ★ and vanishing there with a light flash. Source
 // position tracks the claimed tile live.
+// Source ★ positions: phase 1 = the single claimed tile; phase 3 = every flying
+// tile (finished claim / CLAIM ALL), all bursting on the SAME timeline.
+var _src_xs = [];
+var _src_ys = [];
 if (claim_phase == 1 && claim_mi >= 0 && claim_mi < array_length(slot_old)) {
     var _src_top = M.list_top + slot_old[claim_mi]*(CARD_H+CARD_GAP) - scroll_y;
-    var _cy0 = _src_top + CARD_H/2;                         // source centre (reward ★ spot)
-    var _cx0 = REW_CX + 46;
+    array_push(_src_xs, REW_CX + 46);
+    array_push(_src_ys, _src_top + CARD_H/2);
+} else if (claim_phase == 3 && array_length(fly_idxs) > 0) {
+    var _fl3 = prof_finished_layout(M.list_top, prof_finished_groups(fly_idxs));
+    for (var _fi = 0; _fi < array_length(fly_idxs); _fi++) {
+        array_push(_src_xs, REW_CX + 46);
+        array_push(_src_ys, _fl3.top[fly_idxs[_fi]] + CARD_H/2);
+    }
+}
+if (array_length(_src_xs) > 0) {
     var _tx  = 82, _ty = M.topbar_cy;                       // level ★ destination
     var _hud_s = 110/512;                                   // arrival size = HUD star's
     var _rew_s = 100/512;                                   // reward ★ rest size
+
+  for (var _src_i = 0; _src_i < array_length(_src_xs); _src_i++) {
+    var _cx0 = _src_xs[_src_i];                             // source centre (reward ★ spot)
+    var _cy0 = _src_ys[_src_i];
 
     for (var _s = 0; _s < STARFLY_N; _s++) {
         var _rel  = SF_GATHER + SF_ORBIT + _s*SF_RELGAP;    // this copy's release frame
@@ -268,6 +331,7 @@ if (claim_phase == 1 && claim_mi >= 0 && claim_mi < array_length(slot_old)) {
             gpu_set_blendmode(bm_normal);
         }
     }
+  }
 }
 
 // ═══ Toast (reset feedback) ══════════════════════════════════════════════════

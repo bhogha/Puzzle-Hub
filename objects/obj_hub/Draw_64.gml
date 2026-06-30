@@ -58,7 +58,7 @@ draw_sprite_ext(global.spr_star3d, 0, _star_cx, _crow_cy, _star_s, _star_s, 0, c
 // Level number — replaces the old "LVL" label; centred in the pill to the right
 // of the star, matching the coin balance's font (Nunito Black).
 ph_draw_text((_star_cx + 45 + _lvl_x2) / 2, _crow_cy, string(_level),
-             global.fnt_num_md, PH_COL_DARK, fa_center, fa_middle);
+             global.fnt_pill_num, PH_COL_DARK, fa_center, fa_middle);
 
 // — Coin pill — anchored to the top-right corner —
 var _pill_x2 = PH_W - 24;          // right margin
@@ -80,11 +80,9 @@ ph_draw_text(_plus_cx, _crow_cy-2, "+", global.fnt_disp_xs, PH_COL_WHITE, fa_cen
 // Coin value — right-aligned, sitting just to the left of the "+" button.
 // Uses a thousands separator so 4-digit balances stay readable in the pill.
 ph_draw_text(_plus_cx - 32, _crow_cy, ph_format_int_thousands(_coins),
-             global.fnt_num_md, PH_COL_DARK, fa_right, fa_middle);
+             global.fnt_pill_num, PH_COL_DARK, fa_right, fa_middle);
 
-// — Game title — centred between the LVL and coin pills at the top of the hub.
-ph_draw_text(PH_W/2, _crow_cy, "PUZZLE HUB",
-             global.fnt_disp_md, PH_COL_PINK, fa_center, fa_middle);
+// — Game title removed per 2026-06-29 design pass (header now just the two pills).
 
 // ═══════════════════════════════════════════════════════════
 // 3. CALENDAR BAR  (tappable — expands to month grid)
@@ -150,14 +148,17 @@ if (cal_anim_t > 0.05) {
         if (_is_future_m) draw_set_alpha(0.30);
 
         // Only draw a background box for days that have state (selected / today
-        // / solved). Plain days show just the number on the teal band. Selected
-        // and today use the pink / yellow box sprites; solved keeps the teal pill.
+        // / solved). Plain days show just the number on the teal band. Drawn as
+        // barely-rounded squares (≈10px corner on a ~100px square — Bora) via
+        // primitives so the radius is controllable (the old sel/today box sprites
+        // were too rounded). Pink = selected, yellow = today, teal = solved.
+        var _box_hw = 28, _box_hh = 26, _box_r = 6;
         if (_is_sel_m) {
-            draw_sprite_ext(global.spr_cal_day_sel, 0, _mcx, _mcy, 56/106, 52/107, 0, c_white, 1);
+            ph_draw_rounded(_mcx-_box_hw, _mcy-_box_hh, _mcx+_box_hw, _mcy+_box_hh, _box_r, make_color_rgb(255,0,140));
         } else if (_is_today_m) {
-            draw_sprite_ext(global.spr_cal_day_today, 0, _mcx, _mcy, 56/106, 52/107, 0, c_white, 1);
+            ph_draw_rounded(_mcx-_box_hw, _mcy-_box_hh, _mcx+_box_hw, _mcy+_box_hh, _box_r, make_color_rgb(255,192,0));
         } else if (_solved_m > 0) {
-            ph_draw_rounded(_mcx-26, _mcy-24, _mcx+26, _mcy+24, 12, PH_COL_TEAL);
+            ph_draw_rounded(_mcx-_box_hw, _mcy-_box_hh, _mcx+_box_hw, _mcy+_box_hh, _box_r, PH_COL_TEAL);
         }
 
         var _mtc = (_is_sel_m || _solved_m > 0) ? PH_COL_WHITE : PH_COL_DARK;
@@ -258,46 +259,44 @@ var _solved_today = min(ph_solved_count_on(_save, _sel), PH_PUZZLES_PER_DAY);
 if (_strip_alpha > 0.02) {
     var _ptube_top = _strip_top + _eff_strip_h * 0.82;
 
-    // Tube bounds — leave right gap for trophy icon
+    // Bar spans the full content width (Penpot "Daily Progress Bar"); the trophy
+    // overlaps the right end and the gift overlaps the 4-solve milestone, both on
+    // top of the bar, so no horizontal gap is reserved for them.
     var _tx1 = LAYOUT.card_pad_x;
-    var _tx2 = PH_W - LAYOUT.card_pad_x - 96;  // gap for trophy
-    var _ty1 = _ptube_top;
-    var _ty2 = _ptube_top + 46;
+    var _tx2 = PH_W - LAYOUT.card_pad_x;
+    var _bar_h   = 54;
+    var _ty1     = _ptube_top + 6;
+    var _tube_cy = _ty1 + _bar_h/2;
 
-    // Segmented bar built from the progress_bar_* sprites: one cell per daily
-    // puzzle, the first _solved_today cells purple (filled), the rest grey.
-    ph_draw_progress_segments(_tx1, _tx2, (_ty1+_ty2)/2, _ty2-_ty1,
+    // "x/10" progress counter — top-LEFT, above the start of the bar (per design:
+    // Nunito Regular ~44, black, left-aligned).
+    draw_set_alpha(_strip_alpha);
+    ph_draw_text(_tx1 + 4, _ty1 - 34,
+                 string(_solved_today) + "/" + string(PH_PUZZLES_PER_DAY),
+                 global.fnt_body_md, PH_COL_DARK, fa_left, fa_middle);
+    draw_set_alpha(1);
+
+    // Fragmented bar: one chunk per daily puzzle, first _solved_today purple.
+    ph_draw_progress_segments(_tx1, _tx2, _tube_cy, _bar_h,
                               PH_PUZZLES_PER_DAY, _solved_today, _strip_alpha);
 
-    // Gift box icon at milestone — sits directly over the thick bar, between 4th and 5th
-    var _tube_cy = (_ty1+_ty2)/2;
+    // Gift box icon — sits over the bar at the 4-solve coin milestone (enlarged).
     var _gift_x  = _tx1 + (_tx2-_tx1)*(4/PH_PUZZLES_PER_DAY);
-    var _gift_s  = 110 / 512;
+    var _gift_s  = 150 / 512;
     draw_sprite_ext(global.spr_gift, 0, _gift_x, _tube_cy, _gift_s, _gift_s, 0, c_white, _strip_alpha);
 
-    // Trophy icon — right end of tube
-    var _trophy_cx = _tx2 + 56;
-    var _trophy_s  = 100 / 512;
-    draw_sprite_ext(global.spr_trophy3d, 0, _trophy_cx, _tube_cy + 8, _trophy_s, _trophy_s, 0, c_white, _strip_alpha);
-
-    // "4/10" counter — top-right above trophy
-    draw_set_alpha(_strip_alpha);
-    ph_draw_text(_trophy_cx, _ty1 - 8,
-                 string(_solved_today) + "/" + string(PH_PUZZLES_PER_DAY),
-                 global.fnt_body_sm, PH_COL_DARK, fa_center, fa_bottom);
-    draw_set_alpha(1);
+    // Trophy icon — overlaps the right end of the bar (enlarged), right edge ~ bar end.
+    var _trophy_s  = 150 / 512;
+    var _trophy_cx = _tx2 - 60;
+    draw_sprite_ext(global.spr_trophy3d, 0, _trophy_cx, _tube_cy, _trophy_s, _trophy_s, 0, c_white, _strip_alpha);
 }
 
 // ═══════════════════════════════════════════════════════════
-// 5. SECTION HEADER — "TODAY'S GAMES"
+// 5. SECTION HEADER — removed 2026-06-29 (was "TODAY'S GAMES").
+//    LAYOUT.section_h now just reserves a small breathing gap between the
+//    calendar/progress band and the card list (cards reflow up into the
+//    freed space — see the updated Penpot "Hub Screen" board).
 // ═══════════════════════════════════════════════════════════
-// Title is anchored to _post_cal. Closed it sits in the lower 70% of the section
-// so it clears the progress-tube band above; open it rides higher (40%) so it
-// tucks just under the month grid.
-var _sec_off = lerp(LAYOUT.section_h * 0.70, LAYOUT.section_h * 0.40, cal_anim_t);
-var _sec_cy  = _post_cal + _sec_off;
-ph_draw_text(LAYOUT.card_pad_x, _sec_cy,
-             "TODAY'S GAMES", global.fnt_disp_sm, PH_COL_DARK, fa_left, fa_middle);
 
 // ═══════════════════════════════════════════════════════════
 // 6. SCROLLABLE CARD LIST
@@ -354,17 +353,17 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     // Anygram uses the consolidated DONE flag (with legacy M1/M2 fallback inside
     // the helper); other games use the simple per-name check.
     var _is_solved;
-    if (_card.name == "ANYGRAM") {
+    if (_card.room == "rm_anygram") {
         _is_solved = ph_anygram_is_done(_save, _sel);
-    } else if (_card.name == "WORD WAVE") {
+    } else if (_card.room == "rm_wordwave") {
         _is_solved = ph_wordwave_is_done(_save, _sel);
-    } else if (_card.name == "WORD BEND") {
+    } else if (_card.room == "rm_wordbend") {
         _is_solved = ph_wordbend_is_done(_save, _sel);
-    } else if (_card.name == "HUE SORT") {
+    } else if (_card.room == "rm_huesort") {
         _is_solved = ph_huesort_is_done(_save, _sel);
-    } else if (_card.name == "COLOR LINK") {
+    } else if (_card.room == "rm_colorlink") {
         _is_solved = ph_colorlink_is_done(_save, _sel);
-    } else if (_card.name == "ARROWS") {
+    } else if (_card.room == "rm_arrows") {
         _is_solved = ph_arrows_is_done(_save, _sel);
     } else {
         _is_solved = ph_is_solved(_save, _sel, _card.name);
@@ -433,7 +432,7 @@ for (var _i = 0; _i < array_length(cards); _i++) {
     // White capsule (shared by every variant).
     ph_draw_pill(_pill_left, _btn_cy-_pill_hh, _pill_right, _btn_cy+_pill_hh, PH_COL_WHITE, 1);
 
-    if (_card.name == "WORDLE" && ph_wordle_is_missed(_save, _sel)) {
+    if (_card.room == "rm_wordle" && ph_wordle_is_missed(_save, _sel)) {
         // MISSED — out of guesses / gave up. Finish time shown in RED (Penpot
         // Pill "Missed" variant), distinct from a solved day's dark time.
         var _mt_key = "wordle_time_" + _sel;
@@ -453,19 +452,19 @@ for (var _i = 0; _i < array_length(cards); _i++) {
         var _ag_time  = variable_struct_exists(_save, _time_key)
                         ? _save[$ _time_key] : "--:--";
         // Time first, then the stopwatch on top so the icon's overhang reads cleanly.
-        ph_draw_text(_txt_cx, _btn_cy, _ag_time, global.fnt_body_md, _ink, fa_center, fa_middle);
+        ph_draw_text(_txt_cx, _btn_cy, _ag_time, global.fnt_pill_num, _ink, fa_center, fa_middle);
         // Stopwatch is a full-colour 3D sprite — draw c_white (no tint) so it keeps its art.
         draw_sprite_ext(global.spr_stopwatch, 0, _ic_x, _btn_cy, _ic_s, _ic_s, 0, c_white, 1);
     } else if (_btype == "time_trophy") {
         // Best-time badge — full-colour 3D trophy (drawn c_white to keep its art) + dark time.
-        ph_draw_text(_txt_cx, _btn_cy, _card.best_time, global.fnt_body_md, _ink, fa_center, fa_middle);
+        ph_draw_text(_txt_cx, _btn_cy, _card.best_time, global.fnt_pill_num, _ink, fa_center, fa_middle);
         draw_sprite_ext(global.spr_trophy3d, 0, _ic_x, _btn_cy, _ic_s, _ic_s, 0, c_white, 1);
     } else if (_btype == "locked") {
         // COMING SOON — text only, centred (matches the Penpot locked pill).
         ph_draw_text(_pill_cx, _btn_cy, "COMING SOON", global.fnt_body_sm, _ink, fa_center, fa_middle);
     } else {
         // Every play variant (play / play_translucent / play_light) → centred dark PLAY.
-        ph_draw_text(_pill_cx, _btn_cy, "PLAY", global.fnt_body_lg, _ink, fa_center, fa_middle);
+        ph_draw_text(_pill_cx, _btn_cy, "PLAY", global.fnt_pill_num, _ink, fa_center, fa_middle);
     }
 }
 
@@ -546,3 +545,75 @@ ph_spin_draw(spin);
 
 // ── First-run soft finger hint (drawn last; no overlay, just the pointer) ─────
 ph_finger_draw(finger);
+
+// ═══════════════════════════════════════════════════════════
+// 9. DAILY-PROGRESS FTUE COACH  (first return from a puzzle)
+// ═══════════════════════════════════════════════════════════
+// Dim everything except the daily-progress teal band (calendar icon top → below
+// the caption), point a hopping purple arrow at a milestone icon, and show a
+// one-line caption + a "Tap anywhere to continue" pill. State in scr_tutorial
+// (ph_dailytut_*); geometry mirrors the calendar/progress band above. The coach
+// only shows with the calendar CLOSED (it captures input, so it can't be opened),
+// i.e. cal_anim_t == 0 → _eff_strip_h == strip_h, _strip_alpha == 1.
+if (ph_dailytut_is_open(dailytut)) {
+    var _dt_fade = ph_ease_out(dailytut.fade);
+
+    // — Band geometry (recomputed locally; matches §3/§4/progress-tube above) —
+    var _dtt_strip_top = _cal_y1 + LAYOUT.calbar_h;                 // calendar closed
+    var _dtt_ptube_top = _dtt_strip_top + LAYOUT.strip_h * 0.82;
+    var _dtt_tube_cy   = _dtt_ptube_top + 6 + 27;                   // = _ty1 + _bar_h/2
+    var _dtt_tx1       = LAYOUT.card_pad_x;
+    var _dtt_tx2       = PH_W - LAYOUT.card_pad_x;
+    var _dtt_gift_x    = _dtt_tx1 + (_dtt_tx2 - _dtt_tx1) * (4 / PH_PUZZLES_PER_DAY);
+    var _dtt_trophy_cx = _dtt_tx2 - 60;
+    // The hub's pale-teal band ends here (matches _teal_bottom in §3, closed state).
+    var _dtt_teal_end  = _cal_y1 + LAYOUT.calbar_h + LAYOUT.strip_h * 0.82 + 88;
+
+    // Bright box: from the top of the (overhanging) calendar icon down to below
+    // the caption. Calendar icon is drawn at _cal_y1+16, 130px tall, centred origin.
+    var _dtt_box_top = _cal_y1 + 16 - 65 - 4;
+    var _dtt_cap_y   = _dtt_tube_cy + 232;                          // caption baseline (below the arrow)
+    var _dtt_box_bot = _dtt_cap_y + 64;
+
+    // — Teal extension behind the arrow + caption (covers the card tops that sit
+    //   inside the bright box). Redraw the two milestone icons afterwards so the
+    //   extension doesn't clip the part of them that overhangs the hub's band. —
+    draw_set_color(merge_color(PH_COL_TEAL_SOFT, PH_COL_WHITE, 0.6));
+    draw_rectangle(0, _dtt_teal_end, PH_W, _dtt_box_bot, false);
+    var _dtt_ic_s = 150 / 512;
+    draw_sprite_ext(global.spr_gift,     0, _dtt_gift_x,    _dtt_tube_cy, _dtt_ic_s, _dtt_ic_s, 0, c_white, 1);
+    draw_sprite_ext(global.spr_trophy3d, 0, _dtt_trophy_cx, _dtt_tube_cy, _dtt_ic_s, _dtt_ic_s, 0, c_white, 1);
+
+    // — Hopping purple arrow at the step's milestone (step 0 → trophy, 1 → gift) —
+    var _dtt_is_trophy = (ph_dailytut_step(dailytut) == 0);
+    var _dtt_arr_x     = _dtt_is_trophy ? _dtt_trophy_cx : _dtt_gift_x;
+    var _dtt_lift      = ph_dailytut_bob_px(dailytut.bob);
+    var _dtt_tip_rest  = _dtt_tube_cy + 92;                         // just below the icon (icon bottom ≈ +75)
+    ph_dailytut_arrow(_dtt_arr_x, _dtt_tip_rest - _dtt_lift, PH_COL_PURPLE, _dt_fade);
+
+    // — Caption (centred, dark, below the arrow) —
+    var _dtt_cap = _dtt_is_trophy
+        ? "Complete 10 Puzzles everyday to claim your trophy."
+        : "Solve 4 Puzzles and get your reward.";
+    draw_set_alpha(_dt_fade);
+    ph_draw_text(PH_W/2, _dtt_cap_y, _dtt_cap, global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
+    draw_set_alpha(1);
+
+    // — Dim everything OUTSIDE the bright box (two full-width bands) —
+    draw_set_color(c_black);
+    draw_set_alpha(PH_DAILYTUT_DIM_ALPHA * _dt_fade);
+    draw_rectangle(0, 0,            PH_W, _dtt_box_top, false);     // above the band (chip pills)
+    draw_rectangle(0, _dtt_box_bot, PH_W, PH_H,         false);     // below the band (cards + nav)
+    draw_set_alpha(1);
+
+    // — "Tap anywhere to continue" pill, on the dimmed lower band —
+    var _dtt_pill_cy = _dtt_box_bot + 78;
+    var _dtt_pill_hw = 360;
+    var _dtt_pill_hh = 56;
+    draw_set_alpha(_dt_fade);
+    ph_draw_pill(PH_W/2 - _dtt_pill_hw, _dtt_pill_cy - _dtt_pill_hh,
+                 PH_W/2 + _dtt_pill_hw, _dtt_pill_cy + _dtt_pill_hh, PH_COL_WHITE, _dt_fade);
+    ph_draw_text(PH_W/2, _dtt_pill_cy, "Tap anywhere to continue",
+                 global.fnt_body_md, PH_COL_DARK, fa_center, fa_middle);
+    draw_set_alpha(1);
+}

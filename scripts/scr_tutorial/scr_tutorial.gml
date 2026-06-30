@@ -343,3 +343,115 @@ function ph_coach_draw(_c) {
     var _cy  = _c.fy + _c.lift + (_oy - PH_COACH_TIP_AY) * _fsc;
     draw_sprite_ext(global.spr_finger, 0, _cx, _cy, _fsc, _fsc, 0, c_white, _ease);
 }
+
+// ── Daily-progress FTUE coach ─────────────────────────────────────────────────
+//
+// A one-time, 2-step overlay shown the FIRST time the player returns to the hub
+// from a puzzle screen, teaching the daily-progress band (the "x/10" tube with
+// its 4-solve gift + 10-solve trophy). It dims everything except the teal band,
+// points a gently-hopping purple arrow at a milestone icon, and shows a one-line
+// caption; a tap anywhere (active after ~1 s) advances, then closes.
+//
+//   Step 0 → arrow at the TROPHY  : "Complete 10 Puzzles everyday to claim your trophy."
+//   Step 1 → arrow at the GIFT    : "Solve 4 Puzzles and get your reward."
+//
+// (Step order + copy match the Penpot "Daily Progress Screens" FTUE-1 / FTUE-2.)
+//
+// This engine owns only the STATE + the arrow primitive; obj_hub owns *when* to
+// start it (Create), advances it (Step), and composes the dim/teal/text overlay
+// in Draw using its own band geometry. On completion obj_hub persists
+// save.daily_progress_tut_done and requests the notification permission.
+//
+// ── API ───────────────────────────────────────────────────────────────────────
+//   ph_dailytut_create()          → coach struct (inactive)
+//   ph_dailytut_begin(t)          — start at step 0
+//   ph_dailytut_is_open(t)        — bool (capturing input / drawing)
+//   ph_dailytut_step(t)           — 0 or 1 (which milestone)
+//   ph_dailytut_tick(t)           — once per Step: fade-in + hop + tap-delay clock
+//   ph_dailytut_input(t)          — "none" | "advanced" | "done" (tap, gated to ~1 s)
+//   ph_dailytut_arrow(cx, tip_y, col, alpha)  — draw the purple up-arrow
+//   ph_dailytut_bob_px(phase)     — current hop lift in px (0..PH_DAILYTUT_BOB_PX)
+
+function ph_dailytut_create() {
+    var _t = {};
+    _t.active  = false;   // showing + capturing input
+    _t.step    = 0;       // 0 = trophy / 10 puzzles, 1 = gift / 4 puzzles
+    _t.fade    = 0;       // 0..1 overlay fade-in
+    _t.bob     = 0;       // arrow hop phase (loops via frac())
+    _t.elapsed = 0;       // frames since the current step began (gates the tap)
+    return _t;
+}
+
+function ph_dailytut_begin(_t) {
+    _t.active  = true;
+    _t.step    = 0;
+    _t.fade    = 0;
+    _t.bob     = 0;
+    _t.elapsed = 0;
+}
+
+function ph_dailytut_is_open(_t) { return _t.active; }
+function ph_dailytut_step(_t)    { return _t.step; }
+
+function ph_dailytut_tick(_t) {
+    if (!_t.active) return;
+    if (_t.fade < 1) _t.fade = min(1, _t.fade + PH_DAILYTUT_FADE_SPD);
+    _t.bob     += PH_DAILYTUT_BOB_SPD;
+    _t.elapsed += 1;
+}
+
+/// Tap anywhere advances (step 0 → 1) then closes (step 1 → done). Ignored until
+/// PH_DAILYTUT_TAP_DELAY frames into the current step so the tap that brought the
+/// player back to the hub can't blow straight through a step.
+function ph_dailytut_input(_t) {
+    if (!_t.active) return "none";
+    if (_t.elapsed < PH_DAILYTUT_TAP_DELAY) return "none";
+    if (!device_mouse_check_button_pressed(0, mb_left)) return "none";
+    if (_t.step == 0) {
+        _t.step    = 1;
+        _t.elapsed = 0;     // re-arm the ~1 s tap delay for step 2
+        _t.bob     = 0;
+        return "advanced";
+    }
+    _t.active = false;
+    return "done";
+}
+
+/// Arrow hop lift (px, upward = toward the icon). A non-linear hop: a decelerating
+/// rise to the apex, an accelerating fall, then a short rest at the bottom (the
+/// wind-up pause before the next hop) — never a flat sine.
+function ph_dailytut_bob_px(_phase) {
+    var _p = frac(_phase);
+    if (_p < 0.40) return PH_DAILYTUT_BOB_PX * ph_ease_out(_p / 0.40);              // rise (decel to apex)
+    if (_p < 0.72) return PH_DAILYTUT_BOB_PX * (1 - ph_ease_in((_p - 0.40) / 0.32)); // fall (accel down)
+    return 0;                                                                       // rest (pause)
+}
+
+/// Draw the chunky purple up-arrow with its TIP at (cx, tip_y), pointing up.
+/// Built from primitives (triangle head + rounded stem) so it needs no sprite.
+function ph_dailytut_arrow(_cx, _tip_y, _col, _alpha) {
+    var _hw = 40;   // half base-width of the triangular head
+    var _hh = 58;   // head height (tip → base)
+    var _sw = 34;   // stem width
+    var _sh = 66;   // stem length
+    draw_set_alpha(_alpha);
+    // Rounded stem first, then the head on top so the join is clean.
+    ph_draw_rounded(_cx - _sw*0.5, _tip_y + _hh - 8, _cx + _sw*0.5, _tip_y + _hh - 8 + _sh, 12, _col);
+    draw_set_color(_col);
+    draw_triangle(_cx - _hw, _tip_y + _hh, _cx + _hw, _tip_y + _hh, _cx, _tip_y, false);
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+}
+
+/// True if _rm is a puzzle room (or the Level-Up screen, rm_win) — i.e. arriving
+/// at the hub from _rm means the player just came "from a puzzle". Used to trigger
+/// the daily-progress FTUE. asset ids are compared directly (the rm_* constants).
+function ph_room_is_puzzle(_rm) {
+    static _rooms = [
+        rm_anygram, rm_sudoku, rm_wordwave, rm_shikaku, rm_wordle,
+        rm_huesort, rm_colorlink, rm_wordbend, rm_arrows, rm_ladder,
+        rm_colordoku, rm_win
+    ];
+    for (var _i = 0; _i < array_length(_rooms); _i++) if (_rm == _rooms[_i]) return true;
+    return false;
+}

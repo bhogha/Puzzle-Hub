@@ -1,5 +1,5 @@
 // ── Palette ───────────────────────────────────────────────────────────────────
-#macro PH_COL_BG          make_color_rgb(255,246,241)
+#macro PH_COL_BG          make_color_rgb(254,247,241)
 #macro PH_COL_PINK        make_color_rgb(233, 30,137)
 #macro PH_COL_PINK_SOFT   make_color_rgb(255,217,236)
 #macro PH_COL_PINK_DEEP   make_color_rgb(180, 10,100)
@@ -63,6 +63,17 @@
 // Deep variant is a readable teal for titles & text on light backgrounds.
 #macro PH_COL_BRTEAL      make_color_rgb( 90,242,188)   // #5af2bc accent gem
 #macro PH_COL_BRTEAL_DEEP make_color_rgb( 22,150,118)   // readable deep teal
+
+// ── Daily-progress FTUE tutorial (first return from a puzzle) ──────────────────
+// A one-time, 2-step coach over the hub's daily-progress band: a bobbing purple
+// arrow points at the trophy (step 1, "Complete 10 Puzzles") then the gift (step
+// 2, "Solve 4 Puzzles"); everything outside the teal band is dimmed; a tap
+// anywhere advances/closes. Tuning knobs (see scr_tutorial ph_dailytut_*):
+#macro PH_DAILYTUT_FADE_SPD   0.10   // overlay fade-in per frame (≈6 frames to full)
+#macro PH_DAILYTUT_BOB_SPD    0.018  // arrow hop-loop speed (≈0.9 s per up-down)
+#macro PH_DAILYTUT_BOB_PX     24     // arrow hop height (px it jumps up toward the icon)
+#macro PH_DAILYTUT_DIM_ALPHA  0.45   // darken strength outside the bright teal box
+#macro PH_DAILYTUT_TAP_DELAY  60     // frames (~1 s) before a tap can skip/advance a step
 
 // ── Assets Path ───────────────────────────────────────────────────────────────
 // On HTML5, relative asset paths are automatically resolved inside the "html5game/"
@@ -181,7 +192,7 @@
 // ⚠️ TEST MODE: when > 0 the spin becomes available again this many MINUTES after a
 // claim (instead of once per calendar day) so the returning-player flow can be
 // tested without waiting a day. SET TO 0 BEFORE SHIPPING to restore daily behaviour.
-#macro PH_SPIN_TEST_COOLDOWN_MINS 10
+#macro PH_SPIN_TEST_COOLDOWN_MINS 0
 
 /// The six coin prizes, one per wheel slice (clockwise from the slice under the
 /// pointer). Picked uniformly. Keep length == PH_SPIN_SLICES. Mirror any change
@@ -189,6 +200,22 @@
 function ph_spin_prizes() {
     return [10, 25, 50, 75, 100, 150];
 }
+
+// ── Audio (SFX) ──────────────────────────────────────────────────────────────
+// Master gain applied to every ph_sfx(...) call (0..1). Per-call gains layer on
+// top of this. Tune here — never hardcode volumes at call sites.
+#macro PH_SFX_MASTER_VOL  0.85
+// Debounce window (ms) for rapid-fire UI taps so identical clicks don't pile up.
+#macro PH_SFX_TAP_GAP     40
+
+// ── Haptics ───────────────────────────────────────────────────────────────────
+// Min-gap (ms) to suppress a REPEAT of the same haptic effect (rapid taps, fast
+// wheel ticks, drag-trace) so they don't overload the Taptic Engine. One-shot
+// events (success/error/win) are never throttled. Tune here — see scr_haptics.
+#macro PH_HAPTIC_MIN_GAP  28
+// Wider spacing (ms) for the coin-stream tick so a fast stream reads as a few
+// distinct ticks rather than one long buzz.
+#macro PH_HAPTIC_COIN_GAP 70
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 #macro PH_SAVE_FILE "puzzlehub_save.json"
@@ -200,7 +227,7 @@ function ph_spin_prizes() {
 // ── Debug / testing ───────────────────────────────────────────────────────────
 // When true, Sudoku starts ~90% solved so the win flow is quick to reach.
 // SET BACK TO false BEFORE SHIPPING.
-#macro PH_SUDOKU_TEST_PREFILL true
+#macro PH_SUDOKU_TEST_PREFILL false
 
 // When true, the hub draws a small safe-area readout (source + inset values) so
 // you can confirm whether the insets came from the extension or the estimate.
@@ -209,9 +236,36 @@ function ph_spin_prizes() {
 
 // ── Game cards ────────────────────────────────────────────────────────────────
 function ph_game_cards() {
+    // Hub display order + names (Bora 2026-06-30). Display NAME only was changed;
+    // each card keeps its original room / sprites / accent colour. Internal
+    // resource names (obj_*/rm_*/scr_*) are unchanged on purpose — renaming those
+    // is the build-breaking path.
     var _cards = [];
+    // 1 — Arrow (was ARROWS)
     array_push(_cards, {
-        name:     "ANYGRAM",
+        name:     "ARROW",
+        subtitle: "Slide the arrows out",
+        room:     "rm_arrows",
+        locked:   false,
+        card_spr: global.spr_card_silver,
+        icon_spr: global.spr_game_arrows,
+        text_col: PH_COL_SILVER_DEEP,
+        btn_type: "play_light",
+    });
+    // 2 — Dots (was COLOR LINK)
+    array_push(_cards, {
+        name:     "DOTS",
+        subtitle: "Link colors",
+        room:     "rm_colorlink",
+        locked:   false,
+        card_spr: global.spr_card_lime,
+        icon_spr: global.spr_game_colorlink,
+        text_col: PH_COL_LIME_DEEP,
+        btn_type: "play_light",
+    });
+    // 3 — Wheel (was ANYGRAM)
+    array_push(_cards, {
+        name:     "WHEEL",
         subtitle: "Word cross",
         room:     "rm_anygram",
         locked:   false,
@@ -220,6 +274,7 @@ function ph_game_cards() {
         text_col: make_color_rgb(180, 130, 0),
         btn_type: "play_light",
     });
+    // 4 — Sudoku
     array_push(_cards, {
         name:     "SUDOKU",
         subtitle: "Number logic",
@@ -230,16 +285,7 @@ function ph_game_cards() {
         text_col: make_color_rgb(80, 30, 180),
         btn_type: "play_light",
     });
-    array_push(_cards, {
-        name:     "WORD WAVE",
-        subtitle: "Find the hidden word",
-        room:     "rm_wordwave",
-        locked:   false,
-        card_spr: global.spr_card_teal,
-        icon_spr: global.spr_game_wordwave,
-        text_col: PH_COL_TEAL_DEEP,
-        btn_type: "play_light",
-    });
+    // 5 — Shikaku
     array_push(_cards, {
         name:     "SHIKAKU",
         subtitle: "Divide by squares",
@@ -250,8 +296,20 @@ function ph_game_cards() {
         text_col: PH_COL_BLUE_DEEP,
         btn_type: "play_light",
     });
+    // 6 — Word Hunt (was WORD WAVE)
     array_push(_cards, {
-        name:     "WORDLE",
+        name:     "WORD HUNT",
+        subtitle: "Find the hidden word",
+        room:     "rm_wordwave",
+        locked:   false,
+        card_spr: global.spr_card_teal,
+        icon_spr: global.spr_game_wordwave,
+        text_col: PH_COL_TEAL_DEEP,
+        btn_type: "play_light",
+    });
+    // 7 — Word (was WORDLE)
+    array_push(_cards, {
+        name:     "WORD",
         subtitle: "Guess the word",
         room:     "rm_wordle",
         locked:   false,
@@ -260,8 +318,9 @@ function ph_game_cards() {
         text_col: make_color_rgb(0, 90, 40),
         btn_type: "play_light",
     });
+    // 8 — Colors (was HUE SORT)
     array_push(_cards, {
-        name:     "HUE SORT",
+        name:     "COLORS",
         subtitle: "Sort color tiles",
         room:     "rm_huesort",
         locked:   false,
@@ -270,36 +329,7 @@ function ph_game_cards() {
         text_col: PH_COL_BLUE_DEEP,
         btn_type: "play_light",
     });
-    array_push(_cards, {
-        name:     "COLOR LINK",
-        subtitle: "Link colors",
-        room:     "rm_colorlink",
-        locked:   false,
-        card_spr: global.spr_card_lime,
-        icon_spr: global.spr_game_colorlink,
-        text_col: PH_COL_LIME_DEEP,
-        btn_type: "play_light",
-    });
-    array_push(_cards, {
-        name:     "WORD BEND",
-        subtitle: "Fill the grid with words",
-        room:     "rm_wordbend",
-        locked:   false,
-        card_spr: global.spr_card_tangerine,
-        icon_spr: global.spr_game_wordbend,
-        text_col: PH_COL_TANGERINE_DEEP,
-        btn_type: "play_light",
-    });
-    array_push(_cards, {
-        name:     "ARROWS",
-        subtitle: "Slide the arrows out",
-        room:     "rm_arrows",
-        locked:   false,
-        card_spr: global.spr_card_silver,
-        icon_spr: global.spr_game_arrows,
-        text_col: PH_COL_SILVER_DEEP,
-        btn_type: "play_light",
-    });
+    // 9 — Ladder
     array_push(_cards, {
         name:     "LADDER",
         subtitle: "Change one letter at a time",
@@ -310,14 +340,26 @@ function ph_game_cards() {
         text_col: PH_COL_AMBER_DEEP,
         btn_type: "play_light",
     });
+    // 10 — Diamond (was COLORDOKU)
     array_push(_cards, {
-        name:     "COLORDOKU",
+        name:     "DIAMOND",
         subtitle: "One queen per colour, row & column",
         room:     "rm_colordoku",
         locked:   false,
         card_spr: global.spr_card_brightteal,
         icon_spr: global.spr_game_colordoku,
         text_col: PH_COL_BRTEAL_DEEP,
+        btn_type: "play_light",
+    });
+    // 11 — Bend (was WORD BEND)
+    array_push(_cards, {
+        name:     "BEND",
+        subtitle: "Fill the grid with words",
+        room:     "rm_wordbend",
+        locked:   false,
+        card_spr: global.spr_card_tangerine,
+        icon_spr: global.spr_game_wordbend,
+        text_col: PH_COL_TANGERINE_DEEP,
         btn_type: "play_light",
     });
     return _cards;

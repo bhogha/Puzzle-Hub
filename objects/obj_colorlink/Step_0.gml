@@ -94,6 +94,7 @@ if (dragging && device_mouse_check_button(0, mb_left)) {
             var _nxt = cl_step_toward(cl_head(), _fc);
             if (_nxt == -1) break;
             if (!cl_try_step(_nxt)) break;
+            ph_haptic_select();   // small tick each tile added to the link (debounced)
         }
     }
     exit;
@@ -107,6 +108,10 @@ if (dragging && device_mouse_check_button_released(0, mb_left)) {
     // First line connected by hand → retire the onboarding finger tip.
     if (ph_coach_active(coach) && _dc >= 0 && cl_flow_connected(_dc)) {
         ph_coach_stop(coach); ph_tip_mark_seen("COLORLINK");
+    }
+    if (_dc >= 0 && cl_flow_connected(_dc)) {
+        ph_sfx(snd_correct, 0.7);   // a flow's two endpoints just linked up
+        ph_haptic_success();        // distinct "link complete" buzz (vs the per-tile ticks)
     }
     cl_check_win();
     if (win_phase == 0) cl_save();
